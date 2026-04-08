@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: openai
+    description: OpenAI AI chat, image, and audio operations
+  - name: ai
+    description: GravityWrite AI generation endpoints
 paths:
   /healthz:
     get:
@@ -24,6 +28,107 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /openai/conversations:
+    get:
+      operationId: listOpenaiConversations
+      tags: [openai]
+      summary: List all conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiConversation"
+    post:
+      operationId: createOpenaiConversation
+      tags: [openai]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOpenaiConversationBody"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversation"
+  /openai/generate-image:
+    post:
+      operationId: generateOpenaiImage
+      tags: [openai]
+      summary: Generate an image from a text prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateOpenaiImageBody"
+      responses:
+        "200":
+          description: Generated image data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateOpenaiImageResponse"
+  /ai/generate-blog:
+    post:
+      operationId: generateBlog
+      tags: [ai]
+      summary: Generate a blog post with streaming
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateBlogBody"
+      responses:
+        "200":
+          description: SSE stream of blog content
+          content:
+            text/event-stream: {}
+  /ai/generate-image:
+    post:
+      operationId: generateAiImage
+      tags: [ai]
+      summary: Generate an image from a prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateAiImageBody"
+      responses:
+        "200":
+          description: Generated image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateAiImageResponse"
+  /ai/generate-social-post:
+    post:
+      operationId: generateSocialPost
+      tags: [ai]
+      summary: Generate social media posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateSocialPostBody"
+      responses:
+        "200":
+          description: Generated social media posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateSocialPostResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +138,122 @@ components:
           type: string
       required:
         - status
-
+    OpenaiConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+    CreateOpenaiConversationBody:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+    GenerateOpenaiImageBody:
+      type: object
+      properties:
+        prompt:
+          type: string
+        size:
+          type: string
+          enum: ["1024x1024", "512x512", "256x256"]
+      required:
+        - prompt
+    GenerateOpenaiImageResponse:
+      type: object
+      properties:
+        b64_json:
+          type: string
+      required:
+        - b64_json
+    OpenaiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    GenerateBlogBody:
+      type: object
+      properties:
+        topic:
+          type: string
+        keywords:
+          type: string
+        tone:
+          type: string
+        wordCount:
+          type: integer
+      required:
+        - topic
+    GenerateAiImageBody:
+      type: object
+      properties:
+        prompt:
+          type: string
+        style:
+          type: string
+        aspectRatio:
+          type: string
+      required:
+        - prompt
+    GenerateAiImageResponse:
+      type: object
+      properties:
+        b64_json:
+          type: string
+        prompt:
+          type: string
+      required:
+        - b64_json
+        - prompt
+    GenerateSocialPostBody:
+      type: object
+      properties:
+        topic:
+          type: string
+        brand:
+          type: string
+        platforms:
+          type: array
+          items:
+            type: string
+        tone:
+          type: string
+      required:
+        - topic
+        - platforms
+    SocialPlatformPost:
+      type: object
+      properties:
+        platform:
+          type: string
+        content:
+          type: string
+        hashtags:
+          type: array
+          items:
+            type: string
+      required:
+        - platform
+        - content
+        - hashtags
+    GenerateSocialPostResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialPlatformPost"
+      required:
+        - posts

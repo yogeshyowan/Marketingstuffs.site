@@ -14,3 +14,78 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary List all conversations
+ */
+export const ListOpenaiConversationsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListOpenaiConversationsResponse = zod.array(
+  ListOpenaiConversationsResponseItem,
+);
+
+/**
+ * @summary Create a new conversation
+ */
+export const CreateOpenaiConversationBody = zod.object({
+  title: zod.string(),
+});
+
+/**
+ * @summary Generate an image from a text prompt
+ */
+export const GenerateOpenaiImageBody = zod.object({
+  prompt: zod.string(),
+  size: zod.enum(["1024x1024", "512x512", "256x256"]).optional(),
+});
+
+export const GenerateOpenaiImageResponse = zod.object({
+  b64_json: zod.string(),
+});
+
+/**
+ * @summary Generate a blog post with streaming
+ */
+export const GenerateBlogBody = zod.object({
+  topic: zod.string(),
+  keywords: zod.string().optional(),
+  tone: zod.string().optional(),
+  wordCount: zod.number().optional(),
+});
+
+/**
+ * @summary Generate an image from a prompt
+ */
+export const GenerateAiImageBody = zod.object({
+  prompt: zod.string(),
+  style: zod.string().optional(),
+  aspectRatio: zod.string().optional(),
+});
+
+export const GenerateAiImageResponse = zod.object({
+  b64_json: zod.string(),
+  prompt: zod.string(),
+});
+
+/**
+ * @summary Generate social media posts
+ */
+export const GenerateSocialPostBody = zod.object({
+  topic: zod.string(),
+  brand: zod.string().optional(),
+  platforms: zod.array(zod.string()),
+  tone: zod.string().optional(),
+});
+
+export const GenerateSocialPostResponse = zod.object({
+  posts: zod.array(
+    zod.object({
+      platform: zod.string(),
+      content: zod.string(),
+      hashtags: zod.array(zod.string()),
+    }),
+  ),
+});

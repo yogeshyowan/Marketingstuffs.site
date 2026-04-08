@@ -6,4 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./createOpenaiConversationBody";
+export * from "./generateAiImageBody";
+export * from "./generateAiImageResponse";
+export * from "./generateBlogBody";
+export * from "./generateOpenaiImageBody";
+export * from "./generateOpenaiImageBodySize";
+export * from "./generateOpenaiImageResponse";
+export * from "./generateSocialPostBody";
+export * from "./generateSocialPostResponse";
 export * from "./healthStatus";
+export * from "./openaiConversation";
+export * from "./openaiError";
+export * from "./socialPlatformPost";

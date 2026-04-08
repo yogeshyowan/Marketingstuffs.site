@@ -5,18 +5,32 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CreateOpenaiConversationBody,
+  GenerateAiImageBody,
+  GenerateAiImageResponse,
+  GenerateBlogBody,
+  GenerateOpenaiImageBody,
+  GenerateOpenaiImageResponse,
+  GenerateSocialPostBody,
+  GenerateSocialPostResponse,
+  HealthStatus,
+  OpenaiConversation,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +113,510 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all conversations
+ */
+export const getListOpenaiConversationsUrl = () => {
+  return `/api/openai/conversations`;
+};
+
+export const listOpenaiConversations = async (
+  options?: RequestInit,
+): Promise<OpenaiConversation[]> => {
+  return customFetch<OpenaiConversation[]>(getListOpenaiConversationsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListOpenaiConversationsQueryKey = () => {
+  return [`/api/openai/conversations`] as const;
+};
+
+export const getListOpenaiConversationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOpenaiConversations>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listOpenaiConversations>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListOpenaiConversationsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOpenaiConversations>>
+  > = ({ signal }) => listOpenaiConversations({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOpenaiConversations>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOpenaiConversationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOpenaiConversations>>
+>;
+export type ListOpenaiConversationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all conversations
+ */
+
+export function useListOpenaiConversations<
+  TData = Awaited<ReturnType<typeof listOpenaiConversations>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listOpenaiConversations>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOpenaiConversationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new conversation
+ */
+export const getCreateOpenaiConversationUrl = () => {
+  return `/api/openai/conversations`;
+};
+
+export const createOpenaiConversation = async (
+  createOpenaiConversationBody: CreateOpenaiConversationBody,
+  options?: RequestInit,
+): Promise<OpenaiConversation> => {
+  return customFetch<OpenaiConversation>(getCreateOpenaiConversationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createOpenaiConversationBody),
+  });
+};
+
+export const getCreateOpenaiConversationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOpenaiConversation>>,
+    TError,
+    { data: BodyType<CreateOpenaiConversationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOpenaiConversation>>,
+  TError,
+  { data: BodyType<CreateOpenaiConversationBody> },
+  TContext
+> => {
+  const mutationKey = ["createOpenaiConversation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOpenaiConversation>>,
+    { data: BodyType<CreateOpenaiConversationBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOpenaiConversation(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOpenaiConversationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOpenaiConversation>>
+>;
+export type CreateOpenaiConversationMutationBody =
+  BodyType<CreateOpenaiConversationBody>;
+export type CreateOpenaiConversationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new conversation
+ */
+export const useCreateOpenaiConversation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOpenaiConversation>>,
+    TError,
+    { data: BodyType<CreateOpenaiConversationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOpenaiConversation>>,
+  TError,
+  { data: BodyType<CreateOpenaiConversationBody> },
+  TContext
+> => {
+  return useMutation(getCreateOpenaiConversationMutationOptions(options));
+};
+
+/**
+ * @summary Generate an image from a text prompt
+ */
+export const getGenerateOpenaiImageUrl = () => {
+  return `/api/openai/generate-image`;
+};
+
+export const generateOpenaiImage = async (
+  generateOpenaiImageBody: GenerateOpenaiImageBody,
+  options?: RequestInit,
+): Promise<GenerateOpenaiImageResponse> => {
+  return customFetch<GenerateOpenaiImageResponse>(getGenerateOpenaiImageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateOpenaiImageBody),
+  });
+};
+
+export const getGenerateOpenaiImageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateOpenaiImage>>,
+    TError,
+    { data: BodyType<GenerateOpenaiImageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateOpenaiImage>>,
+  TError,
+  { data: BodyType<GenerateOpenaiImageBody> },
+  TContext
+> => {
+  const mutationKey = ["generateOpenaiImage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateOpenaiImage>>,
+    { data: BodyType<GenerateOpenaiImageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateOpenaiImage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateOpenaiImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateOpenaiImage>>
+>;
+export type GenerateOpenaiImageMutationBody = BodyType<GenerateOpenaiImageBody>;
+export type GenerateOpenaiImageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate an image from a text prompt
+ */
+export const useGenerateOpenaiImage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateOpenaiImage>>,
+    TError,
+    { data: BodyType<GenerateOpenaiImageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateOpenaiImage>>,
+  TError,
+  { data: BodyType<GenerateOpenaiImageBody> },
+  TContext
+> => {
+  return useMutation(getGenerateOpenaiImageMutationOptions(options));
+};
+
+/**
+ * @summary Generate a blog post with streaming
+ */
+export const getGenerateBlogUrl = () => {
+  return `/api/ai/generate-blog`;
+};
+
+export const generateBlog = async (
+  generateBlogBody: GenerateBlogBody,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getGenerateBlogUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateBlogBody),
+  });
+};
+
+export const getGenerateBlogMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateBlog>>,
+    TError,
+    { data: BodyType<GenerateBlogBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateBlog>>,
+  TError,
+  { data: BodyType<GenerateBlogBody> },
+  TContext
+> => {
+  const mutationKey = ["generateBlog"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateBlog>>,
+    { data: BodyType<GenerateBlogBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateBlog(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateBlogMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateBlog>>
+>;
+export type GenerateBlogMutationBody = BodyType<GenerateBlogBody>;
+export type GenerateBlogMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a blog post with streaming
+ */
+export const useGenerateBlog = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateBlog>>,
+    TError,
+    { data: BodyType<GenerateBlogBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateBlog>>,
+  TError,
+  { data: BodyType<GenerateBlogBody> },
+  TContext
+> => {
+  return useMutation(getGenerateBlogMutationOptions(options));
+};
+
+/**
+ * @summary Generate an image from a prompt
+ */
+export const getGenerateAiImageUrl = () => {
+  return `/api/ai/generate-image`;
+};
+
+export const generateAiImage = async (
+  generateAiImageBody: GenerateAiImageBody,
+  options?: RequestInit,
+): Promise<GenerateAiImageResponse> => {
+  return customFetch<GenerateAiImageResponse>(getGenerateAiImageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateAiImageBody),
+  });
+};
+
+export const getGenerateAiImageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateAiImage>>,
+    TError,
+    { data: BodyType<GenerateAiImageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateAiImage>>,
+  TError,
+  { data: BodyType<GenerateAiImageBody> },
+  TContext
+> => {
+  const mutationKey = ["generateAiImage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateAiImage>>,
+    { data: BodyType<GenerateAiImageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateAiImage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateAiImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateAiImage>>
+>;
+export type GenerateAiImageMutationBody = BodyType<GenerateAiImageBody>;
+export type GenerateAiImageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate an image from a prompt
+ */
+export const useGenerateAiImage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateAiImage>>,
+    TError,
+    { data: BodyType<GenerateAiImageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateAiImage>>,
+  TError,
+  { data: BodyType<GenerateAiImageBody> },
+  TContext
+> => {
+  return useMutation(getGenerateAiImageMutationOptions(options));
+};
+
+/**
+ * @summary Generate social media posts
+ */
+export const getGenerateSocialPostUrl = () => {
+  return `/api/ai/generate-social-post`;
+};
+
+export const generateSocialPost = async (
+  generateSocialPostBody: GenerateSocialPostBody,
+  options?: RequestInit,
+): Promise<GenerateSocialPostResponse> => {
+  return customFetch<GenerateSocialPostResponse>(getGenerateSocialPostUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateSocialPostBody),
+  });
+};
+
+export const getGenerateSocialPostMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSocialPost>>,
+    TError,
+    { data: BodyType<GenerateSocialPostBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateSocialPost>>,
+  TError,
+  { data: BodyType<GenerateSocialPostBody> },
+  TContext
+> => {
+  const mutationKey = ["generateSocialPost"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateSocialPost>>,
+    { data: BodyType<GenerateSocialPostBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateSocialPost(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateSocialPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateSocialPost>>
+>;
+export type GenerateSocialPostMutationBody = BodyType<GenerateSocialPostBody>;
+export type GenerateSocialPostMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate social media posts
+ */
+export const useGenerateSocialPost = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSocialPost>>,
+    TError,
+    { data: BodyType<GenerateSocialPostBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateSocialPost>>,
+  TError,
+  { data: BodyType<GenerateSocialPostBody> },
+  TContext
+> => {
+  return useMutation(getGenerateSocialPostMutationOptions(options));
+};
