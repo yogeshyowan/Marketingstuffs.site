@@ -3,6 +3,7 @@ import HeroSection from "@/components/HeroSection";
 import BrandsMarquee from "@/components/BrandsMarquee";
 import BlogWriterSection from "@/components/BlogWriterSection";
 import ImageGeneratorSection from "@/components/ImageGeneratorSection";
+import WebsiteDeveloperSection from "@/components/WebsiteDeveloperSection";
 import SocialMediaSection from "@/components/SocialMediaSection";
 import ToolsSection from "@/components/ToolsSection";
 import WhyGravityWrite from "@/components/WhyGravityWrite";
@@ -19,6 +20,7 @@ export default function Home() {
       <BrandsMarquee />
       <BlogWriterSection />
       <ImageGeneratorSection />
+      <WebsiteDeveloperSection />
       <SocialMediaSection />
       <ToolsSection />
       <WhyGravityWrite />
