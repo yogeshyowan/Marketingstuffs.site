@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --animate-marquee: marquee 25s linear infinite;
+  --animate-marquee-slow: marquee 40s linear infinite;
+
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-100%); }
+  }
+}
+
+:root {
+  --background: 236 29% 7%; /* #0A0B1A */
+  --foreground: 0 0% 100%;
+  --border: 236 20% 15%;
+  --input: 236 20% 15%;
+  --ring: 258 84% 60%; /* #7C3AED */
+
+  --card: 236 29% 9%; /* Slightly lighter than background */
+  --card-foreground: 0 0% 100%;
+  --card-border: 236 20% 18%;
+
+  --popover: 236 29% 9%;
+  --popover-foreground: 0 0% 100%;
+  --popover-border: 236 20% 18%;
+
+  --primary: 258 84% 60%; /* #7C3AED */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 186 100% 41%; /* Bright teal/cyan */
+  --secondary-foreground: 236 29% 7%;
+
+  --muted: 236 20% 15%;
+  --muted-foreground: 220 14% 71%;
+
+  --accent: 258 84% 60%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: Menlo, monospace;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 236 29% 7%;
+  --foreground: 0 0% 100%;
+  --border: 236 20% 15%;
+  --input: 236 20% 15%;
+  --ring: 258 84% 60%;
+
+  --card: 236 29% 9%;
+  --card-foreground: 0 0% 100%;
+  --card-border: 236 20% 18%;
+
+  --popover: 236 29% 9%;
+  --popover-foreground: 0 0% 100%;
+  --popover-border: 236 20% 18%;
+
+  --primary: 258 84% 60%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 186 100% 41%;
+  --secondary-foreground: 236 29% 7%;
+
+  --muted: 236 20% 15%;
+  --muted-foreground: 220 14% 71%;
+
+  --accent: 258 84% 60%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    /* Force dark mode always */
+    color-scheme: dark;
+  }
+}
+
+.glass-card {
+  background: rgba(13, 17, 48, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #A78BFA 0%, #4F46E5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-bg {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, rgba(0,0,0,0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}

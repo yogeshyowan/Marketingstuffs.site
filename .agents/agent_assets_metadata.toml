@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "n9TDQTg4EpWXlkLazb1w0"
+uri = "file://artifacts/gravitywrite-clone/public/images/hero-dashboard.png"
+type = "image"
+title = "dark dashboard ui with colorful content cards"
+
+[[generated]]
+id = "Oo_wPMfrBuVafuYj3MPzb"
+uri = "file://artifacts/gravitywrite-clone/public/images/blog-interface.png"
+type = "image"
+title = "blog writing ai interface"
+
+[[generated]]
+id = "oIe3yYXwM-X-yPLLHvo9E"
+uri = "file://artifacts/gravitywrite-clone/public/images/ai-art-1.png"
+type = "image"
+title = "abstract colorful ai art 1"
+
+[[generated]]
+id = "EpPJLKhuIyqLbbEy5ADgo"
+uri = "file://artifacts/gravitywrite-clone/public/images/ai-art-2.png"
+type = "image"
+title = "abstract colorful ai art 2"
+
+[[generated]]
+id = "SDv4bRHrX7oABNvQeRa2U"
+uri = "file://artifacts/gravitywrite-clone/public/images/ai-art-3.png"
+type = "image"
+title = "abstract colorful ai art 3"
+
+[[generated]]
+id = "lBMoasQ1WCdc8DwLJtQSi"
+uri = "file://artifacts/gravitywrite-clone/public/images/why-1.png"
+type = "image"
+title = "dark ui dashboard screenshot 1"
+
+[[generated]]
+id = "UR6ol1dgb0bZqrvn9oyhV"
+uri = "file://artifacts/gravitywrite-clone/public/images/why-2.png"
+type = "image"
+title = "dark ui dashboard screenshot 2"
+
+[[generated]]
+id = "hJ-hjcZIAE6WYTawjfDCu"
+uri = "file://artifacts/gravitywrite-clone/public/images/why-3.png"
+type = "image"
+title = "dark ui dashboard screenshot 3"
+
+[[generated]]
+id = "5mQ004k6eweVtndklpqS5"
+uri = "file://artifacts/gravitywrite-clone/public/images/why-4.png"
+type = "image"
+title = "dark ui dashboard screenshot 4"
+
+[[generated]]
+id = "-sF4u9i-u1LYf4JFMwDj0"
+uri = "file://artifacts/gravitywrite-clone/public/images/why-5.png"
+type = "image"
+title = "dark ui dashboard screenshot 5"

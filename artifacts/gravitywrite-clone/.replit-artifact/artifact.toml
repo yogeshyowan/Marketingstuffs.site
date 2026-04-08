@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "GravityWrite Clone"
+version = "1.0.0"
+id = "artifacts/gravitywrite-clone"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24339
+
+[services.development]
+run = "pnpm --filter @workspace/gravitywrite-clone run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gravitywrite-clone", "run", "build" ]
+publicDir = "artifacts/gravitywrite-clone/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24339"
+BASE_PATH = "/"
