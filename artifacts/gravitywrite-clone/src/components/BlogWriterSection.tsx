@@ -1,78 +1,136 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, PenTool, Search, LayoutTemplate, Loader2, Copy, Check, ChevronDown, Lightbulb, Download, RefreshCw } from "lucide-react";
+import { PenTool, Loader2, Copy, Check, Download, RefreshCw, Lightbulb, ChevronRight, ChevronLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const TONES = ["Professional", "Conversational", "Witty", "Persuasive", "Informative", "Inspirational", "Friendly", "Authoritative"];
-const WORD_COUNTS = [300, 500, 800, 1000, 1200, 1500, 2000, 2500];
-const INTRO_STYLES = ["Engaging Hook", "Shocking Statistic", "Story Opening", "Question Lead", "Contrarian View", "News Angle"];
-const LANGUAGES = ["English", "Spanish", "French", "German", "Portuguese", "Italian", "Dutch", "Hindi"];
+// ── Step data ──────────────────────────────────────────────
+const BLOG_STYLES = [
+  { id: "how-to", emoji: "🛠️", label: "How-To Guide", desc: "Step-by-step instructions" },
+  { id: "listicle", emoji: "📝", label: "Listicle", desc: "Top 10, Best of..." },
+  { id: "opinion", emoji: "💡", label: "Opinion / Thought Leadership", desc: "Your expert take" },
+  { id: "case-study", emoji: "📊", label: "Case Study", desc: "Story-driven results" },
+  { id: "news", emoji: "📰", label: "News & Trends", desc: "What's happening now" },
+  { id: "review", emoji: "⭐", label: "Review", desc: "Honest product/service review" },
+];
+
+const VOICES = [
+  { id: "professional", emoji: "👔", label: "Professional", desc: "Authoritative, trusted, formal" },
+  { id: "conversational", emoji: "☕", label: "Conversational", desc: "Friendly, casual, relatable" },
+  { id: "inspiring", emoji: "🔥", label: "Inspiring", desc: "Motivational, energetic, bold" },
+  { id: "educational", emoji: "🎓", label: "Educational", desc: "Clear, structured, thorough" },
+  { id: "witty", emoji: "😄", label: "Witty", desc: "Fun, clever, memorable" },
+  { id: "storytelling", emoji: "📖", label: "Storytelling", desc: "Narrative-driven, emotional" },
+];
+
+const IMAGE_STYLES = [
+  { id: "photography", emoji: "📷", label: "Photography", desc: "Real, authentic photos" },
+  { id: "illustration", emoji: "🎨", label: "Illustration", desc: "Artistic, hand-drawn style" },
+  { id: "infographic", emoji: "📊", label: "Infographic", desc: "Data visualizations" },
+  { id: "minimal", emoji: "⬜", label: "Minimalist", desc: "Clean, simple, elegant" },
+  { id: "3d", emoji: "🎭", label: "3D / CGI", desc: "Polished 3D renders" },
+  { id: "none", emoji: "❌", label: "No Images", desc: "Text-only article" },
+];
+
+const WORD_COUNTS = [
+  { value: 500, label: "Short", desc: "~2 min read" },
+  { value: 800, label: "Standard", desc: "~4 min read" },
+  { value: 1200, label: "Long-form", desc: "~6 min read" },
+  { value: 2000, label: "In-depth", desc: "~10 min read" },
+];
 
 function renderMarkdown(text: string): string {
   return text
     .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-white mt-6 mb-3 leading-tight">$1</h1>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold text-white mt-5 mb-2">$1</h2>')
+    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold text-violet-300 mt-5 mb-2">$1</h2>')
     .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-white/90 mt-4 mb-2">$1</h3>')
     .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em class="italic text-white/80">$1</em>')
-    .replace(/^- (.+)$/gm, '<li class="ml-5 list-disc text-white/80 mb-1">$1</li>')
-    .replace(/^\d+\. (.+)$/gm, '<li class="ml-5 list-decimal text-white/80 mb-1">$1</li>')
-    .replace(/\n\n/g, '</p><p class="text-white/70 leading-relaxed mb-3">')
-    .replace(/^(?!<[hlp])(.+)$/gm, (l) => l.trim() ? `<p class="text-white/70 leading-relaxed mb-3">${l}</p>` : "");
+    .replace(/^- (.+)$/gm, '<li class="ml-5 list-disc text-white/75 mb-1.5">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li class="ml-5 list-decimal text-white/75 mb-1.5">$1</li>')
+    .replace(/\n\n/g, '</p><p class="text-white/65 leading-relaxed mb-4">')
+    .replace(/^(?!<[hlp])(.+)$/gm, (l) => l.trim() ? `<p class="text-white/65 leading-relaxed mb-4">${l}</p>` : "");
 }
 
+const STEPS = ["Your Idea", "Blog Style", "Your Voice", "Images", "Details"];
+
 export default function BlogWriterSection() {
+  const [step, setStep] = useState(0);
   const [topic, setTopic] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [tone, setTone] = useState("Professional");
+  const [blogStyle, setBlogStyle] = useState("how-to");
+  const [voice, setVoice] = useState("conversational");
+  const [imageStyle, setImageStyle] = useState("photography");
+  const [imageIdea, setImageIdea] = useState("");
   const [wordCount, setWordCount] = useState(800);
+  const [keywords, setKeywords] = useState("");
   const [language, setLanguage] = useState("English");
-  const [introStyle, setIntroStyle] = useState("Engaging Hook");
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
+  const [generatedImageUrl, setGeneratedImageUrl] = useState("");
+  const [generatingImage, setGeneratingImage] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [suggestedTitles, setSuggestedTitles] = useState<string[]>([]);
   const [loadingTitles, setLoadingTitles] = useState(false);
-  const [activeTab, setActiveTab] = useState<"write" | "settings">("write");
   const abortRef = useRef<AbortController | null>(null);
 
-  const wordCountEstimate = generatedContent.split(/\s+/).filter(Boolean).length;
+  const wordEstimate = generatedContent.split(/\s+/).filter(Boolean).length;
 
-  async function fetchTitleSuggestions() {
+  async function fetchTitles() {
     if (!topic.trim()) return;
     setLoadingTitles(true);
     try {
       const res = await fetch("/api/ai/suggest-blog-titles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, count: 5 }),
       });
       const data = await res.json() as { titles?: string[] };
       setSuggestedTitles(data.titles ?? []);
-    } catch {
-      /* silent — titles are optional */
-    } finally {
-      setLoadingTitles(false);
-    }
+    } catch { /* optional */ }
+    finally { setLoadingTitles(false); }
+  }
+
+  async function generateImage() {
+    if (imageStyle === "none" || !imageIdea.trim()) return;
+    setGeneratingImage(true);
+    setGeneratedImageUrl("");
+    try {
+      const prompt = `${imageIdea} for a blog about "${topic}", ${imageStyle} style, high quality, professional`;
+      const encoded = encodeURIComponent(prompt);
+      const url = `https://image.pollinations.ai/prompt/${encoded}?width=1200&height=630&nologo=true&enhance=true&model=flux`;
+      setGeneratedImageUrl(url);
+    } catch { /* skip */ }
+    finally { setGeneratingImage(false); }
   }
 
   async function handleGenerate() {
-    if (!topic.trim()) return;
     setIsGenerating(true);
     setGeneratedContent("");
     setError("");
-    setSuggestedTitles([]);
     abortRef.current = new AbortController();
+
+    // Generate image in parallel if needed
+    if (imageStyle !== "none" && imageIdea.trim()) generateImage();
+
+    const selectedStyle = BLOG_STYLES.find(s => s.id === blogStyle)?.label ?? blogStyle;
+    const selectedVoice = VOICES.find(v => v.id === voice)?.label ?? voice;
 
     try {
       const res = await fetch("/api/ai/generate-blog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, keywords, tone: tone.toLowerCase(), wordCount, language, introStyle: introStyle.toLowerCase() }),
+        body: JSON.stringify({
+          topic,
+          keywords,
+          tone: selectedVoice.toLowerCase(),
+          wordCount,
+          language,
+          introStyle: blogStyle === "how-to" ? "step opening" : blogStyle === "opinion" ? "contrarian view" : "engaging hook",
+          blogStyle: selectedStyle,
+        }),
         signal: abortRef.current.signal,
       });
-      if (!res.ok) throw new Error("Request failed");
+
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -86,7 +144,7 @@ export default function BlogWriterSection() {
           if (line.startsWith("data: ")) {
             try {
               const d = JSON.parse(line.slice(6));
-              if (d.error) { setError(d.error); }
+              if (d.error) setError(d.error);
               if (d.content) setGeneratedContent(p => p + d.content);
             } catch { /* skip */ }
           }
@@ -94,15 +152,8 @@ export default function BlogWriterSection() {
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== "AbortError")
-        setError("Generation failed. Try again.");
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  function handleStop() {
-    abortRef.current?.abort();
-    setIsGenerating(false);
+        setError("Generation failed. Please try again.");
+    } finally { setIsGenerating(false); }
   }
 
   function handleCopy() {
@@ -121,221 +172,286 @@ export default function BlogWriterSection() {
     URL.revokeObjectURL(url);
   }
 
+  const canGoNext = step === 0 ? topic.trim().length > 0 : true;
+  const isLastStep = step === STEPS.length - 1;
+
+  if (generatedContent || isGenerating) {
+    return (
+      <section id="blog-writer" className="py-24 relative overflow-hidden">
+        <div className="absolute left-0 top-1/3 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="container px-4 mx-auto max-w-4xl">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                <PenTool className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-lg">Blog Writer</h2>
+                <p className="text-white/40 text-xs">{topic}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => { setGeneratedContent(""); setStep(0); }}
+              className="border-white/10 text-white/50 hover:bg-white/5 text-xs rounded-xl">
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Start Over
+            </Button>
+          </div>
+
+          {generatedImageUrl && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-2xl overflow-hidden border border-white/10">
+              <img src={generatedImageUrl} alt="Blog cover" className="w-full h-56 object-cover" />
+            </motion.div>
+          )}
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-2xl border border-white/10 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-black/20">
+              <div className="flex items-center gap-3">
+                {isGenerating && <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />}
+                <span className="text-sm text-white/40">{wordEstimate} words</span>
+                <span className="text-xs text-emerald-400/70 font-medium bg-emerald-400/10 px-2 py-0.5 rounded-full">Free AI</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={handleDownload} disabled={isGenerating} className="text-white/30 hover:text-white/70 transition-colors">
+                  <Download className="w-4 h-4" />
+                </button>
+                <button onClick={handleCopy} disabled={isGenerating} className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors">
+                  {copied ? <><Check className="w-4 h-4 text-emerald-400" />Copied</> : <><Copy className="w-4 h-4" />Copy</>}
+                </button>
+              </div>
+            </div>
+            <div className="p-6 md:p-8 max-h-[640px] overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(generatedContent) }} />
+            {!isGenerating && (
+              <div className="px-6 pb-6 pt-2 border-t border-white/5 flex flex-wrap gap-2">
+                <Button size="sm" onClick={handleGenerate} variant="outline"
+                  className="border-white/10 text-white/50 hover:bg-white/5 text-xs h-8 rounded-lg">
+                  <RefreshCw className="w-3 h-3 mr-1.5" /> Regenerate
+                </Button>
+                <Button size="sm" onClick={handleDownload}
+                  className="bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30 text-xs h-8 rounded-lg">
+                  <Download className="w-3 h-3 mr-1.5" /> Download .md
+                </Button>
+                <Button size="sm" onClick={handleCopy}
+                  className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs h-8 rounded-lg">
+                  {copied ? "Copied!" : <><Copy className="w-3 h-3 mr-1.5" />Copy All</>}
+                </Button>
+              </div>
+            )}
+          </motion.div>
+          {error && <div className="mt-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">{error}</div>}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="blog-writer" className="py-24 relative overflow-hidden">
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="container px-4 mx-auto">
-        <div className="flex flex-col lg:flex-row items-start gap-12">
+      <div className="absolute left-0 top-1/3 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="container px-4 mx-auto max-w-3xl">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center px-3 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-400 text-sm font-medium mb-4">
+            <PenTool className="w-4 h-4 mr-2" /> AI Blog Writer
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            Write Blogs That <span className="text-violet-400">Get Found</span>
+          </h2>
+          <p className="text-white/50 text-lg">Answer 5 simple questions — we'll write a full, SEO-optimized article for you</p>
+        </div>
 
-          {/* Left: Form */}
-          <div className="lg:w-5/12 w-full">
-            <div className="inline-flex items-center px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium mb-6">
-              AI Blog Writer
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              AI Blog Writer That <span className="gradient-text">Ranks & Converts</span>
-            </h2>
-            <p className="text-base text-muted-foreground mb-6 leading-relaxed">
-              Input your topic, set your preferences, and publish SEO-optimized articles that drive traffic. Powered entirely by free AI — zero subscription cost.
-            </p>
-
-            {/* Tab bar */}
-            <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-6">
-              <button onClick={() => setActiveTab("write")} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "write" ? "bg-primary/20 text-primary" : "text-white/50 hover:text-white"}`}>
-                Write
+        {/* Progress bar */}
+        <div className="mb-8">
+          <div className="flex justify-between mb-3">
+            {STEPS.map((s, i) => (
+              <button key={s} onClick={() => i < step && setStep(i)}
+                className={`flex flex-col items-center gap-1.5 ${i <= step ? "cursor-pointer" : "cursor-default"}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < step ? "bg-violet-500 text-white" : i === step ? "bg-violet-500/30 border-2 border-violet-500 text-violet-400" : "bg-white/5 border border-white/10 text-white/30"}`}>
+                  {i < step ? "✓" : i + 1}
+                </div>
+                <span className={`text-xs hidden sm:block ${i === step ? "text-violet-400 font-medium" : "text-white/30"}`}>{s}</span>
               </button>
-              <button onClick={() => setActiveTab("settings")} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "settings" ? "bg-primary/20 text-primary" : "text-white/50 hover:text-white"}`}>
-                Settings
-              </button>
-            </div>
+            ))}
+          </div>
+          <div className="h-1 bg-white/10 rounded-full">
+            <div className="h-full bg-gradient-to-r from-violet-500 to-primary rounded-full transition-all duration-500"
+              style={{ width: `${(step / (STEPS.length - 1)) * 100}%` }} />
+          </div>
+        </div>
 
-            <div className="glass-card rounded-2xl border border-white/10 p-5 space-y-4">
-              {activeTab === "write" ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">Blog Topic *</label>
-                    <input
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 transition-colors text-sm"
-                      placeholder="e.g., How AI is Revolutionizing Content Marketing in 2025"
-                      value={topic}
-                      onChange={e => setTopic(e.target.value)}
-                    />
-                    <button
-                      onClick={fetchTitleSuggestions}
-                      disabled={!topic.trim() || loadingTitles}
-                      className="mt-2 flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary transition-colors disabled:opacity-40"
-                    >
-                      {loadingTitles ? <Loader2 className="w-3 h-3 animate-spin" /> : <Lightbulb className="w-3 h-3" />}
-                      Suggest 5 click-worthy titles
+        {/* Step content */}
+        <div className="glass-card rounded-2xl border border-white/10 p-6 md:p-8 min-h-80">
+          <AnimatePresence mode="wait">
+
+            {/* Step 0: Your Idea */}
+            {step === 0 && (
+              <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-2">What's your blog idea? 💭</h3>
+                <p className="text-white/50 text-sm mb-5">Type your topic below — it can be a title, question, or just a rough idea</p>
+                <textarea
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-white/25 focus:outline-none focus:border-violet-500/50 resize-none text-sm h-28 transition-colors"
+                  placeholder="e.g., &quot;How small businesses can use AI to double their online sales&quot; or just &quot;AI for small business marketing&quot;"
+                  value={topic}
+                  onChange={e => { setTopic(e.target.value); setSuggestedTitles([]); }}
+                  autoFocus
+                />
+                <button onClick={fetchTitles} disabled={!topic.trim() || loadingTitles}
+                  className="mt-3 flex items-center gap-2 text-sm text-violet-400/70 hover:text-violet-400 transition-colors disabled:opacity-40">
+                  {loadingTitles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+                  Suggest 5 click-worthy titles based on my idea
+                </button>
+                {suggestedTitles.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-xs text-white/30 font-medium uppercase tracking-wide">Pick one or use as inspiration:</p>
+                    {suggestedTitles.map((t, i) => (
+                      <button key={i} onClick={() => setTopic(t)}
+                        className="w-full text-left text-sm text-white/60 hover:text-white bg-white/5 hover:bg-violet-500/10 border border-white/5 hover:border-violet-500/30 rounded-xl px-4 py-3 transition-all">
+                        <span className="text-violet-400/60 mr-2">→</span>{t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 1: Blog Style */}
+            {step === 1 && (
+              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-2">What kind of blog post? 📝</h3>
+                <p className="text-white/50 text-sm mb-5">Choose the style that fits your goal</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {BLOG_STYLES.map(s => (
+                    <button key={s.id} onClick={() => setBlogStyle(s.id)}
+                      className={`flex flex-col items-start gap-1 p-4 rounded-xl border transition-all text-left ${blogStyle === s.id ? "border-violet-500/60 bg-violet-500/15 shadow-[0_0_20px_rgba(139,92,246,0.15)]" : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8"}`}>
+                      <span className="text-2xl">{s.emoji}</span>
+                      <span className={`text-sm font-semibold ${blogStyle === s.id ? "text-violet-300" : "text-white/80"}`}>{s.label}</span>
+                      <span className="text-xs text-white/40">{s.desc}</span>
                     </button>
-                    {suggestedTitles.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {suggestedTitles.map((t, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setTopic(t)}
-                            className="w-full text-left text-xs text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg px-3 py-2 transition-colors"
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 2: Voice */}
+            {step === 2 && (
+              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-2">What's your writing voice? 🎙️</h3>
+                <p className="text-white/50 text-sm mb-5">Pick the tone that sounds like you (or how you want to sound)</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {VOICES.map(v => (
+                    <button key={v.id} onClick={() => setVoice(v.id)}
+                      className={`flex flex-col items-start gap-1 p-4 rounded-xl border transition-all text-left ${voice === v.id ? "border-violet-500/60 bg-violet-500/15 shadow-[0_0_20px_rgba(139,92,246,0.15)]" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                      <span className="text-2xl">{v.emoji}</span>
+                      <span className={`text-sm font-semibold ${voice === v.id ? "text-violet-300" : "text-white/80"}`}>{v.label}</span>
+                      <span className="text-xs text-white/40">{v.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Images */}
+            {step === 3 && (
+              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-2">What about images? 🖼️</h3>
+                <p className="text-white/50 text-sm mb-5">Tell us the visual style for your blog's cover image</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+                  {IMAGE_STYLES.map(s => (
+                    <button key={s.id} onClick={() => setImageStyle(s.id)}
+                      className={`flex flex-col items-start gap-1 p-4 rounded-xl border transition-all text-left ${imageStyle === s.id ? "border-violet-500/60 bg-violet-500/15" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                      <span className="text-2xl">{s.emoji}</span>
+                      <span className={`text-sm font-semibold ${imageStyle === s.id ? "text-violet-300" : "text-white/80"}`}>{s.label}</span>
+                      <span className="text-xs text-white/40">{s.desc}</span>
+                    </button>
+                  ))}
+                </div>
+                {imageStyle !== "none" && (
+                  <div>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Describe the image you want:</label>
+                    <input
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-violet-500/50 text-sm"
+                      placeholder={`e.g., "A business owner working on a laptop in a modern cafe, warm lighting"`}
+                      value={imageIdea}
+                      onChange={e => setImageIdea(e.target.value)}
+                    />
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 4: Details */}
+            {step === 4 && (
+              <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-2">Fine-tune your blog ⚙️</h3>
+                <p className="text-white/50 text-sm mb-5">These help the AI write a more targeted article (all optional)</p>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Article length</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {WORD_COUNTS.map(w => (
+                        <button key={w.value} onClick={() => setWordCount(w.value)}
+                          className={`p-3 rounded-xl border text-left transition-all ${wordCount === w.value ? "border-violet-500/60 bg-violet-500/15" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                          <div className={`text-sm font-semibold ${wordCount === w.value ? "text-violet-300" : "text-white/80"}`}>{w.label}</div>
+                          <div className="text-xs text-white/40">{w.desc}</div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">Focus Keywords <span className="text-white/30">(optional)</span></label>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Focus keywords <span className="text-white/30">(optional)</span></label>
                     <input
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 transition-colors text-sm"
-                      placeholder="e.g., AI writing, content strategy, SEO tools"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-violet-500/50 text-sm"
+                      placeholder="e.g., AI marketing tools, small business automation, ROI"
                       value={keywords}
                       onChange={e => setKeywords(e.target.value)}
                     />
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-white/60 mb-1.5">Tone</label>
-                      <div className="relative">
-                        <select className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary/50 pr-8" value={tone} onChange={e => setTone(e.target.value)}>
-                          {TONES.map(t => <option key={t}>{t}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-white/60 mb-1.5">Word Count</label>
-                      <div className="relative">
-                        <select className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary/50 pr-8" value={wordCount} onChange={e => setWordCount(Number(e.target.value))}>
-                          {WORD_COUNTS.map(w => <option key={w} value={w}>{w} words</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-white/60 mb-1.5">Language</label>
-                      <div className="relative">
-                        <select className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary/50 pr-8" value={language} onChange={e => setLanguage(e.target.value)}>
-                          {LANGUAGES.map(l => <option key={l}>{l}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-white/60 mb-1.5">Intro Style</label>
-                      <div className="relative">
-                        <select className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-primary/50 pr-8" value={introStyle} onChange={e => setIntroStyle(e.target.value)}>
-                          {INTRO_STYLES.map(s => <option key={s}>{s}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60 mb-2">Language</label>
+                    <select
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500/50 text-sm"
+                      value={language} onChange={e => setLanguage(e.target.value)}>
+                      {["English", "Spanish", "French", "German", "Portuguese", "Hindi", "Arabic", "Japanese"].map(l => (
+                        <option key={l}>{l}</option>
+                      ))}
+                    </select>
                   </div>
-                </>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1 bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white h-11 font-semibold rounded-xl text-sm"
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !topic.trim()}
-                >
-                  {isGenerating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Writing...</> : "Generate Blog Post →"}
-                </Button>
-                {isGenerating && (
-                  <Button variant="outline" className="border-white/20 text-white/70 hover:bg-white/10 h-11 rounded-xl text-sm" onClick={handleStop}>
-                    Stop
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <ul className="space-y-2.5 mt-6">
-              {["100% free — zero AI credit cost", "8 languages supported", "SEO-optimized structure with meta data", "Stream output in real time", "Download as Markdown"].map((f, i) => (
-                <li key={i} className="flex items-center gap-3 text-white/60 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Right: Output */}
-          <div className="lg:w-7/12 w-full lg:sticky lg:top-24">
-            <AnimatePresence mode="wait">
-              {!generatedContent && !isGenerating && (
-                <motion.div key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="glass-card rounded-2xl border border-white/10 p-10 min-h-[500px] flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mb-4">
-                    <PenTool className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Your blog post appears here</h3>
-                  <p className="text-white/40 text-sm max-w-xs">Enter your topic and hit Generate. The article streams live as it's written — no waiting.</p>
-                  <div className="mt-8 grid grid-cols-3 gap-4 w-full max-w-xs">
-                    {[{ icon: PenTool, label: "AI Written" }, { icon: Search, label: "SEO Ready" }, { icon: LayoutTemplate, label: "Structured" }].map(({ icon: Icon, label }) => (
-                      <div key={label} className="glass-card rounded-xl p-3 flex flex-col items-center gap-2 border border-white/5">
-                        <Icon className="w-5 h-5 text-primary" />
-                        <span className="text-xs text-white/50">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {isGenerating && !generatedContent && (
-                <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="glass-card rounded-2xl border border-white/10 p-10 min-h-[200px] flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                  <p className="text-white/50 text-sm">Selecting best free AI model...</p>
-                </motion.div>
-              )}
-
-              {generatedContent && (
-                <motion.div key="content" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  className="glass-card rounded-2xl border border-white/10 overflow-hidden">
-                  <div className="flex items-center justify-between p-4 border-b border-white/10 bg-black/20">
-                    <div className="flex items-center gap-3">
-                      {isGenerating && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
-                      <span className="text-sm text-white/50">{wordCountEstimate} words</span>
-                      <span className="text-xs text-white/30">•</span>
-                      <span className="text-xs text-green-400/70 font-medium">Free AI</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => { setGeneratedContent(""); setSuggestedTitles([]); }}
-                        className="text-white/30 hover:text-white/60 transition-colors">
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                      <button onClick={handleDownload} disabled={isGenerating}
-                        className="text-white/30 hover:text-white/60 transition-colors">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button onClick={handleCopy} disabled={isGenerating}
-                        className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors">
-                        {copied ? <><Check className="w-4 h-4" />Copied</> : <><Copy className="w-4 h-4" />Copy</>}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-6 max-h-[600px] overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: renderMarkdown(generatedContent) }} />
-                  {!isGenerating && (
-                    <div className="px-6 pb-5 pt-2 border-t border-white/5 flex gap-2">
-                      <Button size="sm" onClick={handleGenerate} variant="outline" className="border-white/10 text-white/50 hover:bg-white/5 text-xs h-8">
-                        <RefreshCw className="w-3 h-3 mr-1" /> Regenerate
-                      </Button>
-                      <Button size="sm" onClick={handleDownload} className="bg-primary/20 text-primary hover:bg-primary/30 text-xs h-8">
-                        <Download className="w-3 h-3 mr-1" /> Download .md
-                      </Button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {error && (
-              <div className="mt-3 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">{error}</div>
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
+
+        {/* Summary card */}
+        {step > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {topic && <span className="text-xs bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/50">📝 {topic.slice(0, 30)}{topic.length > 30 ? "…" : ""}</span>}
+            {step > 1 && <span className="text-xs bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/50">{BLOG_STYLES.find(s => s.id === blogStyle)?.emoji} {BLOG_STYLES.find(s => s.id === blogStyle)?.label}</span>}
+            {step > 2 && <span className="text-xs bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/50">{VOICES.find(v => v.id === voice)?.emoji} {VOICES.find(v => v.id === voice)?.label}</span>}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center gap-3 mt-6">
+          {step > 0 && (
+            <Button variant="outline" onClick={() => setStep(s => s - 1)}
+              className="border-white/10 text-white/50 hover:bg-white/5 rounded-xl h-12 px-5">
+              <ChevronLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+          )}
+          {!isLastStep ? (
+            <Button onClick={() => setStep(s => s + 1)} disabled={!canGoNext}
+              className="flex-1 bg-violet-600 hover:bg-violet-500 text-white rounded-xl h-12 font-semibold text-base">
+              Continue <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : (
+            <Button onClick={handleGenerate} disabled={isGenerating || !topic.trim()}
+              className="flex-1 bg-gradient-to-r from-violet-600 to-primary hover:from-violet-500 hover:to-primary/90 text-white rounded-xl h-12 font-bold text-base shadow-[0_0_30px_rgba(139,92,246,0.3)]">
+              {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Writing your blog...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate Blog Post</>}
+            </Button>
+          )}
+        </div>
+        {error && <div className="mt-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">{error}</div>}
       </div>
     </section>
   );

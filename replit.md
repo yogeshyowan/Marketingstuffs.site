@@ -28,7 +28,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## Artifacts
 
-### GravityWrite Clone (`artifacts/gravitywrite-clone`)
+### GrowBiz (`artifacts/gravitywrite-clone`)
 - Full landing page clone of gravitywrite.com with dark navy/purple glassmorphism aesthetic
 - Functional AI features powered by OpenAI via Replit AI Integrations proxy (no API key required)
   - **Blog Writer**: Streaming SSE endpoint (`POST /api/ai/generate-blog`) — generates SEO-optimized markdown blog posts
