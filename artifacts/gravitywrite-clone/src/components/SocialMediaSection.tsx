@@ -225,6 +225,62 @@ export default function SocialMediaSection() {
 
 const TIMEZONES = ["UTC-8 (PST)","UTC-7 (MST)","UTC-6 (CST)","UTC-5 (EST)","UTC+0 (GMT)","UTC+1 (CET)","UTC+5:30 (IST)","UTC+8 (CST/SGT)","UTC+9 (JST)","UTC+10 (AEST)"];
 
+const PLATFORM_META: Record<string, {
+  loginUrl: string; devUrl: string; color: string; gradient: string;
+  authNote: string; handlePrefix: string;
+}> = {
+  "Instagram": {
+    loginUrl: "https://www.instagram.com/accounts/login/",
+    devUrl: "https://developers.facebook.com/apps/",
+    color: "#e1306c",
+    gradient: "from-purple-600 via-pink-500 to-orange-400",
+    authNote: "Instagram publishing uses the Instagram Graph API via Facebook Developer App.",
+    handlePrefix: "@",
+  },
+  "Facebook": {
+    loginUrl: "https://www.facebook.com/login/",
+    devUrl: "https://developers.facebook.com/apps/",
+    color: "#1877f2",
+    gradient: "from-blue-700 to-blue-500",
+    authNote: "Facebook Pages API — requires a Facebook Developer app with pages_manage_posts permission.",
+    handlePrefix: "fb.com/",
+  },
+  "LinkedIn": {
+    loginUrl: "https://www.linkedin.com/login",
+    devUrl: "https://www.linkedin.com/developers/apps",
+    color: "#0077b5",
+    gradient: "from-blue-600 to-sky-500",
+    authNote: "LinkedIn requires a Developer App with w_member_social permission to publish posts.",
+    handlePrefix: "in/",
+  },
+  "X (Twitter)": {
+    loginUrl: "https://x.com/login",
+    devUrl: "https://developer.twitter.com/en/portal/projects-and-apps",
+    color: "#1d9bf0",
+    gradient: "from-sky-500 to-blue-400",
+    authNote: "X API v2 — requires a Developer App with Read & Write permissions.",
+    handlePrefix: "@",
+  },
+  "TikTok": {
+    loginUrl: "https://www.tiktok.com/login",
+    devUrl: "https://developers.tiktok.com/",
+    color: "#010101",
+    gradient: "from-slate-900 to-slate-700",
+    authNote: "TikTok for Developers — requires an app with video.publish scope.",
+    handlePrefix: "@",
+  },
+  "Pinterest": {
+    loginUrl: "https://www.pinterest.com/login/",
+    devUrl: "https://developers.pinterest.com/apps/",
+    color: "#e60023",
+    gradient: "from-red-600 to-rose-500",
+    authNote: "Pinterest API v5 — requires an app with boards:read and pins:write scope.",
+    handlePrefix: "@",
+  },
+};
+
+type ConnectState = "idle" | "window_open" | "confirming" | "connected";
+
 function ConnectAccounts({
   accounts, onUpdate, onNext
 }: {
@@ -232,85 +288,230 @@ function ConnectAccounts({
   onUpdate: React.Dispatch<React.SetStateAction<ConnectedAccount[]>>;
   onNext: () => void;
 }) {
-  const toggle = (id: string) =>
-    onUpdate(prev => prev.map(a => a.id === id ? { ...a, connected: !a.connected } : a));
-  const setHandle = (id: string, handle: string) =>
-    onUpdate(prev => prev.map(a => a.id === id ? { ...a, handle } : a));
-  const setTz = (id: string, tz: string) =>
-    onUpdate(prev => prev.map(a => a.id === id ? { ...a, timezone: tz } : a));
+  const [states, setStates] = useState<Record<string, ConnectState>>(() =>
+    Object.fromEntries(accounts.map(a => [a.id, a.connected ? "connected" : "idle"]))
+  );
+  const [handles, setHandles] = useState<Record<string, string>>(() =>
+    Object.fromEntries(accounts.map(a => [a.id, a.handle]))
+  );
+  const [timezones, setTimezones] = useState<Record<string, string>>(() =>
+    Object.fromEntries(accounts.map(a => [a.id, a.timezone ?? "UTC-5 (EST)"]))
+  );
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
-  const connected = accounts.filter(a => a.connected);
+  const setState = (id: string, s: ConnectState) =>
+    setStates(prev => ({ ...prev, [id]: s }));
+
+  const openLogin = (pl: typeof PLATFORMS[0]) => {
+    const meta = PLATFORM_META[pl.id];
+    window.open(meta.loginUrl, `connect_${pl.id}`, "width=520,height=680,scrollbars=yes,resizable=yes");
+    setState(pl.id, "window_open");
+  };
+
+  const confirmConnected = (id: string) => {
+    setState(id, "connected");
+    onUpdate(prev => prev.map(a => a.id === id ? { ...a, connected: true, handle: handles[id] ?? "", timezone: timezones[id] ?? "UTC-5 (EST)" } : a));
+  };
+
+  const disconnect = (id: string) => {
+    setState(id, "idle");
+    onUpdate(prev => prev.map(a => a.id === id ? { ...a, connected: false, handle: "" } : a));
+  };
+
+  const connectedCount = Object.values(states).filter(s => s === "connected").length;
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
+    <div className="max-w-3xl mx-auto p-6 space-y-5">
+      {/* Header */}
       <div>
         <h2 className="text-white font-bold text-xl mb-1">Phase 1 — Connect Your Accounts</h2>
-        <p className="text-slate-400 text-sm">Connect your social media accounts so GravitySocial can publish on your behalf. Set your time zone for accurate scheduling.</p>
+        <p className="text-slate-400 text-sm">Log in to each platform below, authorize GravitySocial, then confirm here. Connected accounts are auto-selected when you create posts.</p>
+      </div>
+
+      {/* How OAuth works banner */}
+      <div className="bg-blue-950/40 border border-blue-800/40 rounded-xl p-4">
+        <button
+          onClick={() => setShowHowItWorks(p => !p)}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-blue-400">ℹ️</span>
+            <span className="text-blue-300 text-sm font-medium">How account connections work</span>
+          </div>
+          <span className="text-blue-500 text-xs">{showHowItWorks ? "Hide ▲" : "Show ▼"}</span>
+        </button>
+        {showHowItWorks && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 space-y-2 text-slate-400 text-xs">
+            <p><span className="text-white font-medium">Step 1:</span> Click <em>"Log in to [Platform]"</em> — a login window opens on that platform's official site.</p>
+            <p><span className="text-white font-medium">Step 2:</span> Sign in with your account and, if prompted, authorize GravitySocial to manage your posts.</p>
+            <p><span className="text-white font-medium">Step 3:</span> Return here, enter your handle, and click <em>"Confirm Connection"</em>.</p>
+            <div className="mt-3 p-3 bg-amber-950/40 border border-amber-800/30 rounded-lg">
+              <p className="text-amber-300 font-medium text-xs mb-1">⚠️ For Direct Publishing (API access)</p>
+              <p className="text-amber-400/80 text-xs">Automated publishing requires a registered Developer App on each platform with the correct OAuth scopes. Click <em>"Developer Docs →"</em> on any platform to set this up. Without API credentials, this tool manages your content planning — you copy and paste to publish.</p>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Platform cards */}
       <div className="space-y-3">
         {PLATFORMS.map(pl => {
-          const acc = accounts.find(a => a.id === pl.id)!;
+          const meta = PLATFORM_META[pl.id];
+          const state = states[pl.id] ?? "idle";
           return (
-            <div key={pl.id} className={`bg-slate-900 border rounded-2xl p-5 transition-all ${acc.connected ? "border-green-600/60" : "border-slate-800"}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">{pl.emoji}</div>
-                  <div>
-                    <p className="text-white font-semibold">{pl.id}</p>
-                    <p className="text-slate-500 text-xs">{acc.connected ? `@${acc.handle || "connected"}` : "Not connected"}</p>
-                  </div>
+            <div
+              key={pl.id}
+              className={`bg-slate-900 border rounded-2xl overflow-hidden transition-all ${state === "connected" ? "border-green-600/50" : state === "window_open" || state === "confirming" ? "border-yellow-600/50" : "border-slate-800"}`}
+            >
+              {/* Card header */}
+              <div className="flex items-center gap-4 p-4">
+                {/* Platform icon with gradient bg */}
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center text-2xl shrink-0`}>
+                  {pl.emoji}
                 </div>
-                <button
-                  onClick={() => toggle(pl.id)}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${acc.connected ? "bg-green-700/40 text-green-300 hover:bg-red-700/40 hover:text-red-300" : "bg-pink-600 hover:bg-pink-500 text-white"}`}
-                >
-                  {acc.connected ? "✓ Connected" : "Connect"}
-                </button>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold">{pl.id}</p>
+                  <p className="text-slate-500 text-xs">
+                    {state === "connected"
+                      ? <span className="text-green-400">✓ Connected{handles[pl.id] ? ` as ${meta.handlePrefix}${handles[pl.id]}` : ""}</span>
+                      : state === "window_open"
+                      ? <span className="text-yellow-400 animate-pulse">⏳ Waiting for authorization…</span>
+                      : state === "confirming"
+                      ? <span className="text-yellow-300">Enter your handle to confirm</span>
+                      : "Not connected"}
+                  </p>
+                </div>
+
+                {/* Action button */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {state === "idle" && (
+                    <button
+                      onClick={() => openLogin(pl)}
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all"
+                    >
+                      <Link2 size={13} /> Log in to {pl.id} →
+                    </button>
+                  )}
+                  {state === "window_open" && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setState(pl.id, "confirming")}
+                        className="flex items-center gap-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all"
+                      >
+                        <Check size={13} /> I've logged in →
+                      </button>
+                      <button onClick={() => setState(pl.id, "idle")} className="text-slate-500 hover:text-white text-xs px-2">Cancel</button>
+                    </div>
+                  )}
+                  {state === "confirming" && (
+                    <button
+                      onClick={() => confirmConnected(pl.id)}
+                      disabled={!handles[pl.id]}
+                      className="flex items-center gap-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all"
+                    >
+                      <CheckCircle2 size={13} /> Confirm Connection
+                    </button>
+                  )}
+                  {state === "connected" && (
+                    <button
+                      onClick={() => disconnect(pl.id)}
+                      className="text-slate-500 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:border-red-800 transition-colors"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                </div>
               </div>
-              {acc.connected && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-slate-400 text-xs mb-1 block">Username / Handle</label>
-                    <input
-                      className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-pink-500"
-                      placeholder={`Your ${pl.id} username`}
-                      value={acc.handle}
-                      onChange={e => setHandle(pl.id, e.target.value)}
-                    />
+
+              {/* Expanded: handle + timezone + dev docs */}
+              {(state === "confirming" || state === "connected") && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="px-4 pb-4 border-t border-slate-800 pt-3 space-y-3"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-400 text-xs mb-1.5 block">Your {pl.id} username</label>
+                      <div className="flex items-center bg-slate-800 border border-slate-600 rounded-xl overflow-hidden focus-within:border-pink-500 transition-colors">
+                        <span className="text-slate-500 text-sm pl-3">{meta.handlePrefix}</span>
+                        <input
+                          className="flex-1 bg-transparent px-2 py-2 text-white text-sm placeholder-slate-500 focus:outline-none"
+                          placeholder={`username`}
+                          value={handles[pl.id] ?? ""}
+                          onChange={e => setHandles(p => ({ ...p, [pl.id]: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-xs mb-1.5 block">Posting Time Zone</label>
+                      <select
+                        className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500"
+                        value={timezones[pl.id] ?? "UTC-5 (EST)"}
+                        onChange={e => {
+                          setTimezones(p => ({ ...p, [pl.id]: e.target.value }));
+                          if (state === "connected") onUpdate(prev => prev.map(a => a.id === pl.id ? { ...a, timezone: e.target.value } : a));
+                        }}
+                      >
+                        {TIMEZONES.map(tz => <option key={tz}>{tz}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-slate-400 text-xs mb-1 block">Posting Time Zone</label>
-                    <select className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" value={acc.timezone} onChange={e => setTz(pl.id, e.target.value)}>
-                      {TIMEZONES.map(tz => <option key={tz}>{tz}</option>)}
-                    </select>
+                  <div className="flex items-center justify-between bg-slate-800/50 rounded-xl px-3 py-2">
+                    <p className="text-slate-500 text-xs">{meta.authNote}</p>
+                    <a
+                      href={meta.devUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 text-xs whitespace-nowrap ml-3 flex items-center gap-0.5 transition-colors"
+                    >
+                      Developer Docs <span className="text-slate-600">↗</span>
+                    </a>
                   </div>
                 </motion.div>
+              )}
+
+              {/* Idle: show login button + quick link */}
+              {state === "idle" && (
+                <div className="px-4 pb-3 flex items-center justify-between">
+                  <p className="text-slate-600 text-xs">{meta.authNote}</p>
+                  <a
+                    href={meta.devUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500/60 hover:text-blue-400 text-xs whitespace-nowrap ml-3 transition-colors"
+                  >
+                    Developer Docs ↗
+                  </a>
+                </div>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Status + Next */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      {/* Status footer */}
+      <div className={`rounded-2xl p-5 border transition-all ${connectedCount > 0 ? "bg-green-950/30 border-green-800/40" : "bg-slate-900 border-slate-800"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-white font-medium">
-              {connected.length === 0 ? "No accounts connected yet" : `${connected.length} platform${connected.length > 1 ? "s" : ""} connected`}
+            <p className="text-white font-semibold">
+              {connectedCount === 0 ? "No accounts connected yet" : `${connectedCount} account${connectedCount > 1 ? "s" : ""} connected`}
             </p>
-            {connected.length > 0 && (
-              <p className="text-slate-400 text-sm mt-0.5">{connected.map(a => a.emoji ?? PLATFORMS.find(p => p.id === a.id)?.emoji).join(" ")} {connected.map(a => a.id).join(", ")}</p>
+            {connectedCount > 0 && (
+              <p className="text-slate-400 text-sm mt-0.5">
+                {PLATFORMS.filter(p => states[p.id] === "connected").map(p => `${p.emoji} ${p.id}`).join("  ·  ")}
+              </p>
             )}
           </div>
-          <Button onClick={onNext} className={`${connected.length > 0 ? "bg-pink-600 hover:bg-pink-500" : "bg-slate-700 hover:bg-slate-600"} font-bold`}>
-            {connected.length > 0 ? "Start Creating →" : "Skip for now →"}
+          <Button
+            onClick={onNext}
+            className={`font-bold px-5 ${connectedCount > 0 ? "bg-pink-600 hover:bg-pink-500" : "bg-slate-700 hover:bg-slate-600"}`}
+          >
+            {connectedCount > 0 ? "Start Creating →" : "Skip for now →"}
           </Button>
         </div>
       </div>
-
-      <p className="text-slate-600 text-xs text-center">In this demo, account connections are simulated. In production, each platform uses OAuth authentication to grant posting permissions.</p>
     </div>
   );
 }
