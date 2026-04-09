@@ -10,22 +10,25 @@ import PricingSection from "@/components/PricingSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import { GenerationGateProvider } from "@/components/GenerationGate";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
-      <Navbar />
-      <HeroSection />
-      <BrandsMarquee />
-      <BlogWriterSection />
-      <section id="website-developer"><WebsiteDeveloperSection /></section>
-      <section id="social-media-section"><SocialMediaSection /></section>
-      <ToolsSection />
-      <WhyGravityWrite />
-      <PricingSection />
-      <TestimonialsSection />
-      <CTASection />
-      <Footer />
-    </main>
+    <GenerationGateProvider>
+      <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
+        <Navbar />
+        <HeroSection />
+        <BrandsMarquee />
+        <BlogWriterSection />
+        <section id="website-developer"><WebsiteDeveloperSection /></section>
+        <section id="social-media-section"><SocialMediaSection /></section>
+        <ToolsSection />
+        <WhyGravityWrite />
+        <PricingSection />
+        <TestimonialsSection />
+        <CTASection />
+        <Footer />
+      </main>
+    </GenerationGateProvider>
   );
 }

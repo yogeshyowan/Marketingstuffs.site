@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useGenerationGate } from "@/components/GenerationGate";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Share2, Plus, Calendar, BarChart2, Hash, Image as ImageIcon,
@@ -519,6 +520,7 @@ function ConnectAccounts({
 // ── CREATE POST ───────────────────────────────────────────────────────────────
 
 function CreatePost({ onSave, connectedPlatforms = [] }: { onSave: (p: Post) => void; connectedPlatforms?: string[] }) {
+  const { requestGeneration } = useGenerationGate();
   const defaultPlatforms = connectedPlatforms.length > 0 ? connectedPlatforms : ["Instagram", "LinkedIn"];
   const [campaignName, setCampaignName] = useState("");
   const [contentType, setContentType] = useState("announcement");
@@ -626,7 +628,7 @@ function CreatePost({ onSave, connectedPlatforms = [] }: { onSave: (p: Post) => 
             <label className="text-slate-300 text-sm font-medium mb-1.5 block">Schedule (optional)</label>
             <input type="datetime-local" className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-pink-500 transition-colors" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
           </div>
-          <Button onClick={generate} disabled={!summary || !selectedPlatforms.length || isGenerating} className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-40 font-bold py-3">
+          <Button onClick={() => requestGeneration(generate)} disabled={!summary || !selectedPlatforms.length || isGenerating} className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-40 font-bold py-3">
             {isGenerating ? <><Loader2 size={15} className="animate-spin mr-2" />Generating...</> : <><Sparkles size={15} className="mr-2" />Generate Posts</>}
           </Button>
         </div>

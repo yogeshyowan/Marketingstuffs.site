@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useGenerationGate } from "@/components/GenerationGate";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, Loader2, Copy, Check, Download, ChevronLeft, ChevronRight,
@@ -139,6 +140,7 @@ function combinePages(sections: SectionState[]): string {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function WebsiteDeveloperSection() {
+  const { requestGeneration } = useGenerationGate();
   // ─ Phase state ─
   const [phase, setPhase] = useState<Phase>("welcome");
   const [wizardStep, setWizardStep] = useState(0); // 0..3
@@ -632,7 +634,7 @@ export default function WebsiteDeveloperSection() {
               </Button>
             ) : (
               <Button
-                onClick={startBuilding}
+                onClick={() => requestGeneration(startBuilding)}
                 disabled={!bizName}
                 className="bg-green-600 hover:bg-green-500 text-white px-8 font-bold shadow-lg shadow-green-500/25"
               >

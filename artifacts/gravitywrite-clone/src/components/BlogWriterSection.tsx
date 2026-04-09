@@ -6,6 +6,7 @@ import {
   Share2, Image as ImageIcon, PenLine, FileText, RotateCcw, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useGenerationGate } from "@/components/GenerationGate";
 
 // ── Templates ──────────────────────────────────────────────
 const TEMPLATES = [
@@ -273,6 +274,7 @@ function ImageCard({
 
 // ── Component ──────────────────────────────────────────────
 export default function BlogWriterSection() {
+  const { requestGeneration } = useGenerationGate();
   const [step, setStep] = useState(0);
   const [template, setTemplate] = useState("minimal");
   const [topic, setTopic] = useState("");
@@ -1036,7 +1038,7 @@ export default function BlogWriterSection() {
               Continue <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleGenerate} disabled={isGenerating || !topic.trim()}
+            <Button onClick={() => requestGeneration(handleGenerate)} disabled={isGenerating || !topic.trim()}
               className="flex-1 bg-gradient-to-r from-violet-600 to-primary hover:from-violet-500 text-white rounded-xl h-12 font-bold text-base shadow-[0_0_30px_rgba(139,92,246,0.3)] disabled:opacity-40">
               {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Writing your blog...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate Blog</>}
             </Button>
