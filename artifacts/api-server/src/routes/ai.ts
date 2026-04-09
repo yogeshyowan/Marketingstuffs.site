@@ -81,27 +81,42 @@ async function chatWithFallback(messages: ChatMessage[]): Promise<{
 
 /**
  * Same strategy for streaming — always retry on any error.
+ * onHeartbeat is called every ~10s to keep SSE connections alive through proxy timeouts.
  */
 async function streamWithFallback(
   messages: ChatMessage[],
-  onChunk: (text: string) => void
+  onChunk: (text: string) => void,
+  onHeartbeat?: () => void
 ): Promise<{ key: number; model: string }> {
   const errors: string[] = [];
 
   for (let ki = 0; ki < CLIENTS.length; ki++) {
     for (const model of FREE_MODELS) {
       try {
-        const stream = await CLIENTS[ki].chat.completions.create({
-          model,
-          max_tokens: 8192,
-          messages,
-          stream: true,
-        });
-        for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content;
-          if (content) onChunk(content);
+        // Send a heartbeat before each attempt so the proxy doesn't time out
+        // while we wait for the model to start responding
+        const hbInterval = onHeartbeat
+          ? setInterval(onHeartbeat, 8000)
+          : null;
+
+        let success = false;
+        try {
+          const stream = await CLIENTS[ki].chat.completions.create({
+            model,
+            max_tokens: 4096,
+            messages,
+            stream: true,
+          });
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) onChunk(content);
+          }
+          success = true;
+        } finally {
+          if (hbInterval) clearInterval(hbInterval);
         }
-        return { key: ki + 1, model };
+
+        if (success) return { key: ki + 1, model };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push(`key${ki + 1}/${model}: ${msg.slice(0, 120)}`);
@@ -142,8 +157,13 @@ router.post("/ai/generate-blog", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = () => res.write(": ping\n\n");
+
+  // Send immediate heartbeat so the client knows we're alive
+  heartbeat();
 
   const systemPrompt = `You are an expert SEO content writer and blogger. Write engaging, comprehensive, well-structured blog posts that rank well on search engines.
 
@@ -171,7 +191,8 @@ RULES:
   try {
     const { key, model } = await streamWithFallback(
       [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      (text) => send({ content: text })
+      (text) => send({ content: text }),
+      heartbeat
     );
     send({ done: true, _meta: { key, model } });
     res.end();
@@ -212,8 +233,11 @@ router.post("/ai/generate-website", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = () => res.write(": ping\n\n");
+  heartbeat();
 
   const systemPrompt = `You are an expert web developer and UI/UX designer. Generate complete, production-ready HTML with embedded CSS.
 
@@ -250,7 +274,8 @@ Generate the full HTML file now.`;
   try {
     const { key, model } = await streamWithFallback(
       [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      (text) => send({ content: text })
+      (text) => send({ content: text }),
+      heartbeat
     );
     send({ done: true, _meta: { key, model } });
     res.end();
@@ -274,8 +299,11 @@ router.post("/ai/improve-blog", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = () => res.write(": ping\n\n");
+  heartbeat();
 
   try {
     const { key, model } = await streamWithFallback(
@@ -291,7 +319,8 @@ Keep the markdown formatting intact. Return the FULL improved article.`,
           content: `Here is my current blog post:\n\n${content}\n\n---\n\nPlease apply this improvement: ${instruction}\n\nReturn the complete updated blog post.`,
         },
       ],
-      (text) => send({ content: text })
+      (text) => send({ content: text }),
+      heartbeat
     );
     send({ done: true, _meta: { key, model } });
     res.end();
@@ -315,8 +344,11 @@ router.post("/ai/improve-website", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = () => res.write(": ping\n\n");
+  heartbeat();
 
   try {
     const { key, model } = await streamWithFallback(
@@ -332,7 +364,8 @@ Keep all existing sections intact unless the user asks to change them.`,
           content: `Here is my current website HTML:\n\n${html}\n\n---\n\nPlease apply this change: ${instruction}\n\nReturn the complete updated HTML file.`,
         },
       ],
-      (text) => send({ content: text })
+      (text) => send({ content: text }),
+      heartbeat
     );
     send({ done: true, _meta: { key, model } });
     res.end();
