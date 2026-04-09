@@ -3,65 +3,152 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, Code2, Loader2, Copy, Check, Download, Eye,
   Maximize2, X, ChevronLeft, ChevronRight, Sparkles, Edit3, Wand2, RefreshCw,
+  Zap, Building2, Phone, Mail, MapPin, Instagram, Twitter, Facebook,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const WEBSITE_TYPES = [
-  { id: "shop", emoji: "🛍️", label: "Online Shop", desc: "Sell your products" },
-  { id: "restaurant", emoji: "🍕", label: "Restaurant / Café", desc: "Food & menu site" },
-  { id: "portfolio", emoji: "🎨", label: "My Portfolio", desc: "Show off your work" },
-  { id: "saas", emoji: "💻", label: "SaaS / App", desc: "Software product" },
-  { id: "agency", emoji: "🚀", label: "Agency / Service", desc: "Offer services" },
-  { id: "blog", emoji: "✍️", label: "Blog / Magazine", desc: "Share your ideas" },
-  { id: "event", emoji: "🎉", label: "Event / Wedding", desc: "Special occasion" },
-  { id: "nonprofit", emoji: "❤️", label: "Non-Profit", desc: "Make a difference" },
-  { id: "school", emoji: "📚", label: "School / Course", desc: "Teach & educate" },
-  { id: "personal", emoji: "👋", label: "Personal Brand", desc: "Just about you!" },
+// ── Data ──────────────────────────────────────────────────
+const BUSINESS_TYPES = [
+  { id: "ecommerce", emoji: "🛍️", label: "E-commerce / Online Shop" },
+  { id: "restaurant", emoji: "🍕", label: "Restaurant / Café / Food" },
+  { id: "professional", emoji: "💼", label: "Professional Services" },
+  { id: "beauty", emoji: "💅", label: "Beauty & Wellness / Salon" },
+  { id: "realestate", emoji: "🏠", label: "Real Estate / Property" },
+  { id: "photography", emoji: "📸", label: "Photography / Videography" },
+  { id: "healthcare", emoji: "🏥", label: "Healthcare / Medical" },
+  { id: "fitness", emoji: "💪", label: "Fitness / Gym / Yoga" },
+  { id: "education", emoji: "📚", label: "Education / Tutoring" },
+  { id: "tech", emoji: "💻", label: "Technology / SaaS / App" },
+  { id: "agency", emoji: "🚀", label: "Creative Agency / Marketing" },
+  { id: "nonprofit", emoji: "❤️", label: "Non-Profit / Charity" },
+  { id: "travel", emoji: "✈️", label: "Travel & Hospitality" },
+  { id: "construction", emoji: "🏗️", label: "Construction / Home Services" },
+  { id: "event", emoji: "🎉", label: "Events / Wedding / Entertainment" },
+  { id: "automotive", emoji: "🚗", label: "Automotive / Transport" },
+  { id: "freelancer", emoji: "🎨", label: "Freelancer / Portfolio" },
+  { id: "personal", emoji: "👋", label: "Personal Brand / Blog" },
 ];
 
-const COLORS = [
-  { id: "dark-pro", label: "Dark & Professional", preview: ["#0a0a1a", "#6d28d9", "#10b981"], desc: "Like Tesla or Stripe" },
-  { id: "bright-blue", label: "Bright & Trustworthy", preview: ["#ffffff", "#2563eb", "#f59e0b"], desc: "Like Airbnb or Notion" },
-  { id: "warm-orange", label: "Warm & Energetic", preview: ["#fff7ed", "#ea580c", "#16a34a"], desc: "Like HubSpot" },
-  { id: "pink-fun", label: "Fun & Playful", preview: ["#fdf2f8", "#db2777", "#7c3aed"], desc: "Like Canva" },
-  { id: "nature-green", label: "Natural & Fresh", preview: ["#f0fdf4", "#16a34a", "#0891b2"], desc: "Like Whole Foods" },
-  { id: "luxury-gold", label: "Luxury & Premium", preview: ["#0c0c0c", "#b45309", "#6b7280"], desc: "Like Chanel" },
+const TEMPLATES = [
+  {
+    id: "business-pro",
+    label: "Business Pro",
+    desc: "Corporate, trustworthy, structured layout",
+    colors: { bg: "#0f172a", header: "#2563eb", accent: "#60a5fa", text: "#f1f5f9" },
+  },
+  {
+    id: "creative-studio",
+    label: "Creative Studio",
+    desc: "Bold, artistic, gradient-heavy design",
+    colors: { bg: "#0a0a14", header: "#7c3aed", accent: "#a78bfa", text: "#faf5ff" },
+  },
+  {
+    id: "fresh-modern",
+    label: "Fresh & Modern",
+    desc: "Clean, minimal, lots of white space",
+    colors: { bg: "#f0fdf4", header: "#16a34a", accent: "#22c55e", text: "#14532d" },
+  },
+  {
+    id: "bold-impact",
+    label: "Bold Impact",
+    desc: "High contrast, powerful headlines",
+    colors: { bg: "#0c0c0c", header: "#f59e0b", accent: "#fbbf24", text: "#fafafa" },
+  },
+  {
+    id: "elegant-premium",
+    label: "Elegant Premium",
+    desc: "Luxury feel, serif fonts, gold accents",
+    colors: { bg: "#fffbf0", header: "#92400e", accent: "#b45309", text: "#1c1917" },
+  },
+  {
+    id: "friendly-warm",
+    label: "Friendly & Warm",
+    desc: "Welcoming, community-focused, bright",
+    colors: { bg: "#fff7ed", header: "#ea580c", accent: "#fb923c", text: "#431407" },
+  },
 ];
 
-const WEBSITE_STYLES = [
-  { id: "modern", emoji: "✨", label: "Modern & Minimal", desc: "Clean, lots of white space" },
-  { id: "bold", emoji: "💥", label: "Bold & Impactful", desc: "Big text, strong visuals" },
-  { id: "elegant", emoji: "🏛️", label: "Elegant & Classic", desc: "Sophisticated, refined" },
-  { id: "playful", emoji: "🎈", label: "Fun & Playful", desc: "Colorful, animations" },
-  { id: "tech", emoji: "🤖", label: "Tech & Futuristic", desc: "Dark, glowy, sharp" },
-  { id: "warm", emoji: "🌻", label: "Warm & Friendly", desc: "Welcoming, community feel" },
+const FONT_PAIRINGS = [
+  {
+    id: "clean-modern",
+    label: "Clean & Modern",
+    heading: "Inter",
+    body: "Inter",
+    desc: "Minimal, professional",
+    sample: "Aa",
+  },
+  {
+    id: "elegant-serif",
+    label: "Elegant Serif",
+    heading: "Playfair Display",
+    body: "Lato",
+    desc: "Sophisticated, classic",
+    sample: "Aa",
+  },
+  {
+    id: "bold-strong",
+    label: "Bold & Strong",
+    heading: "Montserrat",
+    body: "Open Sans",
+    desc: "Energetic, impactful",
+    sample: "Aa",
+  },
+  {
+    id: "friendly-rounded",
+    label: "Friendly Rounded",
+    heading: "Poppins",
+    body: "Nunito",
+    desc: "Approachable, warm",
+    sample: "Aa",
+  },
 ];
 
-const QUICK_EDITS_WEBSITE = [
+const COLOR_SCHEMES = [
+  { id: "dark-pro", label: "Dark & Professional", swatch: ["#0a0a1a", "#6d28d9", "#10b981"] },
+  { id: "bright-blue", label: "Bright & Trustworthy", swatch: ["#ffffff", "#2563eb", "#f59e0b"] },
+  { id: "warm-orange", label: "Warm & Energetic", swatch: ["#fff7ed", "#ea580c", "#16a34a"] },
+  { id: "pink-fun", label: "Fun & Playful", swatch: ["#fdf2f8", "#db2777", "#7c3aed"] },
+  { id: "nature-green", label: "Natural & Fresh", swatch: ["#f0fdf4", "#16a34a", "#0891b2"] },
+  { id: "luxury-gold", label: "Luxury & Premium", swatch: ["#0c0c0c", "#b45309", "#6b7280"] },
+];
+
+const QUICK_EDITS = [
   "Change the color scheme to blue and white",
-  "Make the hero section more impactful with bigger text",
+  "Make the hero section more impactful",
   "Add an FAQ section",
   "Add a newsletter signup form",
   "Make the design more minimalist",
-  "Add more social proof / testimonials",
-  "Update all placeholder text with better copy",
-  "Add a contact form to the contact section",
-  "Make it look more premium and luxury",
-  "Add a mobile-friendly hamburger menu",
+  "Add more testimonials",
+  "Update placeholder text with better copy",
+  "Add a contact form",
+  "Make it look more premium",
+  "Add a mobile hamburger menu",
 ];
 
-const STEPS = ["Website Type", "Your Business", "Colors", "Style", "Review"];
+const STEPS = ["Business Type", "Business Name", "Business Info", "Contact", "Template", "Font & Colors", "Review"];
 
 export default function WebsiteDeveloperSection() {
   const [step, setStep] = useState(0);
-  const [websiteType, setWebsiteType] = useState("shop");
-  const [businessName, setBusinessName] = useState("");
-  const [description, setDescription] = useState("");
-  const [audience, setAudience] = useState("");
-  const [features, setFeatures] = useState("");
-  const [colorTheme, setColorTheme] = useState("dark-pro");
-  const [style, setStyle] = useState("modern");
 
+  // Step fields
+  const [businessType, setBusinessType] = useState("ecommerce");
+  const [businessName, setBusinessName] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [description, setDescription] = useState("");
+  const [services, setServices] = useState("");
+  const [audience, setAudience] = useState("");
+  const [ctaText, setCtaText] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactAddress, setContactAddress] = useState("");
+  const [socialInstagram, setSocialInstagram] = useState("");
+  const [socialTwitter, setSocialTwitter] = useState("");
+  const [socialFacebook, setSocialFacebook] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("business-pro");
+  const [fontPairing, setFontPairing] = useState("clean-modern");
+  const [colorScheme, setColorScheme] = useState("dark-pro");
+
+  // Generation
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
   const [viewMode, setViewMode] = useState<"preview" | "code">("preview");
@@ -69,20 +156,47 @@ export default function WebsiteDeveloperSection() {
   const [error, setError] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
 
+  // AI auto-fill
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFillError, setAutoFillError] = useState("");
+
   // Edit mode
   const [editOpen, setEditOpen] = useState(false);
   const [editInstruction, setEditInstruction] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState("");
 
-  const selectedType = WEBSITE_TYPES.find(t => t.id === websiteType);
-  const selectedColor = COLORS.find(c => c.id === colorTheme);
-  const selectedStyle = WEBSITE_STYLES.find(s => s.id === style);
+  const selectedBusinessType = BUSINESS_TYPES.find(t => t.id === businessType);
+  const selectedTemplateData = TEMPLATES.find(t => t.id === selectedTemplate);
+  const selectedFont = FONT_PAIRINGS.find(f => f.id === fontPairing);
+  const selectedColor = COLOR_SCHEMES.find(c => c.id === colorScheme);
 
-  const colorMap: Record<string, string> = {
-    "dark-pro": "dark", "bright-blue": "light", "warm-orange": "warm",
-    "pink-fun": "colorful", "nature-green": "light", "luxury-gold": "dark",
-  };
+  async function handleAutoFill() {
+    if (!businessName.trim()) return;
+    setIsAutoFilling(true);
+    setAutoFillError("");
+    try {
+      const res = await fetch("/api/ai/auto-generate-business-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessType: selectedBusinessType?.label ?? businessType,
+          businessName,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json() as {
+        tagline?: string; description?: string; services?: string; audience?: string; cta?: string;
+      };
+      if (data.tagline) setTagline(data.tagline);
+      if (data.description) setDescription(data.description);
+      if (data.services) setServices(data.services);
+      if (data.audience) setAudience(data.audience);
+      if (data.cta) setCtaText(data.cta);
+    } catch {
+      setAutoFillError("AI auto-fill failed. Please fill in manually.");
+    } finally { setIsAutoFilling(false); }
+  }
 
   async function handleGenerate() {
     setIsGenerating(true);
@@ -90,19 +204,37 @@ export default function WebsiteDeveloperSection() {
     setError("");
     setEditOpen(false);
 
+    const colorMap: Record<string, string> = {
+      "dark-pro": "dark professional", "bright-blue": "clean light blue",
+      "warm-orange": "warm orange", "pink-fun": "fun colorful pink-purple",
+      "nature-green": "natural fresh green", "luxury-gold": "dark luxury gold",
+    };
+
+    let fullCode = "";
     try {
       const res = await fetch("/api/ai/generate-website", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          websiteType: selectedType?.label ?? websiteType,
-          businessName, description, audience, features,
-          colorScheme: colorMap[colorTheme] ?? "dark",
-          style: selectedStyle?.label.toLowerCase() ?? style,
+          websiteType: selectedBusinessType?.label ?? businessType,
+          businessName,
+          tagline,
+          description: `${description}${services ? `. Key services: ${services}` : ""}`,
+          audience,
+          features: services,
+          ctaText: ctaText || "Get Started",
+          contactEmail, contactPhone, contactAddress,
+          socialInstagram, socialTwitter, socialFacebook,
+          templateStyle: selectedTemplateData?.label ?? selectedTemplate,
+          fontHeading: selectedFont?.heading ?? "Inter",
+          fontBody: selectedFont?.body ?? "Inter",
+          colorScheme: colorMap[colorScheme] ?? "dark",
+          style: selectedTemplateData?.desc ?? "modern professional",
         }),
       });
-      if (!res.ok) throw new Error("Request failed");
-      const reader = res.body!.getReader();
+
+      if (!res.ok || !res.body) throw new Error("Request failed");
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       while (true) {
@@ -112,17 +244,16 @@ export default function WebsiteDeveloperSection() {
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const d = JSON.parse(line.slice(6));
-              if (d.error) setError(d.error);
-              if (d.content) setGeneratedCode(p => p + d.content);
-            } catch { /* skip */ }
-          }
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const d = JSON.parse(line.slice(6)) as { content?: string; error?: string };
+            if (d.error) setError(d.error);
+            if (d.content) { fullCode += d.content; setGeneratedCode(fullCode); }
+          } catch { /* skip */ }
         }
       }
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message || "Generation failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Generation failed. Please try again.");
     } finally { setIsGenerating(false); }
   }
 
@@ -131,7 +262,7 @@ export default function WebsiteDeveloperSection() {
     setIsEditing(true);
     setEditError("");
     const previous = generatedCode;
-
+    let fullCode = "";
     try {
       setGeneratedCode("");
       setViewMode("preview");
@@ -140,7 +271,8 @@ export default function WebsiteDeveloperSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ html: previous, instruction: editInstruction }),
       });
-      const reader = res.body!.getReader();
+      if (!res.ok || !res.body) throw new Error("Request failed");
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       while (true) {
@@ -150,13 +282,12 @@ export default function WebsiteDeveloperSection() {
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const d = JSON.parse(line.slice(6));
-              if (d.error) { setEditError(d.error); setGeneratedCode(previous); }
-              if (d.content) setGeneratedCode(p => p + d.content);
-            } catch { /* skip */ }
-          }
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const d = JSON.parse(line.slice(6)) as { content?: string; error?: string };
+            if (d.error) { setEditError(d.error); setGeneratedCode(previous); }
+            if (d.content) { fullCode += d.content; setGeneratedCode(fullCode); }
+          } catch { /* skip */ }
         }
       }
       setEditInstruction("");
@@ -178,40 +309,73 @@ export default function WebsiteDeveloperSection() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${businessName || "website"}-${Date.now()}.html`;
+    a.download = `${(businessName || "website").replace(/\s+/g, "-").toLowerCase()}.html`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   const isLastStep = step === STEPS.length - 1;
-  const canGoNext = step === 0 ? true : step === 1 ? description.trim().length > 0 : true;
+  const canContinue = step === 1 ? businessName.trim().length > 0
+    : step === 2 ? description.trim().length > 0
+    : true;
 
+  // ── Generated website view ─────────────────────────────────
   if (generatedCode || isGenerating) {
+    const cleanHtml = generatedCode
+      .replace(/^```html\s*/i, "")
+      .replace(/^```\s*/m, "")
+      .replace(/\s*```\s*$/, "")
+      .trim();
+
     return (
       <section id="website-developer" className="py-24 relative overflow-hidden bg-[#050510]">
         <div className="container px-4 mx-auto max-w-6xl">
-
           {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                 <Globe className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
-                <h2 className="text-white font-bold">{businessName || "Your Website"}</h2>
-                <p className="text-white/40 text-xs">{selectedType?.label}</p>
+                <h2 className="text-white font-bold text-lg">{businessName || "Your Website"}</h2>
+                <p className="text-white/40 text-xs">{selectedBusinessType?.label} · {selectedTemplateData?.label} template</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center flex-wrap gap-2">
               {!isGenerating && !isEditing && generatedCode && (
-                <Button size="sm" onClick={() => setEditOpen(o => !o)}
-                  className={`text-xs h-8 rounded-xl gap-1.5 ${editOpen ? "bg-cyan-500/30 text-cyan-300 border border-cyan-500/50" : "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/25"}`}>
-                  <Edit3 className="w-3.5 h-3.5" /> Edit Website
-                </Button>
+                <>
+                  {/* View toggle */}
+                  <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/10">
+                    <button onClick={() => setViewMode("preview")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "preview" ? "bg-cyan-500/20 text-cyan-400" : "text-white/40 hover:text-white"}`}>
+                      <Eye className="w-3.5 h-3.5" /> Preview
+                    </button>
+                    <button onClick={() => setViewMode("code")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === "code" ? "bg-cyan-500/20 text-cyan-400" : "text-white/40 hover:text-white"}`}>
+                      <Code2 className="w-3.5 h-3.5" /> HTML
+                    </button>
+                  </div>
+                  <Button size="sm" onClick={() => setEditOpen(o => !o)}
+                    className={`h-8 text-xs rounded-xl gap-1.5 ${editOpen ? "bg-cyan-500/30 text-cyan-300 border border-cyan-500/50" : "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/25"}`}>
+                    <Edit3 className="w-3.5 h-3.5" /> Edit
+                  </Button>
+                  <Button size="sm" onClick={handleDownload}
+                    className="h-8 text-xs rounded-xl gap-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25">
+                    <Download className="w-3.5 h-3.5" /> Download
+                  </Button>
+                  <Button size="sm" onClick={handleCopy}
+                    className="h-8 text-xs rounded-xl gap-1.5 bg-white/5 text-white/50 border border-white/10 hover:bg-white/10">
+                    {copied ? <><Check className="w-3.5 h-3.5 text-emerald-400" />Copied</> : <><Copy className="w-3.5 h-3.5" />Copy HTML</>}
+                  </Button>
+                  <button onClick={() => setFullscreen(true)}
+                    className="h-8 w-8 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
               )}
               <Button variant="outline" size="sm" onClick={() => { setGeneratedCode(""); setStep(0); setEditOpen(false); }}
-                className="border-white/10 text-white/40 hover:bg-white/5 text-xs h-8 rounded-xl">
-                New Website
+                className="border-white/10 text-white/40 hover:bg-white/5 text-xs h-8 rounded-xl gap-1.5">
+                <RefreshCw className="w-3 h-3" /> New Website
               </Button>
             </div>
           </div>
@@ -219,37 +383,27 @@ export default function WebsiteDeveloperSection() {
           {/* Edit panel */}
           <AnimatePresence>
             {editOpen && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 className="mb-4 p-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="w-4 h-4 text-cyan-400" />
-                    <span className="text-sm font-semibold text-cyan-300">What would you like to change?</span>
-                  </div>
-                  <button onClick={() => setEditOpen(false)} className="text-white/30 hover:text-white/60">
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-cyan-400" /><span className="text-sm font-semibold text-cyan-300">What would you like to change?</span></div>
+                  <button onClick={() => setEditOpen(false)} className="text-white/30 hover:text-white/60"><X className="w-4 h-4" /></button>
                 </div>
-
                 <div className="flex flex-wrap gap-2">
-                  {QUICK_EDITS_WEBSITE.map(q => (
+                  {QUICK_EDITS.map(q => (
                     <button key={q} onClick={() => setEditInstruction(q)}
                       className={`text-xs px-3 py-1.5 rounded-full border transition-all ${editInstruction === q ? "border-cyan-500/60 bg-cyan-500/25 text-cyan-300" : "border-white/10 bg-white/5 text-white/50 hover:border-cyan-500/40 hover:text-cyan-300"}`}>
                       {q}
                     </button>
                   ))}
                 </div>
-
                 <div className="flex gap-3">
-                  <input
-                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
-                    placeholder="Or describe your change... (e.g., 'change the hero headline to say Welcome to Luna Boutique' or 'add a gallery section')"
-                    value={editInstruction}
-                    onChange={e => setEditInstruction(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleEdit()}
-                  />
+                  <input className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
+                    placeholder="Or describe your change... (e.g. 'change hero headline to Welcome to Luna Boutique')"
+                    value={editInstruction} onChange={e => setEditInstruction(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleEdit()} />
                   <Button onClick={handleEdit} disabled={isEditing || !editInstruction.trim()}
-                    className="bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl px-5 text-sm h-10 shrink-0">
+                    className="bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl px-5 text-sm h-10 shrink-0 disabled:opacity-50">
                     {isEditing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-1.5" />Apply</>}
                   </Button>
                 </div>
@@ -258,130 +412,98 @@ export default function WebsiteDeveloperSection() {
             )}
           </AnimatePresence>
 
-          {/* Website preview */}
-          <div className="glass-card rounded-2xl border border-white/10 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 bg-black/60 border-b border-white/10">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                <div className="w-3 h-3 rounded-full bg-green-500/60" />
-              </div>
-              <div className="flex-1 bg-white/5 rounded-md h-6 mx-2 flex items-center px-3">
-                <span className="text-xs text-white/30">🔒 {businessName ? businessName.toLowerCase().replace(/\s+/g, "-") : "your-business"}.com</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setViewMode("preview")}
-                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs transition-colors ${viewMode === "preview" ? "bg-cyan-500/20 text-cyan-400" : "text-white/40 hover:text-white/70"}`}>
-                  <Eye className="w-3 h-3" /> Preview
-                </button>
-                <button onClick={() => setViewMode("code")}
-                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs transition-colors ${viewMode === "code" ? "bg-cyan-500/20 text-cyan-400" : "text-white/40 hover:text-white/70"}`}>
-                  <Code2 className="w-3 h-3" /> Code
-                </button>
-                {generatedCode && (
-                  <>
-                    <button onClick={handleCopy} className="p-1.5 text-white/40 hover:text-white transition-colors">
-                      {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                    <button onClick={handleDownload} className="p-1.5 text-white/40 hover:text-white transition-colors">
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setFullscreen(true)} className="p-1.5 text-white/40 hover:text-white transition-colors">
-                      <Maximize2 className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
-              </div>
+          {/* Preview / Code */}
+          <div className="rounded-2xl border border-white/10 overflow-hidden shadow-[0_0_40px_rgba(6,182,212,0.1)]">
+            <div className="flex items-center gap-3 px-5 py-3 bg-black/50 border-b border-white/10">
+              <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-red-500/60" /><div className="w-3 h-3 rounded-full bg-yellow-500/60" /><div className="w-3 h-3 rounded-full bg-green-500/60" /></div>
+              <div className="flex-1 text-xs text-center text-white/30 truncate">{businessName || "yourwebsite"}.html</div>
+              {(isGenerating || isEditing) && <div className="flex items-center gap-1.5"><Loader2 className="w-3 h-3 text-cyan-400 animate-spin" /><span className="text-xs text-white/40">{isEditing ? "Applying..." : "Building..."}</span></div>}
             </div>
 
-            {(isGenerating || isEditing) && !generatedCode && (
-              <div className="h-64 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-                <p className="text-white/50 text-sm">{isEditing ? "Applying your changes..." : "Building your website with free AI..."}</p>
+            {viewMode === "preview" ? (
+              <div className="relative">
+                {cleanHtml ? (
+                  <iframe
+                    srcDoc={cleanHtml}
+                    className="w-full bg-white"
+                    style={{ height: "720px", border: "none" }}
+                    sandbox="allow-scripts allow-same-origin"
+                    title="Website Preview"
+                  />
+                ) : isGenerating ? (
+                  <div className="h-96 flex flex-col items-center justify-center gap-4 bg-[#080818]">
+                    <div className="relative w-16 h-16">
+                      <div className="absolute inset-0 rounded-full border-2 border-cyan-500/20 animate-ping" />
+                      <div className="w-16 h-16 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+                        <Globe className="w-7 h-7 text-cyan-400 animate-pulse" />
+                      </div>
+                    </div>
+                    <p className="text-white/50 text-sm">Building your website...</p>
+                    <p className="text-white/25 text-xs">This usually takes 30–60 seconds</p>
+                  </div>
+                ) : null}
               </div>
-            )}
-
-            {viewMode === "preview" && generatedCode && (
-              <iframe srcDoc={generatedCode} className="w-full h-[600px] bg-white" sandbox="allow-scripts" title="Website Preview" />
-            )}
-            {viewMode === "code" && generatedCode && (
-              <div className="h-[600px] overflow-auto bg-black/80">
-                <pre className="p-6 text-xs text-green-300/80 font-mono leading-relaxed whitespace-pre-wrap">{generatedCode}</pre>
-              </div>
-            )}
-
-            {(isGenerating || isEditing) && generatedCode && (
-              <div className="px-4 py-2 bg-black/40 border-t border-white/5 flex items-center gap-2">
-                <Loader2 className="w-3 h-3 text-cyan-400 animate-spin" />
-                <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full animate-pulse w-3/4" />
-                </div>
-                <span className="text-xs text-white/30">{generatedCode.length} chars</span>
-              </div>
+            ) : (
+              <pre className="overflow-auto max-h-[720px] bg-[#0d1117] p-5 text-xs text-green-400/90 leading-relaxed font-mono">
+                {generatedCode}
+              </pre>
             )}
           </div>
 
-          {!isGenerating && !isEditing && generatedCode && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button onClick={() => setEditOpen(true)}
-                className="bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 border border-cyan-500/20 rounded-xl h-10 text-sm gap-1.5">
-                <Edit3 className="w-4 h-4" /> Edit / Improve
-              </Button>
-              <Button onClick={handleDownload}
-                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 rounded-xl h-10 text-sm">
-                <Download className="w-4 h-4 mr-2" /> Download HTML
-              </Button>
-              <Button onClick={handleGenerate} variant="outline"
-                className="border-white/10 text-white/40 hover:bg-white/5 rounded-xl h-10 text-sm">
-                <RefreshCw className="w-4 h-4 mr-2" /> Regenerate
-              </Button>
-            </div>
-          )}
           {error && <div className="mt-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">{error}</div>}
         </div>
 
-        {fullscreen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 bg-black/80 border-b border-white/10">
-              <span className="text-white/60 text-sm">{businessName || "Website"} — Fullscreen Preview</span>
-              <button onClick={() => setFullscreen(false)} className="text-white/50 hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
-            <iframe srcDoc={generatedCode} className="flex-1 w-full bg-white" sandbox="allow-scripts" />
-          </motion.div>
-        )}
+        {/* Fullscreen overlay */}
+        <AnimatePresence>
+          {fullscreen && cleanHtml && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black flex flex-col">
+              <div className="flex items-center justify-between px-5 py-3 bg-black/80 border-b border-white/10 shrink-0">
+                <span className="text-white/50 text-sm">{businessName || "Website"} — Fullscreen Preview</span>
+                <div className="flex gap-3">
+                  <Button size="sm" onClick={handleDownload} className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs h-8 rounded-xl gap-1.5"><Download className="w-3.5 h-3.5" />Download</Button>
+                  <button onClick={() => setFullscreen(false)} className="text-white/40 hover:text-white"><X className="w-5 h-5" /></button>
+                </div>
+              </div>
+              <iframe srcDoc={cleanHtml} className="flex-1 w-full bg-white" sandbox="allow-scripts allow-same-origin" title="Fullscreen Preview" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
     );
   }
 
+  // ── Wizard ─────────────────────────────────────────────────
   return (
     <section id="website-developer" className="py-24 relative overflow-hidden bg-[#050510]">
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/10 via-transparent to-blue-900/10 pointer-events-none" />
+      <div className="absolute right-0 top-1/4 w-[600px] h-[600px] bg-cyan-600/8 rounded-full blur-[130px] pointer-events-none" />
       <div className="container px-4 mx-auto max-w-3xl">
-        <div className="text-center mb-12">
+
+        {/* Header */}
+        <div className="text-center mb-10">
           <div className="inline-flex items-center px-3 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-sm font-medium mb-4">
             <Globe className="w-4 h-4 mr-2" /> AI Website Builder
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Build a Website <span className="text-cyan-400">Anyone Can Use</span>
+            Build Your Website in <span className="text-cyan-400">Minutes</span>
           </h2>
-          <p className="text-white/50 text-lg">Answer a few fun questions — we build the website. No coding needed, ever.</p>
+          <p className="text-white/50 text-lg">Answer 7 quick questions — get a complete, professional website ready to publish</p>
         </div>
 
+        {/* Progress */}
         <div className="mb-8">
-          <div className="flex justify-between mb-3">
+          <div className="flex justify-between mb-3 overflow-x-auto gap-1">
             {STEPS.map((s, i) => (
-              <button key={s} onClick={() => i < step && setStep(i)}
-                className={`flex flex-col items-center gap-1 ${i < step ? "cursor-pointer" : "cursor-default"}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < step ? "bg-cyan-500 text-black" : i === step ? "bg-cyan-500/30 border-2 border-cyan-500 text-cyan-400" : "bg-white/5 border border-white/10 text-white/30"}`}>
+              <button key={s} onClick={() => i < step && setStep(i)} className={`flex flex-col items-center gap-1 min-w-fit ${i < step ? "cursor-pointer" : "cursor-default"}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < step ? "bg-cyan-500 text-black" : i === step ? "bg-cyan-500/20 border-2 border-cyan-500 text-cyan-400" : "bg-white/5 border border-white/10 text-white/30"}`}>
                   {i < step ? "✓" : i + 1}
                 </div>
-                <span className={`text-xs hidden sm:block ${i === step ? "text-cyan-400 font-medium" : "text-white/30"}`}>{s}</span>
+                <span className={`text-[10px] hidden sm:block whitespace-nowrap ${i === step ? "text-cyan-400 font-semibold" : "text-white/30"}`}>{s}</span>
               </button>
             ))}
           </div>
-          <div className="h-1.5 bg-white/10 rounded-full">
-            <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all duration-500"
+          <div className="h-1 bg-white/10 rounded-full">
+            <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500"
               style={{ width: `${(step / (STEPS.length - 1)) * 100}%` }} />
           </div>
         </div>
@@ -389,131 +511,273 @@ export default function WebsiteDeveloperSection() {
         <div className="glass-card rounded-2xl border border-white/10 p-6 md:p-8 min-h-80">
           <AnimatePresence mode="wait">
 
+            {/* Step 0: Business Type */}
             {step === 0 && (
               <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-2xl font-bold text-white mb-2">What kind of website do you need? 🤔</h3>
-                <p className="text-white/50 text-sm mb-6">Pick the one that matches your goal</p>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {WEBSITE_TYPES.map(t => (
-                    <button key={t.id} onClick={() => setWebsiteType(t.id)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${websiteType === t.id ? "border-cyan-500/60 bg-cyan-500/15 shadow-[0_0_20px_rgba(6,182,212,0.2)]" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
-                      <span className="text-3xl">{t.emoji}</span>
-                      <span className={`text-xs font-semibold text-center leading-tight ${websiteType === t.id ? "text-cyan-300" : "text-white/70"}`}>{t.label}</span>
+                <h3 className="text-xl font-bold text-white mb-1">Choose your business type 🏢</h3>
+                <p className="text-white/50 text-sm mb-5">What kind of website are you building?</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-96 overflow-y-auto pr-1">
+                  {BUSINESS_TYPES.map(t => (
+                    <button key={t.id} onClick={() => setBusinessType(t.id)}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-left ${businessType === t.id ? "border-cyan-500/60 bg-cyan-500/15" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                      <span className="text-xl shrink-0">{t.emoji}</span>
+                      <span className={`text-xs font-semibold leading-tight ${businessType === t.id ? "text-cyan-300" : "text-white/70"}`}>{t.label}</span>
                     </button>
                   ))}
                 </div>
               </motion.div>
             )}
 
+            {/* Step 1: Business Name */}
             {step === 1 && (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <div className="flex items-center gap-3 mb-5">
-                  <span className="text-4xl">{selectedType?.emoji}</span>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Tell us about your {selectedType?.label} 📋</h3>
-                    <p className="text-white/50 text-sm">The more you tell us, the better the website!</p>
-                  </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-2xl">{selectedBusinessType?.emoji}</span>
+                  <h3 className="text-xl font-bold text-white">What's your business name? ✍️</h3>
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">What's the name?</label>
-                    <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
-                      placeholder={`e.g., "${selectedType?.id === "restaurant" ? "Mario's Kitchen" : selectedType?.id === "shop" ? "Luna Boutique" : "MyAwesomeBiz"}"`}
-                      value={businessName} onChange={e => setBusinessName(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">What do you do? <span className="text-white/30">*</span></label>
-                    <textarea className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 h-24 resize-none text-sm"
-                      placeholder={selectedType?.id === "restaurant" ? "e.g., We serve authentic Italian pizza and pasta in downtown Chicago." : "e.g., We help small businesses grow by creating stunning brand identities."}
-                      value={description} onChange={e => setDescription(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">Who are your customers? <span className="text-white/30">(optional)</span></label>
-                    <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
-                      placeholder="e.g., Young professionals aged 25-40 who love quality food"
-                      value={audience} onChange={e => setAudience(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">Key things to highlight <span className="text-white/30">(optional)</span></label>
-                    <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
-                      placeholder="e.g., Free delivery, 24/7 support, 5-star reviews, award-winning"
-                      value={features} onChange={e => setFeatures(e.target.value)} />
-                  </div>
-                </div>
+                <p className="text-white/50 text-sm mb-6">This will appear throughout your website</p>
+                <input
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white text-lg placeholder:text-white/20 focus:outline-none focus:border-cyan-500/50 transition-all"
+                  placeholder={`e.g., "Luna Boutique" or "TechFlow Solutions"`}
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                  autoFocus
+                />
+                <p className="text-white/30 text-xs mt-3">In the next step, AI can automatically fill in all your business details based on this name.</p>
               </motion.div>
             )}
 
+            {/* Step 2: Business Info */}
             {step === 2 && (
               <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-xl font-bold text-white mb-2">Pick your colors 🎨</h3>
-                <p className="text-white/50 text-sm mb-5">Choose the vibe that matches your brand</p>
-                <div className="space-y-3">
-                  {COLORS.map(c => (
-                    <button key={c.id} onClick={() => setColorTheme(c.id)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${colorTheme === c.id ? "border-cyan-500/60 bg-cyan-500/10" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
-                      <div className="flex gap-1 flex-shrink-0">
-                        {c.preview.map((color, i) => (
-                          <div key={i} className="w-6 h-6 rounded-full border border-white/20" style={{ background: color }} />
-                        ))}
-                      </div>
-                      <div>
-                        <div className={`text-sm font-semibold ${colorTheme === c.id ? "text-cyan-300" : "text-white/80"}`}>{c.label}</div>
-                        <div className="text-xs text-white/40">{c.desc}</div>
-                      </div>
-                      {colorTheme === c.id && <div className="ml-auto text-cyan-400 text-lg">✓</div>}
-                    </button>
-                  ))}
+                <h3 className="text-xl font-bold text-white mb-1">Tell us about your business 📋</h3>
+                <p className="text-white/50 text-sm mb-4">Fill in the details or let AI fill them for you</p>
+
+                {/* AI Auto-Generate button */}
+                <button onClick={handleAutoFill} disabled={isAutoFilling || !businessName.trim()}
+                  className="w-full mb-5 flex items-center justify-center gap-2.5 py-3 px-5 rounded-xl border-2 border-dashed border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:border-cyan-500/70 hover:bg-cyan-500/20 transition-all disabled:opacity-50 text-sm font-semibold">
+                  {isAutoFilling ? <><Loader2 className="w-4 h-4 animate-spin" />AI is generating your business content...</> : <><Zap className="w-4 h-4" />AI Auto-Generate — Fill all fields instantly</>}
+                </button>
+                {autoFillError && <p className="text-red-400 text-xs mb-3">{autoFillError}</p>}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Tagline <span className="text-white/25">(optional)</span></label>
+                    <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                      placeholder="e.g., Your Style, Our Passion" value={tagline} onChange={e => setTagline(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">Business Description <span className="text-white/30">*</span></label>
+                    <textarea className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm resize-none h-24 transition-all"
+                      placeholder="What does your business do? What makes it special?" value={description} onChange={e => setDescription(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-white/50 mb-1.5">Services / Products <span className="text-white/25">(comma-separated)</span></label>
+                      <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                        placeholder="e.g., Dresses, Accessories, Custom Orders" value={services} onChange={e => setServices(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-white/50 mb-1.5">Target Audience <span className="text-white/25">(optional)</span></label>
+                      <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                        placeholder="e.g., Women aged 25-45" value={audience} onChange={e => setAudience(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 mb-1.5">CTA Button Text <span className="text-white/25">(optional)</span></label>
+                    <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                      placeholder="e.g., Shop Now, Book a Call, Get Started" value={ctaText} onChange={e => setCtaText(e.target.value)} />
+                  </div>
                 </div>
               </motion.div>
             )}
 
+            {/* Step 3: Contact Info */}
             {step === 3 && (
               <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-xl font-bold text-white mb-2">Choose your design style ✨</h3>
-                <p className="text-white/50 text-sm mb-5">How do you want your website to feel?</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {WEBSITE_STYLES.map(s => (
-                    <button key={s.id} onClick={() => setStyle(s.id)}
-                      className={`flex flex-col items-start gap-2 p-4 rounded-xl border transition-all text-left ${style === s.id ? "border-cyan-500/60 bg-cyan-500/15 shadow-[0_0_20px_rgba(6,182,212,0.15)]" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
-                      <span className="text-3xl">{s.emoji}</span>
-                      <span className={`text-sm font-semibold ${style === s.id ? "text-cyan-300" : "text-white/80"}`}>{s.label}</span>
-                      <span className="text-xs text-white/40">{s.desc}</span>
-                    </button>
-                  ))}
+                <h3 className="text-xl font-bold text-white mb-1">Contact Information 📞</h3>
+                <p className="text-white/50 text-sm mb-2">This appears on your Contact Us page — all fields are optional</p>
+                <p className="text-xs text-white/30 mb-5">You can skip this step if you don't want contact details on the site</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-white/50 mb-1.5"><Mail className="w-3.5 h-3.5" />Email Address</label>
+                      <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                        placeholder="hello@yourbusiness.com" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-white/50 mb-1.5"><Phone className="w-3.5 h-3.5" />Phone Number</label>
+                      <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                        placeholder="+1 (555) 000-0000" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-white/50 mb-1.5"><MapPin className="w-3.5 h-3.5" />Business Address</label>
+                    <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40 text-sm transition-all"
+                      placeholder="123 Main St, New York, NY 10001" value={contactAddress} onChange={e => setContactAddress(e.target.value)} />
+                  </div>
+                  <div className="pt-2">
+                    <label className="block text-xs font-semibold text-white/50 mb-3">Social Media Links <span className="text-white/25">(optional)</span></label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="flex items-center gap-1 text-xs text-pink-400/70 mb-1.5"><Instagram className="w-3 h-3" />Instagram</label>
+                        <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder:text-white/20 focus:outline-none focus:border-pink-500/40 text-xs transition-all"
+                          placeholder="@username" value={socialInstagram} onChange={e => setSocialInstagram(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1 text-xs text-sky-400/70 mb-1.5"><Twitter className="w-3 h-3" />Twitter / X</label>
+                        <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder:text-white/20 focus:outline-none focus:border-sky-500/40 text-xs transition-all"
+                          placeholder="@username" value={socialTwitter} onChange={e => setSocialTwitter(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1 text-xs text-blue-400/70 mb-1.5"><Facebook className="w-3 h-3" />Facebook</label>
+                        <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/40 text-xs transition-all"
+                          placeholder="facebook.com/page" value={socialFacebook} onChange={e => setSocialFacebook(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
 
+            {/* Step 4: Template */}
             {step === 4 && (
               <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-xl font-bold text-white mb-2">Ready to build! 🚀</h3>
-                <p className="text-white/50 text-sm mb-6">Here's a summary. Click Build when ready!</p>
+                <h3 className="text-xl font-bold text-white mb-1">Select a template 🎨</h3>
+                <p className="text-white/50 text-sm mb-5">Choose the visual style for your website</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {TEMPLATES.map(t => {
+                    const c = t.colors;
+                    return (
+                      <button key={t.id} onClick={() => setSelectedTemplate(t.id)}
+                        className={`flex flex-col gap-3 p-3 rounded-2xl border-2 transition-all text-left ${selectedTemplate === t.id ? "border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.2)]" : "border-white/10 hover:border-white/25"}`}>
+                        {/* Mini website preview */}
+                        <div className="w-full rounded-xl overflow-hidden border border-white/10" style={{ background: c.bg }}>
+                          {/* Nav bar */}
+                          <div className="h-4 flex items-center px-2 gap-1" style={{ background: c.header }}>
+                            <div className="w-8 h-1.5 rounded-full opacity-80" style={{ background: c.text }} />
+                            <div className="ml-auto flex gap-1">
+                              {[1,2,3].map(i => <div key={i} className="w-3 h-1 rounded-full opacity-50" style={{ background: c.text }} />)}
+                            </div>
+                          </div>
+                          {/* Hero */}
+                          <div className="px-2 py-3 space-y-1.5">
+                            <div className="h-3 rounded w-4/5" style={{ background: c.accent + "cc" }} />
+                            <div className="h-1.5 rounded w-full" style={{ background: c.text + "44" }} />
+                            <div className="h-1.5 rounded w-5/6" style={{ background: c.text + "33" }} />
+                            <div className="mt-2 h-4 w-14 rounded-lg" style={{ background: c.accent }} />
+                          </div>
+                          {/* Sections */}
+                          <div className="grid grid-cols-3 gap-1 px-2 pb-2">
+                            {[1,2,3].map(i => (
+                              <div key={i} className="rounded-lg p-1.5" style={{ background: c.text + "11" }}>
+                                <div className="h-1.5 rounded w-full mb-1" style={{ background: c.accent + "88" }} />
+                                <div className="h-1 rounded w-3/4" style={{ background: c.text + "33" }} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-sm font-bold ${selectedTemplate === t.id ? "text-cyan-300" : "text-white/80"}`}>{t.label}</span>
+                            {selectedTemplate === t.id && <span className="text-xs text-cyan-400">✓</span>}
+                          </div>
+                          <p className="text-xs text-white/35 mt-0.5 leading-tight">{t.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 5: Font & Colors */}
+            {step === 5 && (
+              <motion.div key="s5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-1">Font pairing & colors 🖋️</h3>
+                <p className="text-white/50 text-sm mb-5">Choose what matches your brand personality</p>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-white/60 mb-3">Font Pairing</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {FONT_PAIRINGS.map(f => (
+                      <button key={f.id} onClick={() => setFontPairing(f.id)}
+                        className={`flex flex-col gap-1.5 p-4 rounded-xl border-2 transition-all text-left ${fontPairing === f.id ? "border-cyan-500/60 bg-cyan-500/10" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                        <span className={`text-2xl font-bold ${fontPairing === f.id ? "text-cyan-300" : "text-white/80"}`}
+                          style={{ fontFamily: f.heading }}>
+                          {f.sample}
+                        </span>
+                        <div>
+                          <div className={`text-sm font-semibold ${fontPairing === f.id ? "text-cyan-300" : "text-white/80"}`}>{f.label}</div>
+                          <div className="text-xs text-white/35">{f.heading} + {f.body}</div>
+                          <div className="text-xs text-white/25 mt-0.5">{f.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-white/60 mb-3">Color Scheme</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {COLOR_SCHEMES.map(c => (
+                      <button key={c.id} onClick={() => setColorScheme(c.id)}
+                        className={`flex flex-col gap-2 p-3 rounded-xl border-2 transition-all ${colorScheme === c.id ? "border-cyan-500/60 bg-cyan-500/10" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                        <div className="flex gap-1.5">
+                          {c.swatch.map((s, i) => <div key={i} className="w-6 h-6 rounded-md border border-white/10" style={{ background: s }} />)}
+                        </div>
+                        <span className={`text-xs font-semibold text-left leading-tight ${colorScheme === c.id ? "text-cyan-300" : "text-white/60"}`}>{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 6: Review */}
+            {step === 6 && (
+              <motion.div key="s6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h3 className="text-xl font-bold text-white mb-1">Review your details ✅</h3>
+                <p className="text-white/50 text-sm mb-5">Confirm everything looks right before we build your website</p>
                 <div className="space-y-3">
                   {[
-                    { label: "Website type", value: `${selectedType?.emoji} ${selectedType?.label}` },
-                    { label: "Business name", value: businessName || "Not specified" },
-                    { label: "What you do", value: description.length > 80 ? description.slice(0, 80) + "…" : description },
-                    { label: "Color theme", value: selectedColor?.label ?? "" },
-                    { label: "Design style", value: `${selectedStyle?.emoji} ${selectedStyle?.label}` },
-                  ].map(row => (
-                    <div key={row.label} className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                      <span className="text-xs font-medium text-white/40 w-28 flex-shrink-0 pt-0.5">{row.label}</span>
-                      <span className="text-sm text-white/80">{row.value}</span>
+                    { icon: Building2, label: "Business", value: `${selectedBusinessType?.emoji} ${selectedBusinessType?.label}` },
+                    { icon: Globe, label: "Name", value: businessName },
+                    { icon: Zap, label: "Tagline", value: tagline || "—" },
+                    { icon: Edit3, label: "Description", value: description.slice(0, 80) + (description.length > 80 ? "…" : "") },
+                    { icon: Sparkles, label: "Services", value: services || "—" },
+                    { icon: Mail, label: "Contact", value: contactEmail || contactPhone || "Not provided" },
+                    { icon: Globe, label: "Template", value: selectedTemplateData?.label ?? selectedTemplate },
+                    { icon: Edit3, label: "Font", value: `${selectedFont?.label} (${selectedFont?.heading})` },
+                    { icon: Sparkles, label: "Colors", value: selectedColor?.label ?? colorScheme },
+                  ].map(({ icon: Icon, label, value }) => value && value !== "—" && (
+                    <div key={label} className="flex gap-4 items-start p-3 rounded-xl bg-white/5 border border-white/5">
+                      <Icon className="w-4 h-4 text-cyan-400/60 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-white/40 font-medium">{label}</div>
+                        <div className="text-sm text-white/80 mt-0.5 truncate">{value}</div>
+                      </div>
+                      <button onClick={() => {
+                        const stepMap: Record<string, number> = { Business: 0, Name: 1, Tagline: 2, Description: 2, Services: 2, Contact: 3, Template: 4, Font: 5, Colors: 5 };
+                        setStep(stepMap[label] ?? 0);
+                      }} className="text-xs text-white/30 hover:text-cyan-400 transition-colors shrink-0">Edit</button>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
-                  <span className="text-emerald-400 text-lg">✅</span>
-                  <div>
-                    <p className="text-emerald-400 text-sm font-semibold">100% Free — No credit card needed</p>
-                    <p className="text-emerald-400/70 text-xs mt-0.5">After generating, you can edit it further with AI or download the HTML.</p>
+
+                <div className="mt-6 p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <span className="text-sm font-semibold text-cyan-300">Ready to build!</span>
                   </div>
+                  <p className="text-xs text-white/40">AI will generate a complete {selectedBusinessType?.label} website with all sections — hero, services, about, testimonials, pricing, contact, and footer.</p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
+        {/* Navigation */}
         <div className="flex items-center gap-3 mt-6">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(s => s - 1)}
@@ -521,15 +785,22 @@ export default function WebsiteDeveloperSection() {
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           )}
+          {/* Skip contact step */}
+          {step === 3 && (
+            <Button variant="outline" onClick={() => setStep(s => s + 1)}
+              className="border-white/5 text-white/30 hover:bg-white/5 rounded-xl h-12 px-5 text-sm">
+              Skip this step →
+            </Button>
+          )}
           {!isLastStep ? (
-            <Button onClick={() => setStep(s => s + 1)} disabled={!canGoNext}
-              className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl h-12 text-base disabled:opacity-40 disabled:cursor-not-allowed">
+            <Button onClick={() => setStep(s => s + 1)} disabled={!canContinue}
+              className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl h-12 text-base disabled:opacity-40">
               Continue <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
             <Button onClick={handleGenerate} disabled={isGenerating || !description.trim()}
-              className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold rounded-xl h-12 text-base shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-40">
-              {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Building...</> : <><Sparkles className="w-5 h-5 mr-2" />Build My Website!</>}
+              className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl h-12 font-bold text-base shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-40">
+              {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Building your website...</> : <><Sparkles className="w-5 h-5 mr-2" />Start Building →</>}
             </Button>
           )}
         </div>

@@ -210,17 +210,39 @@ router.post("/ai/generate-website", async (req, res) => {
   const {
     websiteType = "Landing Page",
     businessName = "",
+    tagline = "",
     description = "",
     audience = "",
     features = "",
-    colorScheme = "modern",
+    ctaText = "Get Started",
+    contactEmail = "",
+    contactPhone = "",
+    contactAddress = "",
+    socialInstagram = "",
+    socialTwitter = "",
+    socialFacebook = "",
+    templateStyle = "Business Pro",
+    fontHeading = "Inter",
+    fontBody = "Inter",
+    colorScheme = "dark professional",
     style = "professional",
   } = req.body as {
     websiteType?: string;
     businessName?: string;
+    tagline?: string;
     description?: string;
     audience?: string;
     features?: string;
+    ctaText?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    contactAddress?: string;
+    socialInstagram?: string;
+    socialTwitter?: string;
+    socialFacebook?: string;
+    templateStyle?: string;
+    fontHeading?: string;
+    fontBody?: string;
     colorScheme?: string;
     style?: string;
   };
@@ -239,37 +261,56 @@ router.post("/ai/generate-website", async (req, res) => {
   const heartbeat = () => res.write(": ping\n\n");
   heartbeat();
 
-  const systemPrompt = `You are an expert web developer and UI/UX designer. Generate complete, production-ready HTML with embedded CSS.
+  // Build contact block
+  const contactParts: string[] = [];
+  if (contactEmail) contactParts.push(`Email: ${contactEmail}`);
+  if (contactPhone) contactParts.push(`Phone: ${contactPhone}`);
+  if (contactAddress) contactParts.push(`Address: ${contactAddress}`);
+  if (socialInstagram) contactParts.push(`Instagram: ${socialInstagram}`);
+  if (socialTwitter) contactParts.push(`Twitter: ${socialTwitter}`);
+  if (socialFacebook) contactParts.push(`Facebook: ${socialFacebook}`);
+  const contactInfo = contactParts.length > 0 ? contactParts.join("\n") : "No contact info provided";
 
-Requirements:
-- Single self-contained HTML file with embedded <style> and no external dependencies
-- Modern, beautiful design using CSS variables and flexbox/grid
-- Color scheme: ${colorScheme} (${colorScheme === "dark" ? "dark background, light text" : colorScheme === "colorful" ? "vibrant gradients and colors" : "clean whites, subtle grays, professional accents"})
-- Style: ${style}
-- Fully responsive (mobile-first)
-- Smooth CSS animations and hover effects
-- Professional typography using Google Fonts (@import in the style tag)
+  const systemPrompt = `You are an expert web developer and UI/UX designer. Generate a complete, production-ready, single-page website HTML file.
 
-Include ALL these sections for a ${websiteType}:
-1. Sticky navigation bar with logo and links
-2. Hero section with headline, subheadline, CTA buttons
-3. Features/Services section with icons (use CSS shapes or unicode)
-4. About/How It Works section
-5. Social proof / Testimonials section
-6. Pricing section (3 tiers if applicable)
-7. FAQ section with expand/collapse (pure CSS)
-8. Contact / CTA section
-9. Footer with links
+TECHNICAL REQUIREMENTS:
+- Single self-contained HTML file with all CSS embedded in <style> tag, no external CSS files
+- Use Google Fonts via @import for: heading font "${fontHeading}", body font "${fontBody}"
+- Color scheme: ${colorScheme}
+- Template style: ${templateStyle} — ${style}
+- Fully responsive with mobile-first media queries
+- Smooth scroll behavior, CSS hover/transition effects on buttons and cards
+- Use CSS Grid and Flexbox for layout
+- Sticky navigation with smooth scroll to sections
+- Hamburger menu for mobile (pure CSS toggle using checkbox hack)
 
-Return ONLY the complete HTML file, nothing else. Start with <!DOCTYPE html>`;
+CONTENT SECTIONS (include ALL of these):
+1. Navigation — logo (business name), links to all sections, CTA button saying "${ctaText || "Get Started"}"
+2. Hero — compelling headline using the tagline, subheadline, two CTA buttons, visually impressive background
+3. Services/Features — 3–6 service cards with unicode emoji icons, title, description
+4. About Us / Our Story — 2-3 paragraphs, includes a stats row (3 numbers like "500+ clients", "10 years", etc.)
+5. How It Works — 3-step process with numbered steps
+6. Testimonials — 3 customer testimonials with star ratings, name, role
+7. Pricing — 3 tiers (Basic/Pro/Enterprise or similar), highlight the middle tier as "Most Popular"
+8. FAQ — 5 questions with expand/collapse using pure CSS (checkbox + label technique)
+9. Contact — form (name, email, message fields) + display the real contact info provided
+10. Footer — logo, links, social icons using unicode, copyright line
 
-  const userPrompt = `Create a complete ${websiteType} website for:
-Business Name: ${businessName || "Not specified"}
+CONTACT INFO TO USE:
+${contactInfo}
+
+Return ONLY the complete HTML file starting with <!DOCTYPE html>. No explanations, no markdown fences.`;
+
+  const userPrompt = `Build a complete website for this business:
+Type: ${websiteType}
+Name: ${businessName || "My Business"}
+Tagline: ${tagline || "Excellence in everything we do"}
 Description: ${description}
 ${audience ? `Target Audience: ${audience}` : ""}
-${features ? `Key Features/Services: ${features}` : ""}
+${features ? `Key Services/Products: ${features}` : ""}
+CTA Text: ${ctaText || "Get Started"}
 
-Generate the full HTML file now.`;
+Generate the complete HTML file now.`;
 
   try {
     const { key, model } = await streamWithFallback(
@@ -523,6 +564,46 @@ router.post("/ai/suggest-blog-titles", async (req, res) => {
   } catch (err: unknown) {
     req.log.error({ err }, "Title suggestion failed");
     res.status(500).json({ error: "Failed to suggest titles" });
+  }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/auto-generate-business-info
+// Generates tagline, description, services, audience, CTA text from business type + name
+// ───────────────────────────────────────────────
+router.post("/ai/auto-generate-business-info", async (req, res) => {
+  const { businessType, businessName } = req.body as { businessType: string; businessName: string };
+  if (!businessType || !businessName) {
+    res.status(400).json({ error: "businessType and businessName are required" });
+    return;
+  }
+
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a professional marketing copywriter. Generate compelling website content for a business.
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "tagline": "Catchy one-line tagline (max 10 words)",
+  "description": "2-3 sentence business description highlighting value proposition",
+  "services": "Comma-separated list of 4-5 key services/products",
+  "audience": "Target audience description (1 sentence)",
+  "cta": "Strong call-to-action button text (2-5 words)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Business type: ${businessType}\nBusiness name: ${businessName}\n\nGenerate professional website content for this business.`,
+      },
+    ]);
+
+    let content = resp.choices[0]?.message?.content ?? "{}";
+    content = content.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    res.json(JSON.parse(content));
+  } catch (err: unknown) {
+    req.log.error({ err }, "Business info generation failed");
+    res.status(500).json({ error: "Failed to generate business info. Please try again." });
   }
 });
 
