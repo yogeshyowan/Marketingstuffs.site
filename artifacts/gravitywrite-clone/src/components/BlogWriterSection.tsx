@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   PenTool, Loader2, Copy, Check, Download, RefreshCw,
   Lightbulb, ChevronRight, ChevronLeft, Sparkles, Edit3, Wand2, X,
-  Share2, Image as ImageIcon,
+  Share2, Image as ImageIcon, PenLine, FileText, RotateCcw, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -103,13 +103,22 @@ function buildImagePlaceholders(
   content: string,
   topic: string,
   imageStyle: string,
-  imageCount: number
-): { sections: string[]; urls: string[] } {
+  imageCount: number,
+  customPrompts?: { mode: "auto" | "one_for_all" | "per_image"; global: string; perImage: string[] }
+): { sections: string[]; prompts: string[]; urls: string[] } {
   const allSections = extractSections(content);
   const n = Math.min(imageCount, Math.max(allSections.length, 1));
   const sections = n === 0 ? [] : allSections.slice(0, n).length > 0 ? allSections.slice(0, n) : Array(n).fill(topic);
-  const urls = sections.map(s => pollinationsUrl(`${topic}: ${s}`, imageStyle));
-  return { sections, urls };
+
+  const prompts = sections.map((s, i) => {
+    if (!customPrompts || customPrompts.mode === "auto") return `${topic}: ${s}`;
+    if (customPrompts.mode === "one_for_all") return customPrompts.global.trim() || `${topic}: ${s}`;
+    // per_image
+    return customPrompts.perImage[i]?.trim() || `${topic}: ${s}`;
+  });
+
+  const urls = prompts.map(p => pollinationsUrl(p, imageStyle));
+  return { sections, prompts, urls };
 }
 
 function injectImagesIntoMarkdown(content: string, urls: string[]): string {
@@ -176,6 +185,92 @@ function buildHtmlExport(content: string, topic: string, templateId: string): st
 </html>`;
 }
 
+type ImgPromptMode = "auto" | "one_for_all" | "per_image";
+
+// ── ImageCard sub-component ─────────────────────────────────
+function ImageCard({
+  index, url, sectionLabel, prompt, imageStyle,
+  onRegenerate, onRegenerateWithPrompt,
+}: {
+  index: number; url: string; sectionLabel: string; prompt: string;
+  imageStyle: string;
+  onRegenerate: (i: number) => void;
+  onRegenerateWithPrompt: (i: number, p: string) => void;
+}) {
+  const [editingPrompt, setEditingPrompt] = useState(prompt);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [key, setKey] = useState(0); // force re-render on regenerate
+
+  const handleRegenerate = () => {
+    setIsLoaded(false);
+    setImgError(false);
+    setKey(k => k + 1);
+    if (editingPrompt.trim() && editingPrompt !== prompt) {
+      onRegenerateWithPrompt(index, editingPrompt);
+    } else {
+      onRegenerate(index);
+    }
+  };
+
+  return (
+    <div className="bg-black/30 border border-white/10 rounded-xl overflow-hidden">
+      {/* Image */}
+      <div className="relative w-full bg-slate-900" style={{ aspectRatio: "16/9" }}>
+        {!isLoaded && !imgError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+          </div>
+        )}
+        {imgError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/30">
+            <ImageIcon className="w-8 h-8" />
+            <p className="text-xs">Failed to load — click Regenerate</p>
+          </div>
+        ) : (
+          <img
+            key={key}
+            src={url}
+            alt={sectionLabel}
+            onLoad={() => setIsLoaded(true)}
+            onError={() => setImgError(true)}
+            className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+          />
+        )}
+        <span className="absolute top-2 left-2 bg-black/60 text-white/70 text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
+          {index === 0 ? "📌 Cover" : `§ ${sectionLabel.slice(0, 30)}`}
+        </span>
+        <span className="absolute top-2 right-2 bg-black/60 text-violet-300/80 text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
+          {imageStyle}
+        </span>
+      </div>
+
+      {/* Prompt editor + Regenerate button */}
+      <div className="p-3 space-y-2">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Zap className="w-3 h-3 text-violet-400 shrink-0" />
+          <span className="text-[10px] text-white/40 font-medium">Prompt — edit and regenerate</span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder:text-white/20 focus:outline-none focus:border-violet-500/50 text-xs font-mono"
+            value={editingPrompt}
+            onChange={e => setEditingPrompt(e.target.value)}
+            placeholder="Describe the image…"
+            onKeyDown={e => e.key === "Enter" && handleRegenerate()}
+          />
+          <button
+            onClick={handleRegenerate}
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> Regen
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────
 export default function BlogWriterSection() {
   const [step, setStep] = useState(0);
@@ -189,9 +284,16 @@ export default function BlogWriterSection() {
   const [keywords, setKeywords] = useState("");
   const [language, setLanguage] = useState("English");
 
+  // Image prompt customisation
+  const [imgPromptMode, setImgPromptMode] = useState<ImgPromptMode>("auto");
+  const [globalImagePrompt, setGlobalImagePrompt] = useState("");
+  const [perImagePrompts, setPerImagePrompts] = useState<string[]>(Array(6).fill(""));
+  const [imagePrompts, setImagePrompts] = useState<string[]>([]); // prompts used for current images
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageSections, setImageSections] = useState<string[]>([]);
   const [imagesReady, setImagesReady] = useState(false);
 
   const [copied, setCopied] = useState<"text" | "html" | null>(null);
@@ -200,11 +302,15 @@ export default function BlogWriterSection() {
   const [loadingTitles, setLoadingTitles] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
-  // Edit mode
+  // Edit mode — AI rewrite
   const [editOpen, setEditOpen] = useState(false);
   const [editInstruction, setEditInstruction] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState("");
+
+  // Direct text edit mode
+  const [directEditOpen, setDirectEditOpen] = useState(false);
+  const [directEditContent, setDirectEditContent] = useState("");
 
   const selectedTemplate = TEMPLATES.find(t => t.id === template)!;
   const wordEstimate = generatedContent.split(/\s+/).filter(Boolean).length;
@@ -285,8 +391,10 @@ export default function BlogWriterSection() {
 
       // Generate images now that we have the full content
       if (imageCount > 0 && fullContent) {
-        const { urls } = buildImagePlaceholders(fullContent, topic, imageStyle, imageCount);
+        const { urls, sections, prompts } = buildImagePlaceholders(fullContent, topic, imageStyle, imageCount, { mode: imgPromptMode, global: globalImagePrompt, perImage: perImagePrompts });
         setImageUrls(urls);
+        setImageSections(sections);
+        setImagePrompts(prompts);
         setImagesReady(true);
       }
     } catch (err: unknown) {
@@ -295,6 +403,18 @@ export default function BlogWriterSection() {
     } finally {
       setIsGenerating(false);
     }
+  }
+
+  function regenerateImage(index: number) {
+    const prompt = imagePrompts[index] ?? `${topic}: ${imageSections[index] ?? topic}`;
+    const newUrl = pollinationsUrl(prompt, imageStyle);
+    setImageUrls(prev => prev.map((u, i) => i === index ? newUrl : u));
+  }
+
+  function regenerateImageWithPrompt(index: number, newPrompt: string) {
+    const url = pollinationsUrl(newPrompt.trim() || `${topic}: ${imageSections[index] ?? topic}`, imageStyle);
+    setImageUrls(prev => prev.map((u, i) => i === index ? url : u));
+    setImagePrompts(prev => prev.map((p, i) => i === index ? newPrompt : p));
   }
 
   async function handleEdit() {
@@ -332,8 +452,10 @@ export default function BlogWriterSection() {
       }
       // Regenerate images for updated content
       if (imageCount > 0 && fullContent) {
-        const { urls } = buildImagePlaceholders(fullContent, topic, imageStyle, imageCount);
+        const { urls, sections, prompts } = buildImagePlaceholders(fullContent, topic, imageStyle, imageCount, { mode: imgPromptMode, global: globalImagePrompt, perImage: perImagePrompts });
         setImageUrls(urls);
+        setImageSections(sections);
+        setImagePrompts(prompts);
         setImagesReady(true);
       }
       setEditInstruction("");
@@ -405,9 +527,13 @@ export default function BlogWriterSection() {
             <div className="flex items-center flex-wrap gap-2">
               {!isGenerating && !isEditing && generatedContent && (
                 <>
-                  <Button size="sm" onClick={() => setEditOpen(o => !o)}
+                  <Button size="sm" onClick={() => { setEditOpen(o => !o); setDirectEditOpen(false); }}
                     className={`h-8 text-xs rounded-xl gap-1.5 ${editOpen ? "bg-violet-500/30 text-violet-300 border border-violet-500/50" : "bg-violet-500/15 text-violet-400 border border-violet-500/20 hover:bg-violet-500/25"}`}>
-                    <Edit3 className="w-3.5 h-3.5" /> Edit
+                    <Wand2 className="w-3.5 h-3.5" /> AI Edit
+                  </Button>
+                  <Button size="sm" onClick={() => { setDirectEditOpen(o => !o); setDirectEditContent(generatedContent); setEditOpen(false); }}
+                    className={`h-8 text-xs rounded-xl gap-1.5 ${directEditOpen ? "bg-sky-500/30 text-sky-300 border border-sky-500/50" : "bg-sky-500/15 text-sky-400 border border-sky-500/20 hover:bg-sky-500/25"}`}>
+                    <PenLine className="w-3.5 h-3.5" /> Direct Edit
                   </Button>
                   <Button size="sm" onClick={() => setShareOpen(o => !o)}
                     className="h-8 text-xs rounded-xl gap-1.5 bg-pink-500/15 text-pink-400 border border-pink-500/20 hover:bg-pink-500/25">
@@ -419,7 +545,7 @@ export default function BlogWriterSection() {
                   </Button>
                 </>
               )}
-              <Button variant="outline" size="sm" onClick={() => { setGeneratedContent(""); setStep(0); setEditOpen(false); }}
+              <Button variant="outline" size="sm" onClick={() => { setGeneratedContent(""); setStep(0); setEditOpen(false); setDirectEditOpen(false); }}
                 className="border-white/10 text-white/40 hover:bg-white/5 text-xs h-8 rounded-xl">
                 <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> New Blog
               </Button>
@@ -457,6 +583,41 @@ export default function BlogWriterSection() {
                   </Button>
                 </div>
                 {editError && <p className="text-red-400 text-xs">{editError}</p>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Direct Edit panel */}
+          <AnimatePresence>
+            {directEditOpen && !isGenerating && !isEditing && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="mb-4 p-5 rounded-2xl border border-sky-500/30 bg-sky-500/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PenLine className="w-4 h-4 text-sky-400" />
+                    <span className="text-sm font-semibold text-sky-300">Direct Edit — write in markdown</span>
+                  </div>
+                  <button onClick={() => setDirectEditOpen(false)} className="text-white/30 hover:text-white/60"><X className="w-4 h-4" /></button>
+                </div>
+                <textarea
+                  className="w-full bg-black/50 border border-sky-500/20 rounded-xl px-4 py-4 text-white/90 placeholder:text-white/20 focus:outline-none focus:border-sky-500/50 resize-y text-sm font-mono leading-relaxed"
+                  style={{ minHeight: "320px" }}
+                  value={directEditContent}
+                  onChange={e => setDirectEditContent(e.target.value)}
+                  spellCheck
+                  placeholder="Edit your blog in markdown…"
+                />
+                <div className="flex gap-3">
+                  <Button onClick={() => { setGeneratedContent(directEditContent); setDirectEditOpen(false); }}
+                    className="bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-5 text-sm h-10 gap-1.5">
+                    <Check className="w-4 h-4" /> Save Changes
+                  </Button>
+                  <Button variant="outline" onClick={() => setDirectEditOpen(false)}
+                    className="border-white/10 text-white/50 hover:bg-white/5 text-sm h-10 rounded-xl">
+                    Cancel
+                  </Button>
+                  <p className="text-xs text-white/25 self-center ml-auto hidden sm:block">Uses standard markdown — # h1, ## h2, **bold**, *italic*</p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -540,6 +701,34 @@ export default function BlogWriterSection() {
               </div>
             )}
           </div>
+
+          {/* Image Gallery with per-image regenerate */}
+          {imagesReady && imageUrls.length > 0 && !isGenerating && !isEditing && (
+            <div className="mt-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-violet-400" />
+                  <span className="text-sm font-semibold text-violet-300">Generated Images</span>
+                  <span className="text-xs text-white/30 bg-white/10 px-2 py-0.5 rounded-full">{imageUrls.length} image{imageUrls.length > 1 ? "s" : ""}</span>
+                </div>
+                <p className="text-xs text-white/30">Click a prompt to edit, then regenerate</p>
+              </div>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {imageUrls.map((url, i) => (
+                  <ImageCard
+                    key={i}
+                    index={i}
+                    url={url}
+                    sectionLabel={imageSections[i] ?? (i === 0 ? "Cover" : `Section ${i}`)}
+                    prompt={imagePrompts[i] ?? ""}
+                    imageStyle={imageStyle}
+                    onRegenerate={regenerateImage}
+                    onRegenerateWithPrompt={regenerateImageWithPrompt}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && <div className="mt-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">{error}</div>}
         </div>
@@ -682,37 +871,97 @@ export default function BlogWriterSection() {
 
             {/* Step 4: Images */}
             {step === 4 && (
-              <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <h3 className="text-xl font-bold text-white mb-1">How many images? 🖼️</h3>
-                <p className="text-white/50 text-sm mb-5">We'll generate and place AI images throughout your blog</p>
+              <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1">Images 🖼️</h3>
+                  <p className="text-white/50 text-sm">Set how many images, their style, and your prompt ideas</p>
+                </div>
 
                 {/* Count selector */}
-                <div className="mb-6">
+                <div>
                   <label className="block text-sm font-medium text-white/60 mb-3">Number of images</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {IMAGE_COUNT_OPTIONS.map(n => (
                       <button key={n} onClick={() => setImageCount(n)}
                         className={`w-12 h-12 rounded-xl border text-sm font-bold transition-all ${imageCount === n ? "border-violet-500/60 bg-violet-500/20 text-violet-300" : "border-white/10 bg-white/5 text-white/50 hover:border-white/30"}`}>
-                        {n === 0 ? "None" : n}
+                        {n === 0 ? "—" : n}
                       </button>
                     ))}
                   </div>
-                  {imageCount > 0 && <p className="text-xs text-white/40 mt-2">Images will be placed at the start and after each section heading</p>}
+                  {imageCount > 0 && <p className="text-xs text-white/40 mt-2">Placed at the cover and after each section heading</p>}
                 </div>
 
                 {imageCount > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-white/60 mb-3">Image style</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {IMAGE_STYLES.map(s => (
-                        <button key={s.id} onClick={() => setImageStyle(s.id)}
-                          className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${imageStyle === s.id ? "border-violet-500/60 bg-violet-500/15" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
-                          <span>{s.emoji}</span>
-                          <span className={`text-xs font-semibold ${imageStyle === s.id ? "text-violet-300" : "text-white/70"}`}>{s.label}</span>
-                        </button>
-                      ))}
+                  <>
+                    {/* Style */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-3">Image style</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {IMAGE_STYLES.map(s => (
+                          <button key={s.id} onClick={() => setImageStyle(s.id)}
+                            className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${imageStyle === s.id ? "border-violet-500/60 bg-violet-500/15" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
+                            <span>{s.emoji}</span>
+                            <span className={`text-xs font-semibold ${imageStyle === s.id ? "text-violet-300" : "text-white/70"}`}>{s.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Prompt mode */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-3">Image prompts</label>
+                      <div className="flex gap-2 mb-4 flex-wrap">
+                        {([
+                          { id: "auto", label: "✨ Auto", desc: "AI picks prompts from your sections" },
+                          { id: "one_for_all", label: "🖊 One prompt", desc: "Same idea applied to all images" },
+                          { id: "per_image", label: "🎛 Per image", desc: "Custom prompt for each image" },
+                        ] as { id: ImgPromptMode; label: string; desc: string }[]).map(m => (
+                          <button key={m.id} onClick={() => setImgPromptMode(m.id)}
+                            className={`flex-1 min-w-[110px] flex flex-col items-center gap-1 p-3 rounded-xl border text-xs transition-all ${imgPromptMode === m.id ? "border-violet-500/60 bg-violet-500/15 text-violet-300" : "border-white/10 bg-white/5 text-white/50 hover:border-white/20"}`}>
+                            <span className="font-bold">{m.label}</span>
+                            <span className="text-white/30 text-[10px] text-center leading-tight">{m.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {imgPromptMode === "one_for_all" && (
+                        <div>
+                          <p className="text-xs text-white/40 mb-2">Describe the visual idea for all images (leave blank to auto-generate)</p>
+                          <textarea
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-violet-500/50 resize-none text-sm h-20"
+                            placeholder={`e.g., "modern office scene with tech devices and charts"`}
+                            value={globalImagePrompt}
+                            onChange={e => setGlobalImagePrompt(e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      {imgPromptMode === "per_image" && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-white/40 mb-2">Describe each image (leave blank to auto-generate from section heading)</p>
+                          {Array.from({ length: imageCount }, (_, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-xs text-white/30 w-16 shrink-0">Image {i + 1}</span>
+                              <input
+                                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-white/25 focus:outline-none focus:border-violet-500/50 text-sm"
+                                placeholder={i === 0 ? "Cover image idea…" : `Section ${i} image idea…`}
+                                value={perImagePrompts[i] ?? ""}
+                                onChange={e => setPerImagePrompts(prev => { const n = [...prev]; n[i] = e.target.value; return n; })}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {imgPromptMode === "auto" && (
+                        <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+                          <p className="text-xs text-white/40">
+                            <span className="text-violet-400">✓ Auto mode:</span> Prompts are generated from your blog topic and each section heading. You can regenerate individual images after the blog is created.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </motion.div>
             )}
