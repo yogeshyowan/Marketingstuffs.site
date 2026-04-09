@@ -39,7 +39,16 @@ meta-llama/llama-3.3-70b-instruct:free
 | POST | `/api/ai/generate-website-section` | SSE — one section at a time (homepage/about/services/contact) |
 | POST | `/api/ai/improve-website` | SSE — AI edits to generated website |
 | POST | `/api/ai/auto-generate-business-info` | JSON — AI auto-fills tagline, description, services, audience |
-| POST | `/api/ai/generate-social-post` | SSE — social media posts for 5 platforms |
+| POST | `/api/ai/generate-social-post` | JSON — social media posts for selected platforms |
+| POST | `/api/ai/instagram-caption` | SSE — caption with hook + story + CTA + 25 hashtags |
+| POST | `/api/ai/generate-hooks` | JSON — 6 different hook types for any topic |
+| POST | `/api/ai/generate-reply` | SSE — reply to comment/message (platform-aware) |
+| POST | `/api/ai/reel-script` | SSE — scene-by-scene Reel/TikTok script |
+| POST | `/api/ai/hashtag-suggestions` | JSON — 3 sets of hashtags (high-vol/niche/trending) |
+| POST | `/api/ai/content-calendar` | JSON — 4-week AI content plan |
+| POST | `/api/ai/repurpose-post` | SSE — adapt post for a different platform |
+| POST | `/api/ai/tiktok-caption` | SSE — punchy TikTok caption + tips |
+| POST | `/api/ai/pinterest-post` | SSE — SEO-rich pin title + description |
 
 All SSE endpoints: `res.flushHeaders()` immediately + `: ping` heartbeat every 8s to prevent proxy timeout.
 
@@ -74,8 +83,18 @@ All SSE endpoints: `res.flushHeaders()` immediately + `: ping` heartbeat every 8
 - "Edit with AI" sidebar (quick suggestions + custom prompt)
 - Copy HTML / Download HTML buttons
 
-### Social Media Generator
-Platform-specific posts for Instagram, Twitter/X, Facebook, LinkedIn, YouTube (with hashtags, emojis, character counts)
+### Social Media Manager (full 8-phase platform, `SocialMediaSection.tsx`)
+8 tabs matching GravityWrite's full workflow:
+1. **Connect Accounts** (Phase 1) — Toggle connect for 6 platforms, set @handle + timezone per account; persisted in localStorage
+2. **Create Post** (Phase 2) — Campaign name, 8 content types, summary, 6 platforms, 6 tones, schedule picker, "Add to Queue", AI generate → per-platform editable previews → Save Draft / Schedule / Publish
+3. **Calendar** (Phase 4) — Monthly grid with scheduled post chips (color by platform), prev/next month, AI 4-week calendar generator (business name + industry → structured weekly plan)
+4. **Dashboard** (Phase 5) — Search bar + platform filter + status tabs (All/Published/Scheduled/Draft/Failed); expand post → inline edit, Publish Now, Duplicate, Copy, Delete
+5. **Hashtag Manager** — AI generate 3 hashtag sets (high-vol/niche/trending) + manual create + copy all; saved sets in localStorage
+6. **AI Tools Hub** — 11 tool cards (All-in-One Post, Instagram Caption, Hooks Generator, Facebook/Twitter/LinkedIn Responder, TikTok Caption, Reel Script, Pinterest Tool, Repurpose Content, Content Calendar); each card opens a form with streaming output
+7. **Media Library** (Phase 5) — Drag-and-drop or click upload; images stored as base64 in localStorage; grid with download/delete
+8. **Analytics** (Phase 6) — Published post stats (impressions/engagement/clicks per platform with bar chart), best posting times by platform, total impressions callout
+
+All data (posts, hashtag sets, media, accounts) persisted via `useLS<T>()` custom hook (localStorage JSON).
 
 ## Key Implementation Notes
 

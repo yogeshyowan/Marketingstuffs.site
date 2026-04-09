@@ -1,0 +1,64 @@
+Here you go — a clean, structured extraction of ALL steps involved in Social Media Management based on the content from the GravityWrite Social Media Management Tool page you provided.
+This is not copied text — it is a fully reconstructed, step‑by‑step workflow derived from the page content.
+
+⭐ All Steps Involved in Social Media Management (Extracted from GravityWrite Social Tool Page)
+Below is the complete workflow broken into logical phases exactly as the site implies.
+
+PHASE 1 — Setup & Account Connection
+- Create or log in to your GravityWrite account.
+- Connect your social media accounts (Facebook, Instagram, LinkedIn, Pinterest, X, YouTube).
+- Verify permissions so GravityWrite can publish posts on your behalf.
+- Set your time zone inside GravitySocial for accurate scheduling.
+
+PHASE 2 — Content Creation
+- Open the AI Caption Assistant to generate platform‑specific captions.
+- Choose tone, style, or audience for the caption.
+- Generate multiple caption variations using AI.
+- Refine, retry, or edit the generated captions.
+- Upload or select media (images, videos, GIFs) from:
+- Your device
+- Media library
+- Stock images
+- Combine text + visuals into a complete post.
+- Save the post as a reusable template if needed.
+
+PHASE 3 — Multi‑Platform Publishing
+- Select all platforms you want to publish to.
+- Preview how the post looks on each platform.
+- Adjust captions per platform (optional).
+- Publish instantly with one click OR…
+- Add to Queue to auto‑fill the next best time slot.
+PHASE 4 — Scheduling & Calendar Management- Open the content calendar to view upcoming posts.
+- Drag and drop posts to rearrange schedule.
+- Set custom posting times for each day of the week.
+- Schedule posts manually for specific dates.
+- Use Auto‑Queue to let GravitySocial pick optimal times.
+- Edit scheduled posts anytime without deleting them.
+PHASE 5 — Centralized Post Management- View all posts in one dashboard, categorized as:
+- Published
+- Scheduled
+- Drafts
+- Failed
+- Fix failed posts by reconnecting accounts or retrying.
+- Duplicate high‑performing posts for reuse.
+- Organize media assets inside the media library.
+- Search and filter posts by platform, date, or status.
+PHASE 6 — Analytics & Optimization- Track engagement metrics (likes, comments, reach, etc.).
+- Identify top‑performing posts using analytics.
+- Analyze what’s working vs. what’s not.
+- Refine future content strategy based on insights.
+- Reuse best‑performing templates to boost consistency.
+PHASE 7 — Team Collaboration (If enabled)- Invite team members to collaborate.
+- Assign roles or permissions for posting and editing.
+- Review team‑created posts before publishing.
+- Maintain a shared content calendar for the whole team.
+PHASE 8 — Continuous Growth & Optimization- Use AI to generate new content ideas regularly.
+- Maintain consistent posting frequency using auto‑queue.
+- Expand to more platforms as your brand grows.
+- Refine brand voice using AI tone controls.
+- Repeat the cycle to maintain long‑term social media growth.
+⭐ Complete Summary (One‑Line Version)GravitySocial’s social media management workflow includes connecting accounts → creating AI content → scheduling → multi‑platform publishing → analytics → optimization → team collaboration → continuous growth.If you want, I can also generate:✅ A flowchart of the entire process
+✅ A SOP (Standard Operating Procedure) for your team
+✅ A Tamil version
+✅ A QwikOrder/FlipZone‑branded version
+✅ A poster-style infographicJust tell me what format you want next.

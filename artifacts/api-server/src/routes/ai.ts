@@ -731,4 +731,180 @@ Return ONLY valid JSON (no markdown, no code fences):
   }
 });
 
+// ───────────────────────────────────────────────
+// POST /api/ai/instagram-caption  (SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/instagram-caption", async (req, res) => {
+  const { topic = "", niche = "", tone = "engaging", includeEmojis = true } = req.body as Record<string, string | boolean>;
+  if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
+  res.setHeader("Content-Type", "text/event-stream"); res.setHeader("Cache-Control", "no-cache"); res.setHeader("Connection", "keep-alive"); res.flushHeaders();
+  const send = (d: object) => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  const hb = () => res.write(": ping\n\n"); hb();
+  try {
+    const { key, model } = await streamWithFallback([
+      { role: "system", content: `You are an Instagram expert. Write an INSTAGRAM CAPTION that:\n1. Opens with a powerful hook (first line grabs attention)\n2. Tells a story or shares value in 3-5 sentences\n3. Ends with a clear call-to-action\n4. Includes exactly 25 relevant hashtags in a separate block below the caption (format: #hashtag #hashtag...)\n${includeEmojis ? "5. Use emojis throughout naturally" : "5. No emojis"}\nTone: ${tone}${niche ? `\nNiche: ${niche}` : ""}` },
+      { role: "user", content: `Write an Instagram caption for: ${topic}` },
+    ], (c) => send({ content: c }), hb, 2048);
+    send({ done: true, _meta: { key, model } }); res.end();
+  } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/generate-hooks  (JSON)
+// ───────────────────────────────────────────────
+router.post("/ai/generate-hooks", async (req, res) => {
+  const { topic = "", contentType = "post" } = req.body as Record<string, string>;
+  if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `Generate 6 different opening hooks for social media content. Each hook uses a different technique.
+Return ONLY valid JSON: { "hooks": [{ "type": "Question Hook", "text": "..." }, { "type": "Stat Hook", "text": "..." }, { "type": "Story Hook", "text": "..." }, { "type": "Controversial Hook", "text": "..." }, { "type": "How-To Hook", "text": "..." }, { "type": "List Hook", "text": "..." }] }` },
+      { role: "user", content: `Topic: ${topic}\nContent type: ${contentType}` },
+    ]);
+    let c = resp.choices[0]?.message?.content ?? "{}";
+    c = c.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    res.json(JSON.parse(c));
+  } catch { res.status(500).json({ error: "Failed to generate hooks" }); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/generate-reply  (SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/generate-reply", async (req, res) => {
+  const { platform = "Instagram", originalPost = "", replyTone = "friendly" } = req.body as Record<string, string>;
+  if (!originalPost) { res.status(400).json({ error: "originalPost is required" }); return; }
+  res.setHeader("Content-Type", "text/event-stream"); res.setHeader("Cache-Control", "no-cache"); res.setHeader("Connection", "keep-alive"); res.flushHeaders();
+  const send = (d: object) => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  const hb = () => res.write(": ping\n\n"); hb();
+  try {
+    const { key, model } = await streamWithFallback([
+      { role: "system", content: `You are a social media community manager. Write a ${replyTone}, professional, and engaging reply for a ${platform} comment or message. The reply should: acknowledge the person, add value, encourage further engagement, stay brand-appropriate, be 1-3 sentences max.` },
+      { role: "user", content: `Reply to this ${platform} comment/message:\n"${originalPost}"` },
+    ], (c) => send({ content: c }), hb, 512);
+    send({ done: true, _meta: { key, model } }); res.end();
+  } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/reel-script  (SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/reel-script", async (req, res) => {
+  const { topic = "", duration = "30", tone = "engaging", platform = "Instagram" } = req.body as Record<string, string>;
+  if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
+  res.setHeader("Content-Type", "text/event-stream"); res.setHeader("Cache-Control", "no-cache"); res.setHeader("Connection", "keep-alive"); res.flushHeaders();
+  const send = (d: object) => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  const hb = () => res.write(": ping\n\n"); hb();
+  try {
+    const { key, model } = await streamWithFallback([
+      { role: "system", content: `You are a viral ${platform} Reels/TikTok scriptwriter. Write a ${duration}-second script for a short-form video. Format it as:
+**HOOK (0-3 sec):** [First line — must stop scroll instantly]
+**SCENE 1 (3-8 sec):** [Visual + voiceover text]
+**SCENE 2 (8-15 sec):** [Visual + voiceover text]
+...continue until ${duration}s...
+**CALL TO ACTION (last 3 sec):** [What to do next]
+**CAPTION:** [2-sentence caption]
+**SUGGESTED HASHTAGS:** [5-7 hashtags]
+Tone: ${tone}. Keep each scene tight — this is SHORT-FORM video.` },
+      { role: "user", content: `Write a ${duration}-second ${platform} Reel script about: ${topic}` },
+    ], (c) => send({ content: c }), hb, 1500);
+    send({ done: true, _meta: { key, model } }); res.end();
+  } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/hashtag-suggestions  (JSON)
+// ───────────────────────────────────────────────
+router.post("/ai/hashtag-suggestions", async (req, res) => {
+  const { topic = "", platform = "Instagram", niche = "" } = req.body as Record<string, string>;
+  if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `Generate hashtag sets for ${platform} posts. Mix of high-volume (1M+), medium (100k-1M), and niche (<100k) hashtags for best reach.
+Return ONLY valid JSON: { "sets": [ { "name": "High Volume", "tags": ["tag1","tag2",...] }, { "name": "Niche Targeted", "tags": [...] }, { "name": "Trending", "tags": [...] } ] }
+Each set: 10-15 hashtags. No # prefix in the tags array.` },
+      { role: "user", content: `Topic: ${topic}\nPlatform: ${platform}${niche ? `\nNiche: ${niche}` : ""}` },
+    ]);
+    let c = resp.choices[0]?.message?.content ?? "{}";
+    c = c.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    res.json(JSON.parse(c));
+  } catch { res.status(500).json({ error: "Failed to generate hashtags" }); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/content-calendar  (JSON)
+// ───────────────────────────────────────────────
+router.post("/ai/content-calendar", async (req, res) => {
+  const { businessName = "", industry = "", postsPerWeek = "5", platforms = "Instagram,LinkedIn,Twitter" } = req.body as Record<string, string>;
+  if (!businessName) { res.status(400).json({ error: "businessName is required" }); return; }
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `Generate a 4-week social media content calendar. Return ONLY valid JSON:
+{ "weeks": [ { "week": 1, "theme": "Brand Awareness", "posts": [ { "day": "Monday", "platform": "Instagram", "type": "Educational", "topic": "...", "hook": "...", "hashtags": ["tag1","tag2","tag3"] } ] } ] }
+- ${postsPerWeek} posts per week across these platforms: ${platforms}
+- Vary content types: Educational, Promotional, Engagement, Behind-scenes, Testimonial, Trending
+- Each week has a theme
+- Hooks should be scroll-stopping first sentences
+- 3-5 hashtags per post idea` },
+      { role: "user", content: `Business: ${businessName}\nIndustry: ${industry || "general"}\nGenerate 4-week content calendar.` },
+    ], undefined, undefined, 3000);
+    let c = resp.choices[0]?.message?.content ?? "{}";
+    c = c.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    res.json(JSON.parse(c));
+  } catch { res.status(500).json({ error: "Failed to generate calendar" }); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/repurpose-post  (SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/repurpose-post", async (req, res) => {
+  const { originalPost = "", fromPlatform = "Instagram", toPlatform = "LinkedIn" } = req.body as Record<string, string>;
+  if (!originalPost) { res.status(400).json({ error: "originalPost is required" }); return; }
+  res.setHeader("Content-Type", "text/event-stream"); res.setHeader("Cache-Control", "no-cache"); res.setHeader("Connection", "keep-alive"); res.flushHeaders();
+  const send = (d: object) => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  const hb = () => res.write(": ping\n\n"); hb();
+  try {
+    const { key, model } = await streamWithFallback([
+      { role: "system", content: `You are a social media expert. Repurpose content from ${fromPlatform} to ${toPlatform}. Adapt the tone, length, format, hashtags, and style to fit ${toPlatform}'s culture and algorithm perfectly. Don't just shorten/lengthen — truly rewrite it for the platform.` },
+      { role: "user", content: `Repurpose this ${fromPlatform} post for ${toPlatform}:\n\n"${originalPost}"` },
+    ], (c) => send({ content: c }), hb, 1024);
+    send({ done: true, _meta: { key, model } }); res.end();
+  } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/tiktok-caption  (SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/tiktok-caption", async (req, res) => {
+  const { topic = "", tone = "trendy" } = req.body as Record<string, string>;
+  if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
+  res.setHeader("Content-Type", "text/event-stream"); res.setHeader("Cache-Control", "no-cache"); res.setHeader("Connection", "keep-alive"); res.flushHeaders();
+  const send = (d: object) => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  const hb = () => res.write(": ping\n\n"); hb();
+  try {
+    const { key, model } = await streamWithFallback([
+      { role: "system", content: `You are a TikTok expert. Write a ${tone} TikTok caption that:\n1. Starts with a punchy hook (3-5 words max)\n2. Is under 150 characters\n3. Includes 3-5 trending hashtags (mix of broad + niche)\n4. Includes relevant emojis\n5. Creates FOMO or curiosity\n\nAlso suggest: a trending sound type, best posting time, and one engagement tip.` },
+      { role: "user", content: `Write a TikTok caption for: ${topic}` },
+    ], (c) => send({ content: c }), hb, 512);
+    send({ done: true, _meta: { key, model } }); res.end();
+  } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/pinterest-post  (SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/pinterest-post", async (req, res) => {
+  const { topic = "", niche = "" } = req.body as Record<string, string>;
+  if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
+  res.setHeader("Content-Type", "text/event-stream"); res.setHeader("Cache-Control", "no-cache"); res.setHeader("Connection", "keep-alive"); res.flushHeaders();
+  const send = (d: object) => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  const hb = () => res.write(": ping\n\n"); hb();
+  try {
+    const { key, model } = await streamWithFallback([
+      { role: "system", content: `You are a Pinterest SEO expert. Create Pinterest content that:\n1. Pin Title: Keyword-rich, 40-60 chars, descriptive and aspirational\n2. Pin Description: 200-500 chars, keyword-rich, tells a story, includes a CTA\n3. Board suggestion: Best board name/category\n4. SEO keywords: 5 keywords to include\n5. 5-10 relevant hashtags\n${niche ? `Niche: ${niche}` : ""}` },
+      { role: "user", content: `Create Pinterest content for: ${topic}` },
+    ], (c) => send({ content: c }), hb, 800);
+    send({ done: true, _meta: { key, model } }); res.end();
+  } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
+});
+
 export default router;

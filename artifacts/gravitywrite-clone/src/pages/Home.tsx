@@ -19,7 +19,7 @@ export default function Home() {
       <BrandsMarquee />
       <BlogWriterSection />
       <section id="website-developer"><WebsiteDeveloperSection /></section>
-      <SocialMediaSection />
+      <section id="social-media-section"><SocialMediaSection /></section>
       <ToolsSection />
       <WhyGravityWrite />
       <PricingSection />
