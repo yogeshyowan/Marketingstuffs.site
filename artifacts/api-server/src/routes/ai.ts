@@ -80,6 +80,29 @@ async function chatWithFallback(messages: ChatMessage[]): Promise<{
 }
 
 /**
+ * Robustly extract a JSON object or array from an AI response.
+ * Handles: raw JSON, ```json ... ```, prose + JSON block, trailing/leading text.
+ */
+function extractJSON(raw: string): unknown {
+  // 1. Strip every code fence block (```json ... ``` or ``` ... ```)
+  let s = raw.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1").trim();
+  // 2. If still no clean start, try to find first { or [ in original
+  if (!s.startsWith("{") && !s.startsWith("[")) {
+    const objIdx = raw.indexOf("{");
+    const arrIdx = raw.indexOf("[");
+    let start = -1;
+    if (objIdx !== -1 && arrIdx !== -1) start = Math.min(objIdx, arrIdx);
+    else if (objIdx !== -1) start = objIdx;
+    else if (arrIdx !== -1) start = arrIdx;
+    if (start !== -1) s = raw.slice(start);
+  }
+  // 3. Trim trailing non-JSON text after the last } or ]
+  const lastBrace = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
+  if (lastBrace !== -1) s = s.slice(0, lastBrace + 1);
+  return JSON.parse(s);
+}
+
+/**
  * Same strategy for streaming — always retry on any error.
  * onHeartbeat is called every ~10s to keep SSE connections alive through proxy timeouts.
  */
@@ -521,9 +544,8 @@ Return ONLY valid JSON (no markdown fences):
       { role: "user", content: userPrompt },
     ]);
 
-    let content = resp.choices[0]?.message?.content ?? "{}";
-    content = content.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    const parsed = JSON.parse(content) as {
+    const raw0 = resp.choices[0]?.message?.content ?? "{}";
+    const parsed = extractJSON(raw0) as {
       posts: Array<{
         platform: string;
         content: string;
@@ -557,9 +579,8 @@ router.post("/ai/suggest-blog-titles", async (req, res) => {
       },
       { role: "user", content: `Generate ${count} compelling blog titles for: ${topic}` },
     ]);
-    let content = resp.choices[0]?.message?.content ?? "{}";
-    content = content.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    res.json(JSON.parse(content));
+    const raw1 = resp.choices[0]?.message?.content ?? "{}";
+    res.json(extractJSON(raw1));
   } catch (err: unknown) {
     req.log.error({ err }, "Title suggestion failed");
     res.status(500).json({ error: "Failed to suggest titles" });
@@ -722,9 +743,8 @@ Return ONLY valid JSON (no markdown, no code fences):
       },
     ]);
 
-    let content = resp.choices[0]?.message?.content ?? "{}";
-    content = content.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    res.json(JSON.parse(content));
+    const raw2 = resp.choices[0]?.message?.content ?? "{}";
+    res.json(extractJSON(raw2));
   } catch (err: unknown) {
     req.log.error({ err }, "Business info generation failed");
     res.status(500).json({ error: "Failed to generate business info. Please try again." });
@@ -761,9 +781,8 @@ router.post("/ai/generate-hooks", async (req, res) => {
 Return ONLY valid JSON: { "hooks": [{ "type": "Question Hook", "text": "..." }, { "type": "Stat Hook", "text": "..." }, { "type": "Story Hook", "text": "..." }, { "type": "Controversial Hook", "text": "..." }, { "type": "How-To Hook", "text": "..." }, { "type": "List Hook", "text": "..." }] }` },
       { role: "user", content: `Topic: ${topic}\nContent type: ${contentType}` },
     ]);
-    let c = resp.choices[0]?.message?.content ?? "{}";
-    c = c.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    res.json(JSON.parse(c));
+    const raw3 = resp.choices[0]?.message?.content ?? "{}";
+    res.json(extractJSON(raw3));
   } catch { res.status(500).json({ error: "Failed to generate hooks" }); }
 });
 
@@ -824,9 +843,8 @@ Return ONLY valid JSON: { "sets": [ { "name": "High Volume", "tags": ["tag1","ta
 Each set: 10-15 hashtags. No # prefix in the tags array.` },
       { role: "user", content: `Topic: ${topic}\nPlatform: ${platform}${niche ? `\nNiche: ${niche}` : ""}` },
     ]);
-    let c = resp.choices[0]?.message?.content ?? "{}";
-    c = c.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    res.json(JSON.parse(c));
+    const raw4 = resp.choices[0]?.message?.content ?? "{}";
+    res.json(extractJSON(raw4));
   } catch { res.status(500).json({ error: "Failed to generate hashtags" }); }
 });
 
@@ -847,9 +865,8 @@ router.post("/ai/content-calendar", async (req, res) => {
 - 3-5 hashtags per post idea` },
       { role: "user", content: `Business: ${businessName}\nIndustry: ${industry || "general"}\nGenerate 4-week content calendar.` },
     ], undefined, undefined, 3000);
-    let c = resp.choices[0]?.message?.content ?? "{}";
-    c = c.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    res.json(JSON.parse(c));
+    const raw5 = resp.choices[0]?.message?.content ?? "{}";
+    res.json(extractJSON(raw5));
   } catch { res.status(500).json({ error: "Failed to generate calendar" }); }
 });
 
