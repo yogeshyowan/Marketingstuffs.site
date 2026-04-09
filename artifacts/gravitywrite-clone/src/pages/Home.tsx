@@ -18,7 +18,7 @@ export default function Home() {
       <HeroSection />
       <BrandsMarquee />
       <BlogWriterSection />
-      <WebsiteDeveloperSection />
+      <section id="website-developer"><WebsiteDeveloperSection /></section>
       <SocialMediaSection />
       <ToolsSection />
       <WhyGravityWrite />

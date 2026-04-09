@@ -1,46 +1,86 @@
-# Workspace
+# GrowBiz — AI Content & Growth Platform
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo. Two active artifacts: GrowBiz frontend + API server.
+Zero Replit credits — uses 5 user-provided OpenRouter API keys (OPENROUTER_KEY_1–5) with an 8-model free-tier fallback chain. Images via Pollinations.ai (free).
 
 ## Stack
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Monorepo**: pnpm workspaces, TypeScript 5.9, Node.js 24
+- **Frontend**: React + Vite + Tailwind + shadcn/ui + Framer Motion (`artifacts/gravitywrite-clone`)
+- **API**: Express 5 (`artifacts/api-server`) — all AI routes in `src/routes/ai.ts`
+- **AI models**: 8 confirmed free OpenRouter models with key-rotation fallback
+- **Images**: Pollinations.ai (`https://image.pollinations.ai/prompt/{encoded}?...`)
 
-## Key Commands
+## Free AI Models (FREE_MODELS in ai.ts)
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+```
+google/gemma-4-26b-a4b-it:free
+google/gemma-4-31b-it:free
+qwen/qwen3-coder:free
+nvidia/nemotron-3-super-120b-a12b:free
+openai/gpt-oss-120b:free
+nousresearch/hermes-3-llama-3.1-405b:free
+google/gemma-3-27b-it:free
+meta-llama/llama-3.3-70b-instruct:free
+```
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+`streamWithFallback(messages, onChunk, onHeartbeat?, maxTokens=8192)` iterates all 5 keys × 8 models until one succeeds.
 
-## Artifacts
+## API Endpoints (all in `src/routes/ai.ts`)
 
-### GrowBiz (`artifacts/gravitywrite-clone`)
-- Full landing page clone of gravitywrite.com with dark navy/purple glassmorphism aesthetic
-- Functional AI features powered by OpenAI via Replit AI Integrations proxy (no API key required)
-  - **Blog Writer**: Streaming SSE endpoint (`POST /api/ai/generate-blog`) — generates SEO-optimized markdown blog posts
-  - **Image Generator**: (`POST /api/ai/generate-image`) — generates images using `gpt-image-1`, returns base64
-  - **Social Media**: (`POST /api/ai/generate-social-post`) — generates platform-optimized posts with hashtags for multiple platforms
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/ai/generate-blog` | SSE — blog post generation (6-step wizard output) |
+| POST | `/api/ai/improve-blog` | SSE — inline blog editing |
+| POST | `/api/ai/suggest-titles` | JSON — 5 AI title suggestions |
+| POST | `/api/ai/generate-website` | SSE — full single-page HTML website (legacy) |
+| POST | `/api/ai/generate-website-section` | SSE — one section at a time (homepage/about/services/contact) |
+| POST | `/api/ai/improve-website` | SSE — AI edits to generated website |
+| POST | `/api/ai/auto-generate-business-info` | JSON — AI auto-fills tagline, description, services, audience |
+| POST | `/api/ai/generate-social-post` | SSE — social media posts for 5 platforms |
 
-### API Server (`artifacts/api-server`)
-- Express 5 REST API with routes in `src/routes/`
-- AI routes implemented in `src/routes/ai.ts` using `@workspace/integrations-openai-ai-server`
-- Models used: `gpt-5.2` (text), `gpt-image-1` (images)
+All SSE endpoints: `res.flushHeaders()` immediately + `: ping` heartbeat every 8s to prevent proxy timeout.
 
-## AI Integration Notes
-- Uses Replit AI Integrations proxy — env vars `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` are set automatically
-- Image generation always returns base64 (not URLs); `response_format` is not configurable
-- Use `max_completion_tokens` (not `max_tokens`) for gpt-5.2+
+## Frontend Features
+
+### Blog Writer (6-step wizard)
+1. Template (4 templates with mini-previews)
+2. Idea + AI title suggestions
+3. Style (tone/format)
+4. Voice (1st/2nd/3rd person)
+5. Images (0–6 Pollinations images, 6 styles)
+6. Details (keywords, word count, etc.)
+→ Output: streaming preview + copy/download HTML/MD/share
+
+### Website Builder (27-step flow adapted for web app)
+**Welcome** → "Create New Website" button
+**4-step wizard:**
+1. Business Type (18 categories) + Business Name
+2. Content (tagline, description, services, audience, CTA) + AI Auto-Fill button
+3. Contact Info (email, phone, address, socials) — optional/skippable
+4. Style (6 styles) + Template (6 layouts) + Font Pairing (4) + Color Scheme (6)
+→ "Start Building" button
+
+**Building phase** (page-by-page generation):
+- Generates 4 sections sequentially: Homepage → About Us → Services → Contact+Footer
+- Each section: live iframe preview + "Keep & Next" / "Regenerate" / "Skip" buttons
+- Progress tracker showing all 4 pages with status indicators
+
+**Done phase:**
+- Combined HTML (homepage + kept sections merged)
+- Device preview toggle: Desktop / Tablet / Mobile
+- "Edit with AI" sidebar (quick suggestions + custom prompt)
+- Copy HTML / Download HTML buttons
+
+### Social Media Generator
+Platform-specific posts for Instagram, Twitter/X, Facebook, LinkedIn, YouTube (with hashtags, emojis, character counts)
+
+## Key Implementation Notes
+
+- `generate-website-section` prompts: homepage gets full HTML doc; about/services/contact get `<section>` blocks only
+- Combining pages: strip `</body></html>` from homepage, append other sections, re-add closing tags
+- SSE `maxTokens` is 6000 per section (smaller focused prompts), 8192 for full website (legacy)
+- `combinePages()` helper in WebsiteDeveloperSection.tsx handles the HTML stitching
+- All color schemes have real hex values; AI prompts include actual accent/bg/text hex codes

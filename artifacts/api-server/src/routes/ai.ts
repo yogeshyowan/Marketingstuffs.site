@@ -86,15 +86,14 @@ async function chatWithFallback(messages: ChatMessage[]): Promise<{
 async function streamWithFallback(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
-  onHeartbeat?: () => void
+  onHeartbeat?: () => void,
+  maxTokens = 8192
 ): Promise<{ key: number; model: string }> {
   const errors: string[] = [];
 
   for (let ki = 0; ki < CLIENTS.length; ki++) {
     for (const model of FREE_MODELS) {
       try {
-        // Send a heartbeat before each attempt so the proxy doesn't time out
-        // while we wait for the model to start responding
         const hbInterval = onHeartbeat
           ? setInterval(onHeartbeat, 8000)
           : null;
@@ -103,7 +102,7 @@ async function streamWithFallback(
         try {
           const stream = await CLIENTS[ki].chat.completions.create({
             model,
-            max_tokens: 4096,
+            max_tokens: maxTokens,
             messages,
             stream: true,
           });
@@ -564,6 +563,131 @@ router.post("/ai/suggest-blog-titles", async (req, res) => {
   } catch (err: unknown) {
     req.log.error({ err }, "Title suggestion failed");
     res.status(500).json({ error: "Failed to suggest titles" });
+  }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/generate-website-section  (SSE)
+// Generates ONE section at a time for the page-by-page builder
+// ───────────────────────────────────────────────
+router.post("/ai/generate-website-section", async (req, res) => {
+  const {
+    sectionType = "homepage",
+    businessName = "",
+    tagline = "",
+    description = "",
+    services = "",
+    audience = "",
+    ctaText = "Get Started",
+    contactEmail = "",
+    contactPhone = "",
+    contactAddress = "",
+    socialInstagram = "",
+    socialTwitter = "",
+    socialFacebook = "",
+    fontHeading = "Inter",
+    fontBody = "Inter",
+    colorScheme = "dark professional",
+    accentColor = "#2563eb",
+    bgColor = "#0f172a",
+    textColor = "#f1f5f9",
+  } = req.body as Record<string, string>;
+
+  if (!businessName) { res.status(400).json({ error: "businessName is required" }); return; }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = () => res.write(": ping\n\n");
+  heartbeat();
+
+  const BASE_CSS = `@import url('https://fonts.googleapis.com/css2?family=${fontHeading.replace(/ /g,"+")}:wght@400;600;700;800&family=${fontBody.replace(/ /g,"+")}:wght@400;500;600&display=swap');
+:root{--bg:${bgColor};--accent:${accentColor};--text:${textColor};--font-h:'${fontHeading}',sans-serif;--font-b:'${fontBody}',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:var(--font-b)}
+h1,h2,h3,h4{font-family:var(--font-h)}
+.btn{display:inline-block;padding:0.75rem 1.75rem;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;transition:opacity .2s}
+.btn:hover{opacity:.85}.btn-outline{background:transparent;border:2px solid var(--accent);color:var(--accent)}
+.container{max-width:1200px;margin:0 auto;padding:0 1.5rem}
+section{padding:5rem 0}`;
+
+  const prompts: Record<string, { system: string; user: string }> = {
+    homepage: {
+      system: `Generate a complete standalone HTML page for the HOMEPAGE of a business website.
+Include ONLY these sections in order:
+1. Sticky navigation bar — logo (business name), links: About, Services, Contact — plus a "${ctaText}" CTA button. Add a mobile hamburger menu using pure CSS checkbox toggle.
+2. Hero section — large bold headline using the tagline, subtitle sentence about the business, two CTA buttons ("${ctaText}" filled + "Learn More" outline), and a visually impressive gradient/shape background.
+3. Key Features — 3–4 feature cards with a unicode emoji icon, bold title, short description. Grid layout.
+4. Stats bar — 4 impressive numbers (e.g., 500+ clients, 10 years, 98% satisfaction, 1000+ projects).
+5. CTA Section — centered headline + "${ctaText}" button + short persuasion copy.
+
+REQUIREMENTS:
+- Full HTML file: <!DOCTYPE html>...<head>...<style>...</style>...</head><body>...</body></html>
+- Embed all CSS in a single <style> tag. Start with this base CSS:
+${BASE_CSS}
+- Color scheme: ${colorScheme}. Use var(--bg), var(--accent), var(--text) throughout.
+- Responsive (mobile-first). Smooth hover effects. Modern, impressive design.
+- Return ONLY the HTML. No markdown. No explanations.`,
+      user: `Business: ${businessName}\nTagline: ${tagline || "Excellence in everything we do"}\nDescription: ${description}\nCTA: ${ctaText}`,
+    },
+    about: {
+      system: `Generate HTML sections for the ABOUT US page of a business website.
+Include ONLY these HTML sections (no <html>/<head>/<body> wrapper, just <section> tags):
+1. About Us section — compelling story of the business, mission statement, what makes it unique. Include a two-column layout with text + a decorative element/image placeholder.
+2. How It Works — 3 numbered steps showing the process (Step 1 → Step 2 → Step 3).
+3. Stats row — 4 impressive numbers with labels (clients, years, projects, satisfaction).
+4. Team section — 3 team member cards with emoji avatar, name, role, short bio.
+
+REQUIREMENTS:
+- Return ONLY <section>...</section> HTML blocks. No HTML wrapper tags.
+- Use these CSS variables (already defined in base): var(--bg), var(--accent), var(--text), var(--font-h), var(--font-b)
+- Responsive grid/flex layout. Visually impressive. Same color scheme: ${colorScheme}.`,
+      user: `Business: ${businessName}\nDescription: ${description}\nAudience: ${audience || "general public"}`,
+    },
+    services: {
+      system: `Generate HTML sections for the SERVICES/PRODUCTS page.
+Include ONLY these HTML sections (no <html>/<head>/<body> wrapper):
+1. Services section — 6 service cards, each with: unicode emoji icon, service name (based on: ${services || "core services"}), short description, "Learn More" link. Use a CSS grid.
+2. Pricing section — 3 pricing tiers (Starter / Professional / Enterprise). Middle tier highlighted as "Most Popular" with accent color. Each tier: name, price with /mo, 5 features list, CTA button.
+3. Testimonials — 3 customer testimonials. Each: 5 star emojis, quote text, customer name, company/role. Card-based layout.
+
+REQUIREMENTS:
+- Return ONLY <section>...</section> HTML blocks. No HTML wrapper tags.
+- Use CSS variables: var(--bg), var(--accent), var(--text), var(--font-h), var(--font-b).
+- Responsive. Modern card design. Same color scheme: ${colorScheme}.`,
+      user: `Business: ${businessName}\nServices: ${services || "professional services"}\nAudience: ${audience || "businesses"}`,
+    },
+    contact: {
+      system: `Generate HTML sections for the CONTACT page. This should be the FINAL sections of the website, including the footer.
+Include ONLY these HTML sections (no <html>/<head>/<body> wrapper):
+1. FAQ section — 5 questions and answers using pure CSS accordion (checkbox + label technique, no JavaScript). Each Q has a ▼ arrow that rotates when expanded.
+2. Contact section — left column: contact info (${contactEmail ? `Email: ${contactEmail}` : ""} ${contactPhone ? `Phone: ${contactPhone}` : ""} ${contactAddress ? `Address: ${contactAddress}` : ""}), social links (${socialInstagram ? `Instagram: ${socialInstagram}` : ""} ${socialTwitter ? `Twitter: ${socialTwitter}` : ""} ${socialFacebook ? `Facebook: ${socialFacebook}` : ""}). Right column: contact form with fields: Name, Email, Subject, Message + Submit button.
+3. Footer — logo (business name), short tagline, navigation links, social icons (use unicode), copyright line "© ${new Date().getFullYear()} ${businessName}".
+
+REQUIREMENTS:
+- Return ONLY <section>...</section> and <footer>...</footer> HTML blocks. No HTML wrapper tags.
+- Use CSS variables: var(--bg), var(--accent), var(--text).
+- Responsive. The FAQ accordion must work with pure CSS only.`,
+      user: `Business: ${businessName}\nTagline: ${tagline}\nContact: ${[contactEmail, contactPhone, contactAddress].filter(Boolean).join(", ") || "to be added"}`,
+    },
+  };
+
+  const { system, user } = prompts[sectionType] ?? prompts.homepage;
+
+  try {
+    const { key, model } = await streamWithFallback(
+      [{ role: "system", content: system }, { role: "user", content: user }],
+      (text) => send({ content: text }),
+      heartbeat,
+      6000
+    );
+    send({ done: true, sectionType, _meta: { key, model } });
+    res.end();
+  } catch (err: unknown) {
+    req.log.error({ err }, `Section generation failed: ${sectionType}`);
+    send({ error: err instanceof Error ? err.message : "Generation failed. Please try again." });
+    res.end();
   }
 });
 
