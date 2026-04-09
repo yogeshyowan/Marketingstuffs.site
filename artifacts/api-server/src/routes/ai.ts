@@ -3,9 +3,7 @@ import OpenAI from "openai";
 
 const router = Router();
 
-// ── Your 5 OpenRouter API keys ──────────────────────────────
-// We build one client per key. If a key hits rate limits or
-// exhausts credits, we transparently move to the next key.
+// ── Build one client per key ────────────────────────────────
 function buildClients(): OpenAI[] {
   const keys = [
     process.env.OPENROUTER_KEY_1,
@@ -32,40 +30,31 @@ function buildClients(): OpenAI[] {
 
 const CLIENTS = buildClients();
 
-// ── Free models ordered by quality / context size ──────────
+// ── Verified free models on OpenRouter (confirmed live) ────
+// Ordered by context size and quality. All IDs verified against
+// the OpenRouter /api/v1/models endpoint.
 const FREE_MODELS = [
-  "google/gemma-4-27b-a4b-it:free",           // 262k ctx — primary
-  "meta-llama/llama-3.3-70b-instruct:free",   // 65k ctx  — #2
-  "openai/gpt-oss-120b:free",                  // 131k ctx — #3
-  "nousresearch/hermes-3-llama-3.1-405b:free", // 131k ctx — #4
-  "qwen/qwen3-coder:free",                     // 262k ctx — #5
-  "nvidia/nemotron-3-super-120b-a12b:free",    // 262k ctx — #6
+  "google/gemma-4-26b-a4b-it:free",                   // Gemma 4 26B   262k ctx — primary
+  "google/gemma-4-31b-it:free",                        // Gemma 4 31B   262k ctx — #2
+  "qwen/qwen3-coder:free",                             // Qwen3 Coder   262k ctx — #3
+  "nvidia/nemotron-3-super-120b-a12b:free",            // Nemotron 120B 262k ctx — #4
+  "openai/gpt-oss-120b:free",                          // GPT-OSS 120B  131k ctx — #5
+  "nousresearch/hermes-3-llama-3.1-405b:free",         // Hermes 405B   131k ctx — #6
+  "google/gemma-3-27b-it:free",                        // Gemma 3 27B   131k ctx — #7
+  "meta-llama/llama-3.3-70b-instruct:free",            // Llama 3.3 70B  65k ctx — #8
 ];
-
-function isExhaustedError(err: unknown): boolean {
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes("rate limit") ||
-    msg.includes("429") ||
-    msg.includes("quota") ||
-    msg.includes("limit") ||
-    msg.includes("exhausted") ||
-    msg.includes("credits") ||
-    msg.includes("insufficient") ||
-    msg.includes("too many requests") ||
-    msg.includes("context length") ||
-    msg.includes("model_not_found")
-  );
-}
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 /**
- * Tries every key × every model combination until one succeeds.
- * Strategy: key[0]/model[0], key[0]/model[1]..., key[1]/model[0]...
- * (i.e. exhaust all models on current key before switching keys)
+ * Always retry on any error — we have 5 keys × 6 models = 30 combos.
+ * Only hard-fail once all combinations are exhausted.
  */
-async function chatWithFallback(messages: ChatMessage[]): Promise<{ resp: OpenAI.Chat.ChatCompletion; key: number; model: string }> {
+async function chatWithFallback(messages: ChatMessage[]): Promise<{
+  resp: OpenAI.Chat.ChatCompletion;
+  key: number;
+  model: string;
+}> {
   const errors: string[] = [];
 
   for (let ki = 0; ki < CLIENTS.length; ki++) {
@@ -79,18 +68,19 @@ async function chatWithFallback(messages: ChatMessage[]): Promise<{ resp: OpenAI
         return { resp, key: ki + 1, model };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`key${ki + 1}/${model}: ${msg}`);
-        if (isExhaustedError(err)) continue;
-        throw err; // non-quota error — surface it immediately
+        errors.push(`key${ki + 1}/${model}: ${msg.slice(0, 120)}`);
+        // Always continue to next combo — surface only when fully exhausted
       }
     }
   }
 
-  throw new Error(`All ${CLIENTS.length} keys × ${FREE_MODELS.length} models exhausted.\n${errors.join("\n")}`);
+  throw new Error(
+    `All ${CLIENTS.length} keys × ${FREE_MODELS.length} models failed.\n${errors.join("\n")}`
+  );
 }
 
 /**
- * Same double-loop but streams chunks via onChunk callback.
+ * Same strategy for streaming — always retry on any error.
  */
 async function streamWithFallback(
   messages: ChatMessage[],
@@ -114,14 +104,15 @@ async function streamWithFallback(
         return { key: ki + 1, model };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`key${ki + 1}/${model}: ${msg}`);
-        if (isExhaustedError(err)) continue;
-        throw err;
+        errors.push(`key${ki + 1}/${model}: ${msg.slice(0, 120)}`);
+        // Always continue to next combo
       }
     }
   }
 
-  throw new Error(`All ${CLIENTS.length} keys × ${FREE_MODELS.length} models exhausted.\n${errors.join("\n")}`);
+  throw new Error(
+    `All ${CLIENTS.length} keys × ${FREE_MODELS.length} models failed.\n${errors.join("\n")}`
+  );
 }
 
 // ───────────────────────────────────────────────
@@ -227,7 +218,7 @@ router.post("/ai/generate-website", async (req, res) => {
   const systemPrompt = `You are an expert web developer and UI/UX designer. Generate complete, production-ready HTML with embedded CSS.
 
 Requirements:
-- Single self-contained HTML file with embedded <style> and no external dependencies  
+- Single self-contained HTML file with embedded <style> and no external dependencies
 - Modern, beautiful design using CSS variables and flexbox/grid
 - Color scheme: ${colorScheme} (${colorScheme === "dark" ? "dark background, light text" : colorScheme === "colorful" ? "vibrant gradients and colors" : "clean whites, subtle grays, professional accents"})
 - Style: ${style}
@@ -240,7 +231,7 @@ Include ALL these sections for a ${websiteType}:
 2. Hero section with headline, subheadline, CTA buttons
 3. Features/Services section with icons (use CSS shapes or unicode)
 4. About/How It Works section
-5. Social proof / Testimonials section  
+5. Social proof / Testimonials section
 6. Pricing section (3 tiers if applicable)
 7. FAQ section with expand/collapse (pure CSS)
 8. Contact / CTA section
@@ -271,6 +262,88 @@ Generate the full HTML file now.`;
 });
 
 // ───────────────────────────────────────────────
+// POST /api/ai/improve-blog  — edit/improve existing blog
+// ───────────────────────────────────────────────
+router.post("/ai/improve-blog", async (req, res) => {
+  const { content, instruction } = req.body as { content: string; instruction: string };
+  if (!content || !instruction) {
+    res.status(400).json({ error: "content and instruction are required" });
+    return;
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    const { key, model } = await streamWithFallback(
+      [
+        {
+          role: "system",
+          content: `You are an expert editor and content strategist. The user has an existing blog post and wants to improve it. 
+Apply the requested changes while preserving the overall structure and tone.
+Keep the markdown formatting intact. Return the FULL improved article.`,
+        },
+        {
+          role: "user",
+          content: `Here is my current blog post:\n\n${content}\n\n---\n\nPlease apply this improvement: ${instruction}\n\nReturn the complete updated blog post.`,
+        },
+      ],
+      (text) => send({ content: text })
+    );
+    send({ done: true, _meta: { key, model } });
+    res.end();
+  } catch (err: unknown) {
+    req.log.error({ err }, "Blog improvement failed");
+    send({ error: err instanceof Error ? err.message : "Improvement failed. Please try again." });
+    res.end();
+  }
+});
+
+// ───────────────────────────────────────────────
+// POST /api/ai/improve-website  — edit existing website
+// ───────────────────────────────────────────────
+router.post("/ai/improve-website", async (req, res) => {
+  const { html, instruction } = req.body as { html: string; instruction: string };
+  if (!html || !instruction) {
+    res.status(400).json({ error: "html and instruction are required" });
+    return;
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    const { key, model } = await streamWithFallback(
+      [
+        {
+          role: "system",
+          content: `You are an expert web developer. The user has a website they want to edit.
+Apply the requested changes to the HTML. Return the COMPLETE updated HTML file starting with <!DOCTYPE html>.
+Keep all existing sections intact unless the user asks to change them.`,
+        },
+        {
+          role: "user",
+          content: `Here is my current website HTML:\n\n${html}\n\n---\n\nPlease apply this change: ${instruction}\n\nReturn the complete updated HTML file.`,
+        },
+      ],
+      (text) => send({ content: text })
+    );
+    send({ done: true, _meta: { key, model } });
+    res.end();
+  } catch (err: unknown) {
+    req.log.error({ err }, "Website improvement failed");
+    send({ error: err instanceof Error ? err.message : "Improvement failed. Please try again." });
+    res.end();
+  }
+});
+
+// ───────────────────────────────────────────────
 // POST /api/ai/generate-image  (Pollinations.ai — truly free)
 // ───────────────────────────────────────────────
 router.post("/ai/generate-image", async (req, res) => {
@@ -283,7 +356,9 @@ router.post("/ai/generate-image", async (req, res) => {
 
   if (!prompt) { res.status(400).json({ error: "prompt is required" }); return; }
 
-  const fullPrompt = style ? `${prompt}, ${style} style, highly detailed, professional quality` : `${prompt}, highly detailed, professional quality`;
+  const fullPrompt = style
+    ? `${prompt}, ${style} style, highly detailed, professional quality`
+    : `${prompt}, highly detailed, professional quality`;
   const encoded = encodeURIComponent(fullPrompt);
   const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&nologo=true&enhance=true&model=flux`;
 
@@ -346,7 +421,7 @@ ${brand ? `- Brand voice: ${brand}` : ""}
 
 Platform-specific guidance:
 - Instagram: visual storytelling, emotional hooks, strong CTA, save-worthy content
-- Facebook: community building, complete thoughts, encourages shares/comments  
+- Facebook: community building, complete thoughts, encourages shares/comments
 - LinkedIn: professional insights, thought leadership, industry value
 - X (Twitter): punchy, conversation-starting, current/trending angle
 - Pinterest: descriptive, aspirational, keyword-rich for search
@@ -368,19 +443,28 @@ Return ONLY valid JSON (no markdown fences):
   const userPrompt = `Generate social media posts for: ${platforms.join(", ")}\nTopic: ${topic}`;
 
   try {
-    const { resp, key, model } = await chatWithFallback(
-      [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }]
-    );
+    const { resp, key, model } = await chatWithFallback([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ]);
 
     let content = resp.choices[0]?.message?.content ?? "{}";
     content = content.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
     const parsed = JSON.parse(content) as {
-      posts: Array<{ platform: string; content: string; hashtags: string[]; bestTime?: string; tip?: string }>;
+      posts: Array<{
+        platform: string;
+        content: string;
+        hashtags: string[];
+        bestTime?: string;
+        tip?: string;
+      }>;
     };
     res.json({ ...parsed, _meta: { key, model } });
   } catch (err: unknown) {
     req.log.error({ err }, "Social post generation failed");
-    res.status(500).json({ error: err instanceof Error ? err.message : "Generation failed. Please try again." });
+    res
+      .status(500)
+      .json({ error: err instanceof Error ? err.message : "Generation failed. Please try again." });
   }
 });
 
@@ -393,7 +477,11 @@ router.post("/ai/suggest-blog-titles", async (req, res) => {
 
   try {
     const { resp } = await chatWithFallback([
-      { role: "system", content: 'You are an SEO expert. Generate click-worthy, SEO-optimized blog titles. Return ONLY valid JSON (no markdown): { "titles": ["title1", "title2", ...] }' },
+      {
+        role: "system",
+        content:
+          'You are an SEO expert. Generate click-worthy, SEO-optimized blog titles. Return ONLY valid JSON (no markdown): { "titles": ["title1", "title2", ...] }',
+      },
       { role: "user", content: `Generate ${count} compelling blog titles for: ${topic}` },
     ]);
     let content = resp.choices[0]?.message?.content ?? "{}";

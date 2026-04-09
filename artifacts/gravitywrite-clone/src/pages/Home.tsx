@@ -2,7 +2,6 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import BrandsMarquee from "@/components/BrandsMarquee";
 import BlogWriterSection from "@/components/BlogWriterSection";
-import ImageGeneratorSection from "@/components/ImageGeneratorSection";
 import WebsiteDeveloperSection from "@/components/WebsiteDeveloperSection";
 import SocialMediaSection from "@/components/SocialMediaSection";
 import ToolsSection from "@/components/ToolsSection";
@@ -19,7 +18,6 @@ export default function Home() {
       <HeroSection />
       <BrandsMarquee />
       <BlogWriterSection />
-      <ImageGeneratorSection />
       <WebsiteDeveloperSection />
       <SocialMediaSection />
       <ToolsSection />

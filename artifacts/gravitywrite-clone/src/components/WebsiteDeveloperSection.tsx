@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, Code2, Loader2, Copy, Check, Download, Eye, Maximize2, X, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import {
+  Globe, Code2, Loader2, Copy, Check, Download, Eye,
+  Maximize2, X, ChevronLeft, ChevronRight, Sparkles, Edit3, Wand2, RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// ── Kid-friendly wizard data ────────────────────────────────
 const WEBSITE_TYPES = [
   { id: "shop", emoji: "🛍️", label: "Online Shop", desc: "Sell your products" },
   { id: "restaurant", emoji: "🍕", label: "Restaurant / Café", desc: "Food & menu site" },
@@ -35,6 +37,19 @@ const WEBSITE_STYLES = [
   { id: "warm", emoji: "🌻", label: "Warm & Friendly", desc: "Welcoming, community feel" },
 ];
 
+const QUICK_EDITS_WEBSITE = [
+  "Change the color scheme to blue and white",
+  "Make the hero section more impactful with bigger text",
+  "Add an FAQ section",
+  "Add a newsletter signup form",
+  "Make the design more minimalist",
+  "Add more social proof / testimonials",
+  "Update all placeholder text with better copy",
+  "Add a contact form to the contact section",
+  "Make it look more premium and luxury",
+  "Add a mobile-friendly hamburger menu",
+];
+
 const STEPS = ["Website Type", "Your Business", "Colors", "Style", "Review"];
 
 export default function WebsiteDeveloperSection() {
@@ -53,7 +68,12 @@ export default function WebsiteDeveloperSection() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
-  const abortRef = { current: null as AbortController | null };
+
+  // Edit mode
+  const [editOpen, setEditOpen] = useState(false);
+  const [editInstruction, setEditInstruction] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const selectedType = WEBSITE_TYPES.find(t => t.id === websiteType);
   const selectedColor = COLORS.find(c => c.id === colorTheme);
@@ -68,7 +88,7 @@ export default function WebsiteDeveloperSection() {
     setIsGenerating(true);
     setGeneratedCode("");
     setError("");
-    abortRef.current = new AbortController();
+    setEditOpen(false);
 
     try {
       const res = await fetch("/api/ai/generate-website", {
@@ -76,14 +96,10 @@ export default function WebsiteDeveloperSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           websiteType: selectedType?.label ?? websiteType,
-          businessName,
-          description,
-          audience,
-          features,
+          businessName, description, audience, features,
           colorScheme: colorMap[colorTheme] ?? "dark",
           style: selectedStyle?.label.toLowerCase() ?? style,
         }),
-        signal: abortRef.current.signal,
       });
       if (!res.ok) throw new Error("Request failed");
       const reader = res.body!.getReader();
@@ -106,9 +122,49 @@ export default function WebsiteDeveloperSection() {
         }
       }
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== "AbortError")
-        setError("Generation failed. Please try again.");
+      if (err instanceof Error) setError(err.message || "Generation failed. Please try again.");
     } finally { setIsGenerating(false); }
+  }
+
+  async function handleEdit() {
+    if (!editInstruction.trim()) return;
+    setIsEditing(true);
+    setEditError("");
+    const previous = generatedCode;
+
+    try {
+      setGeneratedCode("");
+      setViewMode("preview");
+      const res = await fetch("/api/ai/improve-website", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html: previous, instruction: editInstruction }),
+      });
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const d = JSON.parse(line.slice(6));
+              if (d.error) { setEditError(d.error); setGeneratedCode(previous); }
+              if (d.content) setGeneratedCode(p => p + d.content);
+            } catch { /* skip */ }
+          }
+        }
+      }
+      setEditInstruction("");
+      setEditOpen(false);
+    } catch {
+      setGeneratedCode(previous);
+      setEditError("Edit failed. Please try again.");
+    } finally { setIsEditing(false); }
   }
 
   function handleCopy() {
@@ -134,7 +190,9 @@ export default function WebsiteDeveloperSection() {
     return (
       <section id="website-developer" className="py-24 relative overflow-hidden bg-[#050510]">
         <div className="container px-4 mx-auto max-w-6xl">
-          <div className="flex items-center justify-between mb-6">
+
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                 <Globe className="w-5 h-5 text-cyan-400" />
@@ -145,13 +203,62 @@ export default function WebsiteDeveloperSection() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setGeneratedCode(""); setStep(0); }}
-                className="border-white/10 text-white/50 hover:bg-white/5 text-xs rounded-xl">
-                Start Over
+              {!isGenerating && !isEditing && generatedCode && (
+                <Button size="sm" onClick={() => setEditOpen(o => !o)}
+                  className={`text-xs h-8 rounded-xl gap-1.5 ${editOpen ? "bg-cyan-500/30 text-cyan-300 border border-cyan-500/50" : "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/25"}`}>
+                  <Edit3 className="w-3.5 h-3.5" /> Edit Website
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => { setGeneratedCode(""); setStep(0); setEditOpen(false); }}
+                className="border-white/10 text-white/40 hover:bg-white/5 text-xs h-8 rounded-xl">
+                New Website
               </Button>
             </div>
           </div>
 
+          {/* Edit panel */}
+          <AnimatePresence>
+            {editOpen && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                className="mb-4 p-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="w-4 h-4 text-cyan-400" />
+                    <span className="text-sm font-semibold text-cyan-300">What would you like to change?</span>
+                  </div>
+                  <button onClick={() => setEditOpen(false)} className="text-white/30 hover:text-white/60">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_EDITS_WEBSITE.map(q => (
+                    <button key={q} onClick={() => setEditInstruction(q)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${editInstruction === q ? "border-cyan-500/60 bg-cyan-500/25 text-cyan-300" : "border-white/10 bg-white/5 text-white/50 hover:border-cyan-500/40 hover:text-cyan-300"}`}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <input
+                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
+                    placeholder="Or describe your change... (e.g., 'change the hero headline to say Welcome to Luna Boutique' or 'add a gallery section')"
+                    value={editInstruction}
+                    onChange={e => setEditInstruction(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleEdit()}
+                  />
+                  <Button onClick={handleEdit} disabled={isEditing || !editInstruction.trim()}
+                    className="bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl px-5 text-sm h-10 shrink-0">
+                    {isEditing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-1.5" />Apply</>}
+                  </Button>
+                </div>
+                {editError && <p className="text-red-400 text-xs">{editError}</p>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Website preview */}
           <div className="glass-card rounded-2xl border border-white/10 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-black/60 border-b border-white/10">
               <div className="flex gap-1.5">
@@ -160,7 +267,7 @@ export default function WebsiteDeveloperSection() {
                 <div className="w-3 h-3 rounded-full bg-green-500/60" />
               </div>
               <div className="flex-1 bg-white/5 rounded-md h-6 mx-2 flex items-center px-3">
-                <span className="text-xs text-white/30">🔒 your-business.com</span>
+                <span className="text-xs text-white/30">🔒 {businessName ? businessName.toLowerCase().replace(/\s+/g, "-") : "your-business"}.com</span>
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => setViewMode("preview")}
@@ -187,41 +294,46 @@ export default function WebsiteDeveloperSection() {
               </div>
             </div>
 
-            {isGenerating && !generatedCode && (
+            {(isGenerating || isEditing) && !generatedCode && (
               <div className="h-64 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-                <p className="text-white/50 text-sm">Building your website with free AI...</p>
+                <p className="text-white/50 text-sm">{isEditing ? "Applying your changes..." : "Building your website with free AI..."}</p>
               </div>
             )}
 
             {viewMode === "preview" && generatedCode && (
               <iframe srcDoc={generatedCode} className="w-full h-[600px] bg-white" sandbox="allow-scripts" title="Website Preview" />
             )}
-
             {viewMode === "code" && generatedCode && (
               <div className="h-[600px] overflow-auto bg-black/80">
                 <pre className="p-6 text-xs text-green-300/80 font-mono leading-relaxed whitespace-pre-wrap">{generatedCode}</pre>
               </div>
             )}
 
-            {isGenerating && generatedCode && (
+            {(isGenerating || isEditing) && generatedCode && (
               <div className="px-4 py-2 bg-black/40 border-t border-white/5 flex items-center gap-2">
                 <Loader2 className="w-3 h-3 text-cyan-400 animate-spin" />
                 <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full animate-pulse" style={{ width: `${Math.min(90, (generatedCode.length / 100))}%` }} />
+                  <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full animate-pulse w-3/4" />
                 </div>
                 <span className="text-xs text-white/30">{generatedCode.length} chars</span>
               </div>
             )}
           </div>
 
-          {!isGenerating && generatedCode && (
-            <div className="mt-4 flex gap-3">
-              <Button onClick={handleDownload} className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 rounded-xl h-10 text-sm">
+          {!isGenerating && !isEditing && generatedCode && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button onClick={() => setEditOpen(true)}
+                className="bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 border border-cyan-500/20 rounded-xl h-10 text-sm gap-1.5">
+                <Edit3 className="w-4 h-4" /> Edit / Improve
+              </Button>
+              <Button onClick={handleDownload}
+                className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 rounded-xl h-10 text-sm">
                 <Download className="w-4 h-4 mr-2" /> Download HTML
               </Button>
-              <Button onClick={handleGenerate} variant="outline" className="border-white/10 text-white/50 hover:bg-white/5 rounded-xl h-10 text-sm">
-                Regenerate
+              <Button onClick={handleGenerate} variant="outline"
+                className="border-white/10 text-white/40 hover:bg-white/5 rounded-xl h-10 text-sm">
+                <RefreshCw className="w-4 h-4 mr-2" /> Regenerate
               </Button>
             </div>
           )}
@@ -256,7 +368,6 @@ export default function WebsiteDeveloperSection() {
           <p className="text-white/50 text-lg">Answer a few fun questions — we build the website. No coding needed, ever.</p>
         </div>
 
-        {/* Progress */}
         <div className="mb-8">
           <div className="flex justify-between mb-3">
             {STEPS.map((s, i) => (
@@ -278,7 +389,6 @@ export default function WebsiteDeveloperSection() {
         <div className="glass-card rounded-2xl border border-white/10 p-6 md:p-8 min-h-80">
           <AnimatePresence mode="wait">
 
-            {/* Step 0: Type */}
             {step === 0 && (
               <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <h3 className="text-2xl font-bold text-white mb-2">What kind of website do you need? 🤔</h3>
@@ -286,7 +396,7 @@ export default function WebsiteDeveloperSection() {
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {WEBSITE_TYPES.map(t => (
                     <button key={t.id} onClick={() => setWebsiteType(t.id)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${websiteType === t.id ? "border-cyan-500/60 bg-cyan-500/15 shadow-[0_0_20px_rgba(6,182,212,0.2)]" : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8"}`}>
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${websiteType === t.id ? "border-cyan-500/60 bg-cyan-500/15 shadow-[0_0_20px_rgba(6,182,212,0.2)]" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
                       <span className="text-3xl">{t.emoji}</span>
                       <span className={`text-xs font-semibold text-center leading-tight ${websiteType === t.id ? "text-cyan-300" : "text-white/70"}`}>{t.label}</span>
                     </button>
@@ -295,7 +405,6 @@ export default function WebsiteDeveloperSection() {
               </motion.div>
             )}
 
-            {/* Step 1: Details */}
             {step === 1 && (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <div className="flex items-center gap-3 mb-5">
@@ -307,7 +416,7 @@ export default function WebsiteDeveloperSection() {
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">What's the name? <span className="text-white/30">(your business or project name)</span></label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">What's the name?</label>
                     <input className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 text-sm"
                       placeholder={`e.g., "${selectedType?.id === "restaurant" ? "Mario's Kitchen" : selectedType?.id === "shop" ? "Luna Boutique" : "MyAwesomeBiz"}"`}
                       value={businessName} onChange={e => setBusinessName(e.target.value)} />
@@ -315,7 +424,7 @@ export default function WebsiteDeveloperSection() {
                   <div>
                     <label className="block text-sm font-medium text-white/70 mb-2">What do you do? <span className="text-white/30">*</span></label>
                     <textarea className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 h-24 resize-none text-sm"
-                      placeholder={selectedType?.id === "restaurant" ? "e.g., We serve authentic Italian pizza and pasta in downtown Chicago. Family-owned since 1995." : selectedType?.id === "shop" ? "e.g., We sell handmade jewelry and accessories. Every piece is unique and eco-friendly." : "e.g., We help small businesses grow by creating stunning brand identities and marketing strategies."}
+                      placeholder={selectedType?.id === "restaurant" ? "e.g., We serve authentic Italian pizza and pasta in downtown Chicago." : "e.g., We help small businesses grow by creating stunning brand identities."}
                       value={description} onChange={e => setDescription(e.target.value)} />
                   </div>
                   <div>
@@ -334,7 +443,6 @@ export default function WebsiteDeveloperSection() {
               </motion.div>
             )}
 
-            {/* Step 2: Colors */}
             {step === 2 && (
               <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <h3 className="text-xl font-bold text-white mb-2">Pick your colors 🎨</h3>
@@ -345,7 +453,7 @@ export default function WebsiteDeveloperSection() {
                       className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${colorTheme === c.id ? "border-cyan-500/60 bg-cyan-500/10" : "border-white/10 bg-white/5 hover:border-white/20"}`}>
                       <div className="flex gap-1 flex-shrink-0">
                         {c.preview.map((color, i) => (
-                          <div key={i} className="w-6 h-6 rounded-full border border-white/20 shadow-sm" style={{ background: color }} />
+                          <div key={i} className="w-6 h-6 rounded-full border border-white/20" style={{ background: color }} />
                         ))}
                       </div>
                       <div>
@@ -359,7 +467,6 @@ export default function WebsiteDeveloperSection() {
               </motion.div>
             )}
 
-            {/* Step 3: Style */}
             {step === 3 && (
               <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <h3 className="text-xl font-bold text-white mb-2">Choose your design style ✨</h3>
@@ -377,17 +484,16 @@ export default function WebsiteDeveloperSection() {
               </motion.div>
             )}
 
-            {/* Step 4: Review */}
             {step === 4 && (
               <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <h3 className="text-xl font-bold text-white mb-2">Ready to build! 🚀</h3>
-                <p className="text-white/50 text-sm mb-6">Here's a summary of your website. Click Build when ready!</p>
+                <p className="text-white/50 text-sm mb-6">Here's a summary. Click Build when ready!</p>
                 <div className="space-y-3">
                   {[
                     { label: "Website type", value: `${selectedType?.emoji} ${selectedType?.label}` },
                     { label: "Business name", value: businessName || "Not specified" },
                     { label: "What you do", value: description.length > 80 ? description.slice(0, 80) + "…" : description },
-                    { label: "Color theme", value: `${selectedColor?.label}` },
+                    { label: "Color theme", value: selectedColor?.label ?? "" },
                     { label: "Design style", value: `${selectedStyle?.emoji} ${selectedStyle?.label}` },
                   ].map(row => (
                     <div key={row.label} className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
@@ -400,7 +506,7 @@ export default function WebsiteDeveloperSection() {
                   <span className="text-emerald-400 text-lg">✅</span>
                   <div>
                     <p className="text-emerald-400 text-sm font-semibold">100% Free — No credit card needed</p>
-                    <p className="text-emerald-400/70 text-xs mt-0.5">Your website is built using free AI. Download the HTML file and host it anywhere.</p>
+                    <p className="text-emerald-400/70 text-xs mt-0.5">After generating, you can edit it further with AI or download the HTML.</p>
                   </div>
                 </div>
               </motion.div>
@@ -408,7 +514,6 @@ export default function WebsiteDeveloperSection() {
           </AnimatePresence>
         </div>
 
-        {/* Nav buttons */}
         <div className="flex items-center gap-3 mt-6">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(s => s - 1)}
@@ -418,12 +523,12 @@ export default function WebsiteDeveloperSection() {
           )}
           {!isLastStep ? (
             <Button onClick={() => setStep(s => s + 1)} disabled={!canGoNext}
-              className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl h-12 text-base">
+              className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl h-12 text-base disabled:opacity-40 disabled:cursor-not-allowed">
               Continue <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
             <Button onClick={handleGenerate} disabled={isGenerating || !description.trim()}
-              className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold rounded-xl h-12 text-base shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+              className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold rounded-xl h-12 text-base shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-40">
               {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Building...</> : <><Sparkles className="w-5 h-5 mr-2" />Build My Website!</>}
             </Button>
           )}

@@ -6,7 +6,7 @@ const TOOLS = [
   { icon: PenTool, label: "Blog Writer", color: "text-violet-400", bg: "bg-violet-400/10" },
   { icon: Globe, label: "Website Builder", color: "text-cyan-400", bg: "bg-cyan-400/10" },
   { icon: Share2, label: "Social Media", color: "text-pink-400", bg: "bg-pink-400/10" },
-  { icon: Zap, label: "AI Images", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+  { icon: Zap, label: "100% Free AI", color: "text-emerald-400", bg: "bg-emerald-400/10" },
 ];
 
 export default function HeroSection() {
