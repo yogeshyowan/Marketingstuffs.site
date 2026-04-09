@@ -11,7 +11,7 @@ export default function Footer() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center font-bold text-lg text-white">
                 G
               </div>
-              <span className="font-bold text-2xl tracking-tight text-white">GravityWrite</span>
+              <span className="font-bold text-2xl tracking-tight text-white">GrowBiz</span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
               The AI content platform that grows your business.
@@ -62,7 +62,7 @@ export default function Footer() {
         </div>
         
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
-          <p>© 2025 GravityWrite. All rights reserved.</p>
+          <p>© 2025 GrowBiz. All rights reserved.</p>
           <div className="flex gap-6">
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>

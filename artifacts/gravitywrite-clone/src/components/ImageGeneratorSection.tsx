@@ -57,7 +57,7 @@ export default function ImageGeneratorSection() {
     if (!generatedImage) return;
     const a = document.createElement("a");
     a.href = generatedImage;
-    a.download = `gravitywrite-${Date.now()}.png`;
+    a.download = `growbiz-${Date.now()}.png`;
     a.click();
   }
 

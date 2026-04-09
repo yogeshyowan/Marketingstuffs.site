@@ -130,7 +130,7 @@ export default function PricingSection() {
           <div className="glass-card rounded-3xl p-8 border border-white/10 order-3">
             <div className="mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">Bundle</h3>
-              <p className="text-sm text-white/60">GravityWrite + n8n + WordPress</p>
+              <p className="text-sm text-white/60">GrowBiz + n8n + WordPress</p>
               <div className="mt-4 inline-block bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs font-semibold">
                 Save 80%
               </div>
@@ -154,7 +154,7 @@ export default function PricingSection() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-white/40 shrink-0 mt-0.5" />
-                <span className="text-white/80 text-sm"><strong className="text-white">GravityWrite</strong> (Plus Plan Included)</span>
+                <span className="text-white/80 text-sm"><strong className="text-white">GrowBiz</strong> (Plus Plan Included)</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-white/40 shrink-0 mt-0.5" />

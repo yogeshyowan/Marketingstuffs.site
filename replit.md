@@ -84,7 +84,7 @@ All SSE endpoints: `res.flushHeaders()` immediately + `: ping` heartbeat every 8
 - Copy HTML / Download HTML buttons
 
 ### Social Media Manager (full 8-phase platform, `SocialMediaSection.tsx`)
-8 tabs matching GravityWrite's full workflow:
+8 tabs matching GrowBiz's full workflow:
 1. **Connect Accounts** (Phase 1) — Toggle connect for 6 platforms, set @handle + timezone per account; persisted in localStorage
 2. **Create Post** (Phase 2) — Campaign name, 8 content types, summary, 6 platforms, 6 tones, schedule picker, "Add to Queue", AI generate → per-platform editable previews → Save Draft / Schedule / Publish
 3. **Calendar** (Phase 4) — Monthly grid with scheduled post chips (color by platform), prev/next month, AI 4-week calendar generator (business name + industry → structured weekly plan)
