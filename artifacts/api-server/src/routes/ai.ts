@@ -1,75 +1,127 @@
 import { Router } from "express";
-import { openrouter } from "@workspace/integrations-openrouter-ai";
-import { isRateLimitError } from "@workspace/integrations-openrouter-ai/batch";
+import OpenAI from "openai";
 
 const router = Router();
 
-// Ordered list of FREE models on OpenRouter — no Replit credits consumed.
-// Falls through to the next model if rate-limited or quota-exhausted.
-const FREE_TEXT_MODELS = [
-  "google/gemma-4-27b-a4b-it:free",       // 262k ctx — primary
-  "openai/gpt-oss-120b:free",             // 131k ctx — #2
-  "meta-llama/llama-3.3-70b-instruct:free", // 65k ctx — #3
+// ── Your 5 OpenRouter API keys ──────────────────────────────
+// We build one client per key. If a key hits rate limits or
+// exhausts credits, we transparently move to the next key.
+function buildClients(): OpenAI[] {
+  const keys = [
+    process.env.OPENROUTER_KEY_1,
+    process.env.OPENROUTER_KEY_2,
+    process.env.OPENROUTER_KEY_3,
+    process.env.OPENROUTER_KEY_4,
+    process.env.OPENROUTER_KEY_5,
+  ].filter(Boolean) as string[];
+
+  if (keys.length === 0) throw new Error("No OPENROUTER_KEY_* env vars found");
+
+  return keys.map(
+    (apiKey) =>
+      new OpenAI({
+        apiKey,
+        baseURL: "https://openrouter.ai/api/v1",
+        defaultHeaders: {
+          "HTTP-Referer": "https://growbiz.ai",
+          "X-Title": "GrowBiz",
+        },
+      })
+  );
+}
+
+const CLIENTS = buildClients();
+
+// ── Free models ordered by quality / context size ──────────
+const FREE_MODELS = [
+  "google/gemma-4-27b-a4b-it:free",           // 262k ctx — primary
+  "meta-llama/llama-3.3-70b-instruct:free",   // 65k ctx  — #2
+  "openai/gpt-oss-120b:free",                  // 131k ctx — #3
   "nousresearch/hermes-3-llama-3.1-405b:free", // 131k ctx — #4
-  "qwen/qwen3-coder:free",                // 262k ctx — #5
-  "nvidia/nemotron-3-super-120b-a12b:free", // 262k ctx — #6
+  "qwen/qwen3-coder:free",                     // 262k ctx — #5
+  "nvidia/nemotron-3-super-120b-a12b:free",    // 262k ctx — #6
 ];
+
+function isExhaustedError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes("rate limit") ||
+    msg.includes("429") ||
+    msg.includes("quota") ||
+    msg.includes("limit") ||
+    msg.includes("exhausted") ||
+    msg.includes("credits") ||
+    msg.includes("insufficient") ||
+    msg.includes("too many requests") ||
+    msg.includes("context length") ||
+    msg.includes("model_not_found")
+  );
+}
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-async function chatWithFallback(messages: ChatMessage[], opts: { stream?: false } = {}) {
+/**
+ * Tries every key × every model combination until one succeeds.
+ * Strategy: key[0]/model[0], key[0]/model[1]..., key[1]/model[0]...
+ * (i.e. exhaust all models on current key before switching keys)
+ */
+async function chatWithFallback(messages: ChatMessage[]): Promise<{ resp: OpenAI.Chat.ChatCompletion; key: number; model: string }> {
   const errors: string[] = [];
-  for (const model of FREE_TEXT_MODELS) {
-    try {
-      const resp = await openrouter.chat.completions.create({
-        model,
-        max_tokens: 8192,
-        messages,
-        ...opts,
-      });
-      return { resp, model };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`${model}: ${msg}`);
-      if (isRateLimitError(err)) continue; // try next model
-      if (msg.includes("quota") || msg.includes("limit") || msg.includes("exhausted") || msg.includes("credits")) continue;
-      throw err; // non-rate-limit error — don't hide it
+
+  for (let ki = 0; ki < CLIENTS.length; ki++) {
+    for (const model of FREE_MODELS) {
+      try {
+        const resp = await CLIENTS[ki].chat.completions.create({
+          model,
+          max_tokens: 8192,
+          messages,
+        });
+        return { resp, key: ki + 1, model };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`key${ki + 1}/${model}: ${msg}`);
+        if (isExhaustedError(err)) continue;
+        throw err; // non-quota error — surface it immediately
+      }
     }
   }
-  throw new Error(`All free models exhausted. Errors: ${errors.join(" | ")}`);
+
+  throw new Error(`All ${CLIENTS.length} keys × ${FREE_MODELS.length} models exhausted.\n${errors.join("\n")}`);
 }
 
+/**
+ * Same double-loop but streams chunks via onChunk callback.
+ */
 async function streamWithFallback(
   messages: ChatMessage[],
   onChunk: (text: string) => void
-): Promise<string> {
+): Promise<{ key: number; model: string }> {
   const errors: string[] = [];
-  for (const model of FREE_TEXT_MODELS) {
-    try {
-      const stream = await openrouter.chat.completions.create({
-        model,
-        max_tokens: 8192,
-        messages,
-        stream: true,
-      });
-      let full = "";
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          full += content;
-          onChunk(content);
+
+  for (let ki = 0; ki < CLIENTS.length; ki++) {
+    for (const model of FREE_MODELS) {
+      try {
+        const stream = await CLIENTS[ki].chat.completions.create({
+          model,
+          max_tokens: 8192,
+          messages,
+          stream: true,
+        });
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content;
+          if (content) onChunk(content);
         }
+        return { key: ki + 1, model };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`key${ki + 1}/${model}: ${msg}`);
+        if (isExhaustedError(err)) continue;
+        throw err;
       }
-      return full;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`${model}: ${msg}`);
-      if (isRateLimitError(err)) continue;
-      if (msg.includes("quota") || msg.includes("limit") || msg.includes("exhausted") || msg.includes("credits")) continue;
-      throw err;
     }
   }
-  throw new Error(`All free models exhausted. Errors: ${errors.join(" | ")}`);
+
+  throw new Error(`All ${CLIENTS.length} keys × ${FREE_MODELS.length} models exhausted.\n${errors.join("\n")}`);
 }
 
 // ───────────────────────────────────────────────
@@ -83,6 +135,7 @@ router.post("/ai/generate-blog", async (req, res) => {
     wordCount = 800,
     language = "English",
     introStyle = "engaging",
+    blogStyle = "How-To Guide",
   } = req.body as {
     topic: string;
     keywords?: string;
@@ -90,6 +143,7 @@ router.post("/ai/generate-blog", async (req, res) => {
     wordCount?: number;
     language?: string;
     introStyle?: string;
+    blogStyle?: string;
   };
 
   if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
@@ -113,6 +167,7 @@ STRUCTURE — use this exact format:
 
 RULES:
 - Write in ${language}
+- Blog style: ${blogStyle}
 - Tone: ${tone}
 - Target approximately ${wordCount} words
 - Use markdown formatting throughout
@@ -123,11 +178,11 @@ RULES:
   const userPrompt = `Write a complete, publication-ready blog post about: "${topic}"${keywords ? `\n\nPrimary keywords to include naturally: ${keywords}` : ""}`;
 
   try {
-    await streamWithFallback(
+    const { key, model } = await streamWithFallback(
       [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       (text) => send({ content: text })
     );
-    send({ done: true });
+    send({ done: true, _meta: { key, model } });
     res.end();
   } catch (err: unknown) {
     req.log.error({ err }, "Blog generation failed");
@@ -202,11 +257,11 @@ ${features ? `Key Features/Services: ${features}` : ""}
 Generate the full HTML file now.`;
 
   try {
-    await streamWithFallback(
+    const { key, model } = await streamWithFallback(
       [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       (text) => send({ content: text })
     );
-    send({ done: true });
+    send({ done: true, _meta: { key, model } });
     res.end();
   } catch (err: unknown) {
     req.log.error({ err }, "Website generation failed");
@@ -297,7 +352,7 @@ Platform-specific guidance:
 - Pinterest: descriptive, aspirational, keyword-rich for search
 - TikTok: trend-aware, authentic, hook in first 3 words, hashtag challenges
 
-Return ONLY valid JSON:
+Return ONLY valid JSON (no markdown fences):
 {
   "posts": [
     {
@@ -310,21 +365,19 @@ Return ONLY valid JSON:
   ]
 }`;
 
-  const userPrompt = `Generate social media posts for: ${platforms.join(", ")}
-Topic: ${topic}`;
+  const userPrompt = `Generate social media posts for: ${platforms.join(", ")}\nTopic: ${topic}`;
 
   try {
-    const { resp } = await chatWithFallback(
-      [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+    const { resp, key, model } = await chatWithFallback(
+      [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }]
     );
 
     let content = resp.choices[0]?.message?.content ?? "{}";
-    // Strip markdown code fences if model wraps JSON
     content = content.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
     const parsed = JSON.parse(content) as {
       posts: Array<{ platform: string; content: string; hashtags: string[]; bestTime?: string; tip?: string }>;
     };
-    res.json(parsed);
+    res.json({ ...parsed, _meta: { key, model } });
   } catch (err: unknown) {
     req.log.error({ err }, "Social post generation failed");
     res.status(500).json({ error: err instanceof Error ? err.message : "Generation failed. Please try again." });
@@ -340,7 +393,7 @@ router.post("/ai/suggest-blog-titles", async (req, res) => {
 
   try {
     const { resp } = await chatWithFallback([
-      { role: "system", content: "You are an SEO expert. Generate click-worthy, SEO-optimized blog titles. Return JSON: { \"titles\": [\"title1\", \"title2\", ...] }" },
+      { role: "system", content: 'You are an SEO expert. Generate click-worthy, SEO-optimized blog titles. Return ONLY valid JSON (no markdown): { "titles": ["title1", "title2", ...] }' },
       { role: "user", content: `Generate ${count} compelling blog titles for: ${topic}` },
     ]);
     let content = resp.choices[0]?.message?.content ?? "{}";
