@@ -22,7 +22,7 @@ export default function Navbar() {
     <>
       {/* Announcement bar */}
       <div className="relative z-50 bg-gradient-to-r from-primary/80 via-indigo-600/80 to-primary/80 text-white text-center py-2 px-4 text-sm font-medium">
-        <span>🚀 GrowBiz is live — All AI tools are completely free to use</span>
+        <span>🚀 Marketingstuffs is live — All AI tools are completely free to use</span>
         <button className="ml-3 underline underline-offset-2 opacity-80 hover:opacity-100">Start now →</button>
       </div>
 
@@ -35,7 +35,7 @@ export default function Navbar() {
               <Zap className="w-5 h-5 text-white" fill="white" />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="font-bold text-lg tracking-tight text-white">GrowBiz</span>
+              <span className="font-bold text-lg tracking-tight text-white">Marketingstuffs</span>
               <span className="text-[10px] text-emerald-400/70 font-medium tracking-wider uppercase">AI Growth Platform</span>
             </div>
           </a>

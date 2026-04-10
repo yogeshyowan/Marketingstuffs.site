@@ -4,9 +4,9 @@ import { X, Sparkles, Zap, Crown, Package, Check, ChevronRight, Star } from "luc
 import { Button } from "@/components/ui/button";
 
 // ── localStorage helpers ───────────────────────────────────
-const LS_COUNT  = "growbiz_gen_count";
-const LS_LOGGED = "growbiz_logged_in";
-const LS_BONUS  = "growbiz_bonus_used";
+const LS_COUNT  = "marketingstuffs_gen_count";
+const LS_LOGGED = "marketingstuffs_logged_in";
+const LS_BONUS  = "marketingstuffs_bonus_used";
 
 function getCount()    { return parseInt(localStorage.getItem(LS_COUNT)  ?? "0", 10); }
 function incCount()    { localStorage.setItem(LS_COUNT, String(getCount() + 1)); }

@@ -11,7 +11,7 @@ export default function CTASection() {
           Start Creating Content <br/>That <span className="gradient-text">Actually Works</span>
         </h2>
         <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Join 150,000+ creators and businesses using GrowBiz
+          Join 150,000+ creators and businesses using Marketingstuffs
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

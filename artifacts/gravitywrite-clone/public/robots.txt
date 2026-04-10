@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://growbiz.app/sitemap.xml
+Sitemap: https://marketingstuffs.site/sitemap.xml
 
 # Crawl-delay for well-behaved bots
 Crawl-delay: 10

@@ -141,10 +141,10 @@ interface ConnectedAccount { id: string; connected: boolean; handle: string; tim
 
 export default function SocialMediaSection() {
   const [tab, setTab] = useState<Tab>("accounts");
-  const [posts, setPosts] = useLS<Post[]>("growbiz_posts", []);
-  const [hashtagSets, setHashtagSets] = useLS<HashtagSet[]>("growbiz_hashtags", []);
-  const [media, setMedia] = useLS<MediaItem[]>("growbiz_media", []);
-  const [accounts, setAccounts] = useLS<ConnectedAccount[]>("growbiz_accounts", 
+  const [posts, setPosts] = useLS<Post[]>("marketingstuffs_posts", []);
+  const [hashtagSets, setHashtagSets] = useLS<HashtagSet[]>("marketingstuffs_hashtags", []);
+  const [media, setMedia] = useLS<MediaItem[]>("marketingstuffs_media", []);
+  const [accounts, setAccounts] = useLS<ConnectedAccount[]>("marketingstuffs_accounts", 
     PLATFORMS.map(p => ({ id: p.id, connected: false, handle: "", timezone: "UTC-5" }))
   );
 

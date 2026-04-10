@@ -35,7 +35,7 @@ export default function HeroSection() {
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
           className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed">
           Write blogs, build websites, and dominate social media — all guided by AI, all completely free.
-          GrowBiz turns your ideas into professional content in minutes, not hours.
+          Marketingstuffs turns your ideas into professional content in minutes, not hours.
         </motion.p>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}

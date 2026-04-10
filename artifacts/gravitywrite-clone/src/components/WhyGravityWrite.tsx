@@ -32,7 +32,7 @@ export default function WhyGravityWrite() {
     {
       id: 4,
       title: "Seamless Integrations",
-      desc: "Unlike basic AI tools, GrowBiz integrates with Ahrefs, Google Analytics, WordPress to make data-driven content decisions.",
+      desc: "Unlike basic AI tools, Marketingstuffs integrates with Ahrefs, Google Analytics, WordPress to make data-driven content decisions.",
       img: "/images/why-5.png"
     },
     {
@@ -48,10 +48,10 @@ export default function WhyGravityWrite() {
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Why Smart Creators Choose GrowBiz
+            Why Smart Creators Choose Marketingstuffs
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            GrowBiz brings everything together in one intelligent platform that understands ROI, not just writing.
+            Marketingstuffs brings everything together in one intelligent platform that understands ROI, not just writing.
           </p>
           <Button size="lg" className="bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white rounded-full px-8">
             Get Started →

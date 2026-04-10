@@ -7,23 +7,23 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 mb-16">
 
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4" aria-label="GrowBiz home">
+            <Link href="/" className="flex items-center gap-2 mb-4" aria-label="Marketingstuffs home">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center font-bold text-lg text-white" aria-hidden="true">
                 G
               </div>
-              <span className="font-bold text-2xl tracking-tight text-white">GrowBiz</span>
+              <span className="font-bold text-2xl tracking-tight text-white">Marketingstuffs</span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
               The free AI content platform that writes your blogs, builds your website, and manages your social media — so you can focus on growing your business.
             </p>
             <div className="flex gap-4" aria-label="Social media links">
-              <a href="https://twitter.com/GrowBizAI" target="_blank" rel="noopener noreferrer" aria-label="GrowBiz on X (Twitter)"
+              <a href="https://twitter.com/MarketingstuffsAI" target="_blank" rel="noopener noreferrer" aria-label="Marketingstuffs on X (Twitter)"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-primary/20 transition-colors">X</a>
-              <a href="https://linkedin.com/company/growbiz" target="_blank" rel="noopener noreferrer" aria-label="GrowBiz on LinkedIn"
+              <a href="https://linkedin.com/company/growbiz" target="_blank" rel="noopener noreferrer" aria-label="Marketingstuffs on LinkedIn"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-primary/20 transition-colors">In</a>
-              <a href="https://instagram.com/growbizai" target="_blank" rel="noopener noreferrer" aria-label="GrowBiz on Instagram"
+              <a href="https://instagram.com/growbizai" target="_blank" rel="noopener noreferrer" aria-label="Marketingstuffs on Instagram"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-primary/20 transition-colors">Ig</a>
-              <a href="https://youtube.com/@growbizai" target="_blank" rel="noopener noreferrer" aria-label="GrowBiz on YouTube"
+              <a href="https://youtube.com/@growbizai" target="_blank" rel="noopener noreferrer" aria-label="Marketingstuffs on YouTube"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-primary/20 transition-colors">Yt</a>
             </div>
           </div>
@@ -53,7 +53,7 @@ export default function Footer() {
           <nav aria-label="Company navigation">
             <h4 className="text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">About GrowBiz</a></li>
+              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">About Marketingstuffs</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Careers</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Press</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Contact</a></li>
@@ -64,7 +64,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
-          <p>© 2025 GrowBiz. All rights reserved. Free AI Content Platform.</p>
+          <p>© 2025 Marketingstuffs. All rights reserved. Free AI Content Platform.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-white transition-colors">Terms of Service</a>

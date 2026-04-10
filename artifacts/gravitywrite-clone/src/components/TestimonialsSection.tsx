@@ -1,14 +1,14 @@
 export default function TestimonialsSection() {
   const testimonials = [
-    { name: "Rachel Lewis", text: "Since switching to GrowBiz, I've seen higher engagement, better SEO, and a consistent brand voice. Its writing, image, and social tools work together effortlessly." },
-    { name: "Mark Thompson", text: "GrowBiz blends writing, visuals, and social content seamlessly. From content creation to image generation and scheduling—it saves hours and powers my entire workflow." },
+    { name: "Rachel Lewis", text: "Since switching to Marketingstuffs, I've seen higher engagement, better SEO, and a consistent brand voice. Its writing, image, and social tools work together effortlessly." },
+    { name: "Mark Thompson", text: "Marketingstuffs blends writing, visuals, and social content seamlessly. From content creation to image generation and scheduling—it saves hours and powers my entire workflow." },
     { name: "Emily Chen", text: "The AI Humanizer transforms robotic text into natural, emotional, on-brand writing. My content feels authentic—and clients noticed the difference instantly." },
-    { name: "James Cooper", text: "From rewriting to idea generation, GrowBiz offers powerful, beginner-friendly tools for daily tasks like emails, ad copy, and content summaries. A true creative companion." },
+    { name: "James Cooper", text: "From rewriting to idea generation, Marketingstuffs offers powerful, beginner-friendly tools for daily tasks like emails, ad copy, and content summaries. A true creative companion." },
     { name: "Priya Sharma", text: "Gravity Social streamlines content creation, platform-specific scheduling, and caption tailoring — all in one place. It's a huge time-saver for digital marketers and creators." },
     { name: "Daniel Rivera", text: "The AI Image Generator instantly delivers stunning banners, thumbnails, and blog headers—no delays, just fast, eye-catching visuals on demand." },
-    { name: "Sarah Mitchell", text: "GrowBiz boosts engagement, SEO, and brand consistency with powerful tools like the blog writer, image generator, and Gravity Social - all working seamlessly to drive growth." },
-    { name: "Mishack Iheagwu", text: "GrowBiz simplifies work with title and blog outline generation, fast, clean article writing, allowing focus on research and editing. Great for efficiency." },
-    { name: "Esther Jesudasan", text: "GrowBiz enhances writing with smart suggestions, saves time, works on various devices, offers reliable customer support, and is valuable for ed-tech content creation." }
+    { name: "Sarah Mitchell", text: "Marketingstuffs boosts engagement, SEO, and brand consistency with powerful tools like the blog writer, image generator, and Gravity Social - all working seamlessly to drive growth." },
+    { name: "Mishack Iheagwu", text: "Marketingstuffs simplifies work with title and blog outline generation, fast, clean article writing, allowing focus on research and editing. Great for efficiency." },
+    { name: "Esther Jesudasan", text: "Marketingstuffs enhances writing with smart suggestions, saves time, works on various devices, offers reliable customer support, and is valuable for ed-tech content creation." }
   ];
 
   // Duplicate for seamless infinite scroll
@@ -19,7 +19,7 @@ export default function TestimonialsSection() {
       <div className="container px-4 mx-auto text-center mb-16">
         <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Hear from Our Users</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Discover how content creators, marketers, and business owners are achieving breakthrough results with GrowBiz's intelligent content creation platform.
+          Discover how content creators, marketers, and business owners are achieving breakthrough results with Marketingstuffs's intelligent content creation platform.
         </p>
       </div>
 
