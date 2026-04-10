@@ -9,7 +9,7 @@ export default function ToolsSection() {
   ];
 
   return (
-    <section className="py-32 relative overflow-hidden flex flex-col items-center">
+    <section id="tools" className="py-32 relative overflow-hidden flex flex-col items-center">
       <div className="glow-bg top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[1.5]"></div>
       
       <div className="container px-4 mx-auto text-center relative z-10">

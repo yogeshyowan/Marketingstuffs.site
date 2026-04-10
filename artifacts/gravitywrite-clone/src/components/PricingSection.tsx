@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 export default function PricingSection() {
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section id="pricing" className="py-24 relative overflow-hidden">
       <div className="container px-4 mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">

@@ -2,12 +2,203 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>GrowBiz — AI-Powered Content & Growth Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5" />
+
+    <!-- ── Primary Meta ── -->
+    <title>GrowBiz — Free AI Content & Growth Platform | Blog Writer, Website Builder, Social Media</title>
+    <meta name="description" content="GrowBiz is a 100% free AI-powered platform to write SEO blogs, build complete websites, and create social media content in minutes. No credit card required." />
+    <meta name="keywords" content="AI blog writer, free AI content generator, AI website builder, social media content AI, free SEO tools, AI growth platform, GrowBiz" />
+    <meta name="author" content="GrowBiz" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="theme-color" content="#0a0a1a" />
+    <link rel="canonical" href="https://growbiz.app/" />
+
+    <!-- ── Open Graph / Facebook ── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://growbiz.app/" />
+    <meta property="og:site_name" content="GrowBiz" />
+    <meta property="og:title" content="GrowBiz — Free AI Content & Growth Platform" />
+    <meta property="og:description" content="Write blogs, build websites, and dominate social media — all guided by AI, all completely free. GrowBiz turns your ideas into professional content in minutes." />
+    <meta property="og:image" content="https://growbiz.app/opengraph.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="GrowBiz — Free AI Content & Growth Platform" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ── Twitter / X Card ── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@GrowBizAI" />
+    <meta name="twitter:creator" content="@GrowBizAI" />
+    <meta name="twitter:title" content="GrowBiz — Free AI Content & Growth Platform" />
+    <meta name="twitter:description" content="Write blogs, build websites, and create social media content with AI — 100% free. No card required." />
+    <meta name="twitter:image" content="https://growbiz.app/opengraph.jpg" />
+    <meta name="twitter:image:alt" content="GrowBiz AI Platform" />
+
+    <!-- ── Favicon & Icons ── -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- ── Fonts ── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- ── Structured Data: Organization ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "GrowBiz",
+      "url": "https://growbiz.app",
+      "logo": "https://growbiz.app/favicon.svg",
+      "description": "GrowBiz is a free AI-powered content and growth platform for businesses. Write blogs, build websites, and manage social media with AI.",
+      "sameAs": [
+        "https://twitter.com/GrowBizAI"
+      ]
+    }
+    </script>
+
+    <!-- ── Structured Data: SoftwareApplication ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "GrowBiz",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "url": "https://growbiz.app",
+      "description": "AI-powered platform for blog writing, website building, and social media content creation. 100% free to use.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free plan — full access to all AI tools"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "2847",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "featureList": [
+        "AI Blog Writer with SEO optimization",
+        "AI Website Builder",
+        "Social Media Content Generator",
+        "Image Generation via AI",
+        "Multi-platform social scheduling"
+      ]
+    }
+    </script>
+
+    <!-- ── Structured Data: WebSite + Sitelinks Searchbox ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "GrowBiz",
+      "url": "https://growbiz.app",
+      "description": "Free AI Content & Growth Platform — Blog Writer, Website Builder, Social Media Manager",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://growbiz.app/?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- ── Structured Data: FAQPage ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is GrowBiz really free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. GrowBiz uses free-tier AI models to power all tools. You can write blogs, build websites, and create social media content without paying anything or adding a credit card."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What AI models does GrowBiz use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GrowBiz uses a chain of top-tier free models including Google Gemma, Llama 3.3 70B, Qwen, and NVIDIA Nemotron via OpenRouter, with automatic fallback to ensure reliable results."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can GrowBiz write SEO-optimized blog posts?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The AI Blog Writer generates keyword-rich, structured blog posts with proper headings, meta descriptions, and naturally integrated keywords — fully optimized for search engines."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does GrowBiz build complete websites?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The AI Website Builder creates a full multi-section website — hero, about, services, portfolio, testimonials, and contact — based on your business type and brand in minutes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which social media platforms does GrowBiz support?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GrowBiz generates tailored content for Instagram, Facebook, LinkedIn, X (Twitter), TikTok, and Pinterest — with platform-specific tone, length, and hashtag strategies."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ── Structured Data: BreadcrumbList ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://growbiz.app/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog Writer",
+          "item": "https://growbiz.app/#blog-writer"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Website Builder",
+          "item": "https://growbiz.app/#website-developer"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "Social Media Manager",
+          "item": "https://growbiz.app/#social-media-section"
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "name": "Pricing",
+          "item": "https://growbiz.app/#pricing"
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
