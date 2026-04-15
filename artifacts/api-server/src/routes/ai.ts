@@ -985,4 +985,83 @@ Respond with ONLY this exact JSON structure (no other text):
   res.json({ ok: true, script: buildFallback(), _fallback: true });
 });
 
+// ── POST /api/ai/generate-email ─────────────────────────────
+router.post("/ai/generate-email", async (req, res) => {
+  const { purpose, brand = "", audience = "", tone = "professional", details = "" } = req.body as {
+    purpose: string; brand?: string; audience?: string; tone?: string; details?: string;
+  };
+  if (!purpose) { res.status(400).json({ error: "purpose is required" }); return; }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: "You are an expert email copywriter. Respond ONLY with raw JSON — no markdown, no code fences." },
+    { role: "user", content: `Write a complete marketing email.
+Purpose: ${purpose}
+Brand/Company: ${brand || "the company"}
+Target audience: ${audience || "general audience"}
+Tone: ${tone}
+Extra details: ${details}
+
+RESPOND ONLY WITH THIS JSON:
+{"subjectLine":"compelling subject line (under 60 chars)","previewText":"preview text (under 90 chars)","greeting":"Dear [Name], / Hi [First Name],","body":"full email body (3-5 paragraphs, formatted with \\n\\n between paragraphs)","cta":"call-to-action button text","ctaUrl":"#","signOff":"professional sign-off line","ps":"optional P.S. line or empty string"}` },
+  ];
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      let fullText = "";
+      await streamWithFallback(messages, c => { fullText += c; }, undefined, 1500);
+      const parsed = extractJSON(fullText) as Record<string, string>;
+      if (parsed?.subjectLine && parsed?.body) { res.json(parsed); return; }
+    } catch { if (attempt < 2) await new Promise(r => setTimeout(r, 500)); }
+  }
+  res.json({ subjectLine: `About: ${purpose}`, previewText: "We have something for you", greeting: "Hi there,", body: `We wanted to reach out regarding ${purpose}.\n\nPlease don't hesitate to contact us if you have any questions.\n\nWe look forward to hearing from you.`, cta: "Learn More", ctaUrl: "#", signOff: "Best regards,\nThe Team", ps: "" });
+});
+
+// ── POST /api/ai/generate-text ──────────────────────────────
+router.post("/ai/generate-text", async (req, res) => {
+  const { type, topic, audience = "", tone = "professional", length = "medium", details = "" } = req.body as {
+    type: string; topic: string; audience?: string; tone?: string; length?: string; details?: string;
+  };
+  if (!type || !topic) { res.status(400).json({ error: "type and topic required" }); return; }
+
+  const wordCount: Record<string, number> = { short: 80, medium: 200, long: 400 };
+  const targetWords = wordCount[length] ?? 200;
+
+  const typeInstructions: Record<string, string> = {
+    "headline": "Write 5 different headlines/titles. Each on a new line. No numbering.",
+    "product-description": `Write a product description (~${targetWords} words). Hook → features → benefits → CTA.`,
+    "tagline": "Write 6 short brand taglines (under 10 words each). Each on a new line.",
+    "ad-copy": `Write ad copy (~${targetWords} words). Attention → Interest → Desire → Action format.`,
+    "website-copy": `Write website homepage copy (~${targetWords} words). Hero headline, subheading, value props, CTA.`,
+    "bio": `Write a professional bio (~${targetWords} words). Third person, achievements, personality.`,
+    "pitch": `Write an elevator pitch (~${targetWords} words). Problem → Solution → Unique value → CTA.`,
+    "press-release": `Write a press release (~${targetWords} words). Headline, dateline, body, boilerplate.`,
+  };
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: "You are an expert copywriter. Write compelling, conversion-focused copy." },
+    { role: "user", content: `${typeInstructions[type] ?? `Write ${type} copy (~${targetWords} words).`}
+Topic/Product: ${topic}
+Audience: ${audience || "general audience"}
+Tone: ${tone}
+${details ? `Additional context: ${details}` : ""}
+
+Respond with ONLY the text — no intro, no explanation, no metadata.` },
+  ];
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    await streamWithFallback(messages, (chunk) => {
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+    }, res, 1200);
+    res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
+  } catch (err) {
+    res.write("data: " + JSON.stringify({ error: "Generation failed" }) + "\n\n");
+  } finally {
+    res.end();
+  }
+});
+
 export default router;

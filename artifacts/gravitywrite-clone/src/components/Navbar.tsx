@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { label: "Blog Writer", href: "#blog-writer" },
   { label: "Website Builder", href: "#website-developer" },
   { label: "Social Media", href: "#social-media" },
+  { label: "AI Tools", href: "#ai-tools" },
   { label: "Pricing", href: "#pricing" },
 ];
 
