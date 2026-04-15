@@ -67,16 +67,17 @@ const WEBSITE_STYLES = [
 ];
 
 const PAGES_TO_BUILD: { key: SectionKey; label: string; emoji: string; desc: string }[] = [
-  { key: "homepage", label: "Homepage",    emoji: "🏠", desc: "Hero, features, stats, CTA" },
-  { key: "about",    label: "About Us",   emoji: "👥", desc: "Story, how it works, team" },
-  { key: "services", label: "Services",   emoji: "⚙️", desc: "Services, pricing, testimonials" },
-  { key: "contact",  label: "Contact",    emoji: "📬", desc: "FAQ, contact form, footer" },
+  { key: "homepage",  label: "Homepage",    emoji: "🏠", desc: "Hero, features, stats, CTA" },
+  { key: "about",     label: "About Us",   emoji: "👥", desc: "Story, how it works, team" },
+  { key: "services",  label: "Services",   emoji: "⚙️", desc: "Services, pricing, testimonials" },
+  { key: "portfolio", label: "Portfolio",  emoji: "🎨", desc: "Projects, case studies, client logos" },
+  { key: "contact",   label: "Contact",    emoji: "📬", desc: "FAQ, contact form, footer" },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Phase = "welcome" | "wizard" | "building" | "done";
-type SectionKey = "homepage" | "about" | "services" | "contact";
+type SectionKey = "homepage" | "about" | "services" | "portfolio" | "contact";
 type DeviceView = "desktop" | "tablet" | "mobile";
 
 interface SectionState {

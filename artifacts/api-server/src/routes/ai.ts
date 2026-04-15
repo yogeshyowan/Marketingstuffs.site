@@ -188,26 +188,34 @@ router.post("/ai/generate-blog", async (req, res) => {
   // Send immediate heartbeat so the client knows we're alive
   heartbeat();
 
-  const systemPrompt = `You are an expert SEO content writer and blogger. Write engaging, comprehensive, well-structured blog posts that rank well on search engines.
+  const systemPrompt = `You are a world-class SEO content writer and professional blogger. Write comprehensive, deeply researched, publication-ready blog posts that rank on the first page of Google.
 
-STRUCTURE — use this exact format:
+MANDATORY STRUCTURE:
 1. A compelling SEO-optimized H1 title starting with #
-2. A meta description line: **Meta Description:** [160-char description]
-3. An intro section (style: ${introStyle}) that hooks the reader immediately — 2-3 paragraphs
-4. 4-6 main sections each with ## H2 headings, with 2-4 paragraphs each
-5. Bullet points or numbered lists where appropriate
-6. A "Key Takeaways" section with bullet points
-7. A strong conclusion with a call to action
+2. **Meta Description:** [compelling 150-160 character SEO description]
+3. **Primary Keyword:** [main keyword phrase]
+4. An intro that hooks the reader immediately — 2-3 engaging paragraphs with a bold opening line
+5. A "**Table of Contents**" section listing all H2 headings
+6. 5-7 main sections each with ## H2 headings, with 2-4 rich paragraphs each
+7. At least ONE formatted markdown table (comparison table, stats table, or pros/cons table) that adds real value
+8. Bullet points and numbered lists throughout for easy scanning
+9. ### H3 subheadings inside sections where helpful
+10. A "## Key Takeaways" section with 5-7 bullet points
+11. A strong conclusion with a clear call-to-action
 
-RULES:
-- Write in ${language}
+CONTENT RULES:
+- Write entirely in ${language}
 - Blog style: ${blogStyle}
 - Tone: ${tone}
 - Target approximately ${wordCount} words
-- Use markdown formatting throughout
-- Make all headings SEO-friendly and click-worthy
-- Integrate keywords naturally, never forced
-- Include transition sentences between sections`;
+- Use proper markdown formatting throughout
+- Make ALL headings SEO-friendly, benefit-driven, and click-worthy
+- Integrate keywords naturally — never stuffed or forced
+- Include transition sentences between sections for flow
+- Add real data, statistics, and examples to increase credibility
+- For How-To / FAQ styles: use numbered steps and Q&A format with ## for each question
+- For Comparison style: include a detailed comparison table
+- Always include at least one markdown table for visual data presentation`;
 
   const userPrompt = `Write a complete, publication-ready blog post about: "${topic}"${keywords ? `\n\nPrimary keywords to include naturally: ${keywords}` : ""}`;
 
@@ -677,6 +685,22 @@ REQUIREMENTS:
 - Use CSS variables: var(--bg), var(--accent), var(--text), var(--font-h), var(--font-b).
 - Responsive. Modern card design. Same color scheme: ${colorScheme}.`,
       user: `Business: ${businessName}\nServices: ${services || "professional services"}\nAudience: ${audience || "businesses"}`,
+    },
+    portfolio: {
+      system: `Generate HTML sections for the PORTFOLIO / WORK page of a business website.
+Include ONLY these HTML sections (no <html>/<head>/<body> wrapper):
+1. Portfolio Hero — bold headline like "Our Work Speaks for Itself", short description, filter buttons (All / Category1 / Category2 / Category3) that use pure CSS :target or checkbox technique to show/hide items.
+2. Portfolio Grid — 6 project cards in a masonry-style or responsive 3-column grid. Each card: placeholder image (use a colored div with gradient + emoji + project name overlay), project name, short description, category tag, "View Project" link.
+3. Results / Impact section — 4 stat cards (e.g., 50+ Projects, 98% Client Satisfaction, 12 Industries, 5-Star Rating) with large numbers and accent colored icons.
+4. Client Logos section — "Trusted by Leading Brands" heading, 6 placeholder logo blocks in a flex row (colored rectangles with brand-like names).
+5. CTA Banner — "Ready to Start Your Project?" headline, supporting text, two buttons: "Start a Project" (filled) and "View All Work" (outline).
+
+REQUIREMENTS:
+- Return ONLY <section>...</section> HTML blocks. No HTML wrapper tags.
+- Use CSS variables: var(--bg), var(--accent), var(--text), var(--font-h), var(--font-b).
+- Visually impressive card hover effects (scale + shadow). Modern grid layout. Same color scheme: ${colorScheme}.
+- CSS filter tabs must use only CSS (no JS).`,
+      user: `Business: ${businessName}\nServices/Work: ${services || "professional services and projects"}\nAudience: ${audience || "potential clients"}`,
     },
     contact: {
       system: `Generate HTML sections for the CONTACT page. This should be the FINAL sections of the website, including the footer.

@@ -41,12 +41,14 @@ const TEMPLATES = [
 ];
 
 const BLOG_STYLES = [
-  { id: "how-to", emoji: "🛠️", label: "How-To Guide", desc: "Step-by-step instructions" },
-  { id: "listicle", emoji: "📝", label: "Listicle", desc: "Top 10, Best of..." },
-  { id: "opinion", emoji: "💡", label: "Opinion", desc: "Thought leadership" },
-  { id: "case-study", emoji: "📊", label: "Case Study", desc: "Story-driven results" },
-  { id: "news", emoji: "📰", label: "News & Trends", desc: "What's happening now" },
-  { id: "review", emoji: "⭐", label: "Review", desc: "Honest evaluation" },
+  { id: "how-to",     emoji: "🛠️", label: "How-To Guide",   desc: "Step-by-step instructions" },
+  { id: "listicle",   emoji: "📝", label: "Listicle",        desc: "Top 10, Best of..." },
+  { id: "opinion",    emoji: "💡", label: "Opinion",         desc: "Thought leadership" },
+  { id: "case-study", emoji: "📊", label: "Case Study",      desc: "Story-driven results" },
+  { id: "news",       emoji: "📰", label: "News & Trends",   desc: "What's happening now" },
+  { id: "review",     emoji: "⭐", label: "Review",          desc: "Honest evaluation" },
+  { id: "comparison", emoji: "⚖️", label: "Comparison",      desc: "A vs B deep dives" },
+  { id: "faq",        emoji: "❓", label: "FAQ Article",     desc: "Q&A format with rich answers" },
 ];
 
 const VOICES = [
@@ -70,10 +72,19 @@ const IMAGE_STYLES = [
 const IMAGE_COUNT_OPTIONS = [0, 1, 2, 3, 4, 5, 6];
 
 const WORD_COUNTS = [
-  { value: 600, label: "Short", desc: "~3 min read" },
-  { value: 900, label: "Standard", desc: "~5 min read" },
-  { value: 1400, label: "Long-form", desc: "~7 min read" },
-  { value: 2000, label: "In-depth", desc: "~10 min read" },
+  { value: 600,  label: "Short",       desc: "~3 min read" },
+  { value: 900,  label: "Standard",    desc: "~5 min read" },
+  { value: 1400, label: "Long-form",   desc: "~7 min read" },
+  { value: 2000, label: "In-depth",    desc: "~10 min read" },
+  { value: 3000, label: "Epic",        desc: "~15 min read" },
+];
+
+const LANGUAGES_35 = [
+  "English","Spanish","French","German","Portuguese","Hindi","Arabic","Japanese",
+  "Chinese (Simplified)","Chinese (Traditional)","Korean","Italian","Russian",
+  "Dutch","Turkish","Polish","Swedish","Norwegian","Danish","Finnish",
+  "Greek","Czech","Romanian","Hungarian","Ukrainian","Thai","Vietnamese",
+  "Indonesian","Malay","Bengali","Tamil","Telugu","Kannada","Marathi","Urdu",
 ];
 
 const QUICK_EDITS = [
@@ -285,6 +296,8 @@ export default function BlogWriterSection() {
   const [wordCount, setWordCount] = useState(900);
   const [keywords, setKeywords] = useState("");
   const [language, setLanguage] = useState("English");
+
+  const [quickTopic, setQuickTopic] = useState("");
 
   // Image prompt customisation
   const [imgPromptMode, setImgPromptMode] = useState<ImgPromptMode>("auto");
@@ -914,7 +927,47 @@ export default function BlogWriterSection() {
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Write Blogs That <span className="text-violet-400">Get Found</span>
           </h2>
-          <p className="text-white/50 text-lg">Pick a template, answer a few questions — get a full SEO blog with AI images</p>
+          <p className="text-white/50 text-lg">Create long-form SEO blogs with AI images in 60 seconds — in 35 languages</p>
+        </div>
+
+        {/* Quick Generate bar — GravityWrite-style instant mode */}
+        <div className="mb-8 p-5 rounded-2xl border border-violet-500/30 bg-violet-500/8 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="w-4 h-4 text-violet-400 fill-violet-400" />
+            <span className="text-violet-300 text-sm font-semibold">Quick Generate</span>
+            <span className="text-xs text-white/30 bg-white/5 px-2 py-0.5 rounded-full">Skip the wizard</span>
+          </div>
+          <div className="flex gap-3">
+            <input
+              value={quickTopic}
+              onChange={e => setQuickTopic(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && quickTopic.trim()) {
+                  setTopic(quickTopic);
+                  requestGeneration(() => {
+                    setTopic(quickTopic);
+                    setTimeout(() => handleGenerate(), 50);
+                  });
+                }
+              }}
+              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500/50 text-sm"
+              placeholder="Enter your blog title or topic and hit Generate →"
+            />
+            <Button
+              onClick={() => {
+                if (!quickTopic.trim()) return;
+                setTopic(quickTopic);
+                requestGeneration(() => {
+                  setTopic(quickTopic);
+                  setTimeout(() => handleGenerate(), 50);
+                });
+              }}
+              disabled={!quickTopic.trim() || isGenerating}
+              className="shrink-0 bg-violet-600 hover:bg-violet-500 text-white rounded-xl px-5 h-12 font-semibold">
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generate Blog →"}
+            </Button>
+          </div>
+          <p className="text-white/25 text-xs mt-2">Uses smart defaults (Standard length · Conversational · 4 AI images) · or configure below ↓</p>
         </div>
 
         {/* Progress */}
@@ -1160,10 +1213,11 @@ export default function BlogWriterSection() {
                     <label className="block text-sm font-medium text-white/60 mb-2">Language</label>
                     <select className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500/50 text-sm"
                       value={language} onChange={e => setLanguage(e.target.value)}>
-                      {["English", "Spanish", "French", "German", "Portuguese", "Hindi", "Arabic", "Japanese"].map(l => (
+                      {LANGUAGES_35.map(l => (
                         <option key={l}>{l}</option>
                       ))}
                     </select>
+                    <p className="text-xs text-white/30 mt-1">35 languages supported</p>
                   </div>
                   {/* Summary */}
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
