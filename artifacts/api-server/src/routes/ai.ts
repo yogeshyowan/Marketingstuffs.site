@@ -1178,4 +1178,123 @@ Respond with ONLY the text — no intro, no explanation, no metadata.` },
   }
 });
 
+// ── Blog: Publish to WordPress ─────────────────────────────
+router.post("/blog/publish-wordpress", async (req, res) => {
+  const { siteUrl, username, appPassword, title, htmlContent, status = "draft" } = req.body;
+  if (!siteUrl || !username || !appPassword || !title) {
+    return res.status(400).json({ error: "Missing required fields: siteUrl, username, appPassword, title" });
+  }
+  try {
+    const base = siteUrl.replace(/\/$/, "");
+    const creds = Buffer.from(`${username}:${appPassword}`).toString("base64");
+    const wpRes = await fetch(`${base}/wp-json/wp/v2/posts`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${creds}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, content: htmlContent, status }),
+    });
+    const data = await wpRes.json() as any;
+    if (!wpRes.ok) {
+      return res.status(wpRes.status).json({ error: data?.message ?? "WordPress API error", code: data?.code });
+    }
+    return res.json({ success: true, postId: data.id, postUrl: data.link, editUrl: `${base}/wp-admin/post.php?post=${data.id}&action=edit`, status: data.status });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Network error reaching WordPress site" });
+  }
+});
+
+// ── Blog: Publish to Ghost ─────────────────────────────────
+router.post("/blog/publish-ghost", async (req, res) => {
+  const { siteUrl, adminApiKey, title, htmlContent, status = "draft" } = req.body;
+  if (!siteUrl || !adminApiKey || !title) {
+    return res.status(400).json({ error: "Missing required fields: siteUrl, adminApiKey, title" });
+  }
+  try {
+    const [id, secret] = adminApiKey.split(":");
+    if (!id || !secret) return res.status(400).json({ error: "Admin API Key must be in format id:secret" });
+    const crypto = await import("crypto");
+    const iat = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT", kid: id })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ iat, exp: iat + 300, aud: "/admin/" })).toString("base64url");
+    const signature = crypto.createHmac("sha256", Buffer.from(secret, "hex")).update(`${header}.${payload}`).digest("base64url");
+    const jwt = `${header}.${payload}.${signature}`;
+    const base = siteUrl.replace(/\/$/, "");
+    const ghostRes = await fetch(`${base}/ghost/api/admin/posts/`, {
+      method: "POST",
+      headers: { "Authorization": `Ghost ${jwt}`, "Content-Type": "application/json", "Accept-Version": "v5.0" },
+      body: JSON.stringify({ posts: [{ title, html: htmlContent, status, source: "html" }] }),
+    });
+    const data = await ghostRes.json() as any;
+    if (!ghostRes.ok) {
+      const msg = data?.errors?.[0]?.message ?? "Ghost API error";
+      return res.status(ghostRes.status).json({ error: msg });
+    }
+    const post = data.posts?.[0];
+    return res.json({ success: true, postId: post?.id, postUrl: post?.url, status: post?.status });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Network error reaching Ghost site" });
+  }
+});
+
+// ── Blog: Publish to Dev.to ────────────────────────────────
+router.post("/blog/publish-devto", async (req, res) => {
+  const { apiKey, title, bodyMarkdown, tags = [], published = false } = req.body;
+  if (!apiKey || !title || !bodyMarkdown) {
+    return res.status(400).json({ error: "Missing required fields: apiKey, title, bodyMarkdown" });
+  }
+  try {
+    const devRes = await fetch("https://dev.to/api/articles", {
+      method: "POST",
+      headers: { "api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ article: { title, body_markdown: bodyMarkdown, published, tags: tags.slice(0, 4) } }),
+    });
+    const data = await devRes.json() as any;
+    if (!devRes.ok) {
+      return res.status(devRes.status).json({ error: data?.error ?? "Dev.to API error" });
+    }
+    return res.json({ success: true, postId: data.id, postUrl: data.url, status: published ? "published" : "draft" });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Network error reaching Dev.to" });
+  }
+});
+
+// ── Blog: Publish to Hashnode ──────────────────────────────
+router.post("/blog/publish-hashnode", async (req, res) => {
+  const { apiKey, publicationId, title, contentMarkdown, tags = [], published = false } = req.body;
+  if (!apiKey || !publicationId || !title || !contentMarkdown) {
+    return res.status(400).json({ error: "Missing required fields: apiKey, publicationId, title, contentMarkdown" });
+  }
+  try {
+    const mutation = `
+      mutation PublishPost($input: PublishPostInput!) {
+        publishPost(input: $input) {
+          post { id url title }
+        }
+      }
+    `;
+    const input: Record<string,unknown> = {
+      title,
+      publicationId,
+      contentMarkdown,
+      tags: tags.map((t: string) => ({ name: t, slug: t.toLowerCase().replace(/\s+/g,"-") })),
+    };
+    if (!published) Object.assign(input, { isDraft: true });
+    const hnRes = await fetch("https://gql.hashnode.com/", {
+      method: "POST",
+      headers: { "Authorization": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ query: mutation, variables: { input } }),
+    });
+    const data = await hnRes.json() as any;
+    if (data?.errors?.length) {
+      return res.status(400).json({ error: data.errors[0].message });
+    }
+    const post = data?.data?.publishPost?.post;
+    return res.json({ success: true, postId: post?.id, postUrl: post?.url });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Network error reaching Hashnode" });
+  }
+});
+
 export default router;

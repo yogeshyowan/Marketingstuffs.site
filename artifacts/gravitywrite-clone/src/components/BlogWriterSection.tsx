@@ -4,6 +4,7 @@ import {
   PenTool, Loader2, Copy, Check, Download, RefreshCw,
   Lightbulb, ChevronRight, ChevronLeft, Sparkles, Edit3, Wand2, X,
   Share2, Image as ImageIcon, PenLine, FileText, RotateCcw, Zap, Send, Globe,
+  Upload, ExternalLink, ChevronDown, Eye, BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGenerationGate } from "@/components/GenerationGate";
@@ -328,10 +329,29 @@ export default function BlogWriterSection() {
   const [directEditOpen, setDirectEditOpen] = useState(false);
   const [directEditContent, setDirectEditContent] = useState("");
 
-  // Publish panel
+  // Publish panel (social)
   const [publishOpen, setPublishOpen] = useState(false);
   const [siteUrl, setSiteUrl] = useState(() => localStorage.getItem("marketingstuffs_site_url") ?? "");
   const [publishedTo, setPublishedTo] = useState<string[]>([]);
+
+  // Publish to Site panel
+  const [publishSiteOpen, setPublishSiteOpen] = useState(false);
+  const [publishSitePlatform, setPublishSitePlatform] = useState<"wordpress"|"ghost"|"devto"|"hashnode"|"download"|"copy">("download");
+  const [wpSiteUrl, setWpSiteUrl] = useState(() => localStorage.getItem("ms_wp_url") ?? "");
+  const [wpUsername, setWpUsername] = useState(() => localStorage.getItem("ms_wp_user") ?? "");
+  const [wpAppPassword, setWpAppPassword] = useState("");
+  const [wpStatus, setWpStatus] = useState<"draft"|"publish">("draft");
+  const [ghostSiteUrl, setGhostSiteUrl] = useState(() => localStorage.getItem("ms_ghost_url") ?? "");
+  const [ghostApiKey, setGhostApiKey] = useState("");
+  const [ghostStatus, setGhostStatus] = useState<"draft"|"published">("draft");
+  const [devtoApiKey, setDevtoApiKey] = useState("");
+  const [devtoTags, setDevtoTags] = useState("");
+  const [devtoPublished, setDevtoPublished] = useState(false);
+  const [hashnodeApiKey, setHashnodeApiKey] = useState("");
+  const [hashnodePubId, setHashnodePubId] = useState(() => localStorage.getItem("ms_hn_pubid") ?? "");
+  const [hashnodeTags, setHashnodeTags] = useState("");
+  const [isPublishingToSite, setIsPublishingToSite] = useState(false);
+  const [publishSiteResult, setPublishSiteResult] = useState<{ success: boolean; url?: string; editUrl?: string; error?: string; status?: string } | null>(null);
 
   const connectedAccounts: { id: string; handle: string }[] = (() => {
     try {
@@ -568,6 +588,52 @@ export default function BlogWriterSection() {
     URL.revokeObjectURL(url);
   }
 
+  async function publishToSite() {
+    if (!generatedContent || !topic) return;
+    setIsPublishingToSite(true);
+    setPublishSiteResult(null);
+    const html = buildHtmlExport(contentWithImages, topic, template);
+    const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/__api";
+    try {
+      let res: Response;
+      if (publishSitePlatform === "wordpress") {
+        localStorage.setItem("ms_wp_url", wpSiteUrl);
+        localStorage.setItem("ms_wp_user", wpUsername);
+        res = await fetch(`${API}/api/blog/publish-wordpress`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ siteUrl: wpSiteUrl, username: wpUsername, appPassword: wpAppPassword, title: topic, htmlContent: html, status: wpStatus }),
+        });
+      } else if (publishSitePlatform === "ghost") {
+        localStorage.setItem("ms_ghost_url", ghostSiteUrl);
+        res = await fetch(`${API}/api/blog/publish-ghost`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ siteUrl: ghostSiteUrl, adminApiKey: ghostApiKey, title: topic, htmlContent: html, status: ghostStatus }),
+        });
+      } else if (publishSitePlatform === "devto") {
+        res = await fetch(`${API}/api/blog/publish-devto`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: devtoApiKey, title: topic, bodyMarkdown: generatedContent, tags: devtoTags.split(",").map(t => t.trim()).filter(Boolean), published: devtoPublished }),
+        });
+      } else if (publishSitePlatform === "hashnode") {
+        localStorage.setItem("ms_hn_pubid", hashnodePubId);
+        res = await fetch(`${API}/api/blog/publish-hashnode`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: hashnodeApiKey, publicationId: hashnodePubId, title: topic, contentMarkdown: generatedContent, tags: hashnodeTags.split(",").map(t => t.trim()).filter(Boolean) }),
+        });
+      } else { return; }
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setPublishSiteResult({ success: false, error: data.error ?? "Publish failed" });
+      } else {
+        setPublishSiteResult({ success: true, url: data.postUrl, editUrl: data.editUrl, status: data.status });
+      }
+    } catch (e: any) {
+      setPublishSiteResult({ success: false, error: e.message ?? "Network error" });
+    } finally {
+      setIsPublishingToSite(false);
+    }
+  }
+
   function handleDownloadMd() {
     const blob = new Blob([generatedContent], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
@@ -614,11 +680,15 @@ export default function BlogWriterSection() {
                   </Button>
                   <Button size="sm" onClick={() => setShareOpen(o => !o)}
                     className="h-8 text-xs rounded-xl gap-1.5 bg-pink-500/15 text-pink-400 border border-pink-500/20 hover:bg-pink-500/25">
-                    <Share2 className="w-3.5 h-3.5" /> Share
+                    <Share2 className="w-3.5 h-3.5" /> Export
                   </Button>
-                  <Button size="sm" onClick={() => { setPublishOpen(o => !o); setShareOpen(false); setEditOpen(false); setDirectEditOpen(false); }}
+                  <Button size="sm" onClick={() => { setPublishSiteOpen(o => !o); setPublishOpen(false); setShareOpen(false); setEditOpen(false); setDirectEditOpen(false); setPublishSiteResult(null); }}
+                    className={`h-8 text-xs rounded-xl gap-1.5 ${publishSiteOpen ? "bg-teal-500/30 text-teal-300 border border-teal-500/50" : "bg-teal-500/15 text-teal-400 border border-teal-500/20 hover:bg-teal-500/25"}`}>
+                    <Upload className="w-3.5 h-3.5" /> Publish to Site
+                  </Button>
+                  <Button size="sm" onClick={() => { setPublishOpen(o => !o); setPublishSiteOpen(false); setShareOpen(false); setEditOpen(false); setDirectEditOpen(false); }}
                     className={`h-8 text-xs rounded-xl gap-1.5 ${publishOpen ? "bg-emerald-500/30 text-emerald-300 border border-emerald-500/50" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"}`}>
-                    <Send className="w-3.5 h-3.5" /> Approve & Publish
+                    <Send className="w-3.5 h-3.5" /> Social Promote
                   </Button>
                   <Button size="sm" onClick={handleDownload}
                     className="h-8 text-xs rounded-xl gap-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25">
@@ -728,6 +798,292 @@ export default function BlogWriterSection() {
                       <span className="text-xs font-medium">{btn.active ? "✓ Copied!" : btn.label}</span>
                     </button>
                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Publish to Site Panel ── */}
+          <AnimatePresence>
+            {publishSiteOpen && !isGenerating && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="mb-4 rounded-2xl border border-teal-500/30 bg-teal-500/8 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-teal-400" />
+                    <span className="text-sm font-semibold text-teal-300">Publish to Your Site</span>
+                    <span className="text-xs text-white/30 bg-white/8 px-2 py-0.5 rounded-full">One-click publish to your blog platform</span>
+                  </div>
+                  <button onClick={() => setPublishSiteOpen(false)} className="text-white/30 hover:text-white/60"><X className="w-4 h-4" /></button>
+                </div>
+
+                {/* Platform tabs */}
+                <div className="flex gap-1 p-3 border-b border-white/8 bg-black/20 overflow-x-auto">
+                  {([
+                    { id: "download", label: "Download & Upload", emoji: "⬇️" },
+                    { id: "copy",     label: "Copy & Paste",      emoji: "📋" },
+                    { id: "wordpress",label: "WordPress",         emoji: "🌐" },
+                    { id: "ghost",    label: "Ghost",             emoji: "👻" },
+                    { id: "devto",    label: "Dev.to",            emoji: "💻" },
+                    { id: "hashnode", label: "Hashnode",          emoji: "🔷" },
+                  ] as const).map(p => (
+                    <button key={p.id}
+                      onClick={() => { setPublishSitePlatform(p.id as typeof publishSitePlatform); setPublishSiteResult(null); }}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${publishSitePlatform === p.id ? "bg-teal-500/20 text-teal-300 border border-teal-500/30" : "text-white/40 hover:text-white hover:bg-white/5"}`}>
+                      <span>{p.emoji}</span>{p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="p-5">
+                  {/* ── Download & Upload tab ── */}
+                  {publishSitePlatform === "download" && (
+                    <div className="space-y-4">
+                      <p className="text-white/60 text-sm">Download your blog as a fully-styled HTML file and upload it to your site.</p>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <button onClick={handleDownload}
+                          className="flex items-center gap-3 p-4 rounded-xl border border-teal-500/20 bg-teal-500/5 hover:bg-teal-500/10 text-left group transition-all">
+                          <div className="w-10 h-10 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0"><Download className="w-5 h-5 text-teal-400" /></div>
+                          <div><p className="text-white font-semibold text-sm group-hover:text-teal-300 transition-colors">Download HTML</p><p className="text-xs text-white/40 mt-0.5">Complete styled page — upload anywhere</p></div>
+                        </button>
+                        <button onClick={handleDownloadMd}
+                          className="flex items-center gap-3 p-4 rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] text-left group transition-all">
+                          <div className="w-10 h-10 rounded-lg bg-white/8 flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-white/50" /></div>
+                          <div><p className="text-white font-semibold text-sm">Download Markdown (.md)</p><p className="text-xs text-white/40 mt-0.5">For Jekyll, Hugo, Gatsby, Next.js MDX</p></div>
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-white/8 bg-black/30 p-4 space-y-2">
+                        <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Where to upload</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-white/50">
+                          {[
+                            { name: "Wix",         step: "Add → Embed → HTML" },
+                            { name: "Squarespace", step: "Block → Code Block" },
+                            { name: "Webflow",     step: "Embed Component" },
+                            { name: "Blogger",     step: "New Post → HTML View" },
+                            { name: "cPanel/FTP",  step: "Upload to /blog/" },
+                            { name: "GitHub Pages",step: "Add to /docs folder" },
+                          ].map(s => (
+                            <div key={s.name} className="p-2.5 rounded-lg border border-white/8 bg-white/[0.02]">
+                              <p className="font-semibold text-white/70">{s.name}</p>
+                              <p className="text-white/30 text-[10px] mt-0.5">{s.step}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Copy & Paste tab ── */}
+                  {publishSitePlatform === "copy" && (
+                    <div className="space-y-3">
+                      <p className="text-white/60 text-sm">Copy your blog content in the format your CMS accepts and paste it directly.</p>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {[
+                          { label: "Copy Full HTML", desc: "WordPress Classic, raw HTML blocks, FTP paste", action: handleCopyHtml, active: copied === "html" },
+                          { label: "Copy Plain Text", desc: "Medium, Substack, Notion, any text editor", action: handleCopyText, active: copied === "text" },
+                        ].map(btn => (
+                          <button key={btn.label} onClick={btn.action}
+                            className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${btn.active ? "border-emerald-500/50 bg-emerald-500/10" : "border-white/10 bg-white/[0.02] hover:border-teal-500/30 hover:bg-teal-500/5"}`}>
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${btn.active ? "bg-emerald-500/20" : "bg-white/8"}`}>
+                              {btn.active ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-white/40" />}
+                            </div>
+                            <div>
+                              <p className={`font-semibold text-sm ${btn.active ? "text-emerald-300" : "text-white/80"}`}>{btn.active ? "Copied!" : btn.label}</p>
+                              <p className="text-xs text-white/35 mt-0.5">{btn.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="p-3 rounded-xl border border-white/8 bg-black/20 text-xs text-white/40 leading-relaxed">
+                        <strong className="text-white/60">Tip:</strong> For WordPress block editor — paste plain text, then use "Transform to Heading" for each H2/H3. For Medium — paste plain text and it'll auto-detect the structure.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── WordPress tab ── */}
+                  {publishSitePlatform === "wordpress" && (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 rounded-xl border border-blue-500/20 bg-blue-500/5 text-xs text-blue-300/80 leading-relaxed">
+                        <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>Go to <strong>WordPress Admin → Users → Profile → Application Passwords</strong> and create one. Use your WordPress username (not email) + that password below.</span>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Site URL</label>
+                          <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="https://yourblog.com"
+                            value={wpSiteUrl} onChange={e => setWpSiteUrl(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Username</label>
+                          <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="admin"
+                            value={wpUsername} onChange={e => setWpUsername(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Application Password</label>
+                          <input type="password" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                            value={wpAppPassword} onChange={e => setWpAppPassword(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Post status</label>
+                          <select className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-teal-500/40"
+                            value={wpStatus} onChange={e => setWpStatus(e.target.value as "draft"|"publish")}>
+                            <option value="draft">Save as Draft</option>
+                            <option value="publish">Publish Immediately</option>
+                          </select>
+                        </div>
+                      </div>
+                      <Button onClick={publishToSite} disabled={isPublishingToSite || !wpSiteUrl || !wpUsername || !wpAppPassword}
+                        className="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold h-11 rounded-xl">
+                        {isPublishingToSite ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing...</> : <><Upload className="w-4 h-4 mr-2" />Publish to WordPress</>}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* ── Ghost tab ── */}
+                  {publishSitePlatform === "ghost" && (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 rounded-xl border border-violet-500/20 bg-violet-500/5 text-xs text-violet-300/80 leading-relaxed">
+                        <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>Go to <strong>Ghost Admin → Settings → Integrations → Add Custom Integration</strong>. Copy the <strong>Admin API Key</strong> (format: id:secret).</span>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Ghost Site URL</label>
+                          <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="https://yourblog.ghost.io"
+                            value={ghostSiteUrl} onChange={e => setGhostSiteUrl(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Admin API Key</label>
+                          <input type="password" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="id:secret"
+                            value={ghostApiKey} onChange={e => setGhostApiKey(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Post status</label>
+                          <select className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-teal-500/40"
+                            value={ghostStatus} onChange={e => setGhostStatus(e.target.value as "draft"|"published")}>
+                            <option value="draft">Save as Draft</option>
+                            <option value="published">Publish Immediately</option>
+                          </select>
+                        </div>
+                      </div>
+                      <Button onClick={publishToSite} disabled={isPublishingToSite || !ghostSiteUrl || !ghostApiKey}
+                        className="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold h-11 rounded-xl">
+                        {isPublishingToSite ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing...</> : <><Upload className="w-4 h-4 mr-2" />Publish to Ghost</>}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* ── Dev.to tab ── */}
+                  {publishSitePlatform === "devto" && (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5 text-xs text-orange-300/80 leading-relaxed">
+                        <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>Go to <strong>dev.to → Settings → Extensions → DEV Community API Keys</strong>. Generate a key and paste it below. Posts are created as drafts by default.</span>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">API Key</label>
+                          <input type="password" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="Your DEV.to API key"
+                            value={devtoApiKey} onChange={e => setDevtoApiKey(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Tags (comma-separated, max 4)</label>
+                          <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="marketing, ai, content"
+                            value={devtoTags} onChange={e => setDevtoTags(e.target.value)} />
+                        </div>
+                        <div className="flex items-center gap-3 p-3 rounded-xl border border-white/8 bg-white/[0.02]">
+                          <input type="checkbox" id="devto-pub" checked={devtoPublished} onChange={e => setDevtoPublished(e.target.checked)}
+                            className="w-4 h-4 accent-teal-500" />
+                          <label htmlFor="devto-pub" className="text-sm text-white/70 cursor-pointer">Publish immediately<br/><span className="text-xs text-white/30">Otherwise saved as draft</span></label>
+                        </div>
+                      </div>
+                      <Button onClick={publishToSite} disabled={isPublishingToSite || !devtoApiKey}
+                        className="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold h-11 rounded-xl">
+                        {isPublishingToSite ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing...</> : <><Upload className="w-4 h-4 mr-2" />Publish to Dev.to</>}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* ── Hashnode tab ── */}
+                  {publishSitePlatform === "hashnode" && (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 rounded-xl border border-blue-500/20 bg-blue-500/5 text-xs text-blue-300/80 leading-relaxed">
+                        <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>Go to <strong>Hashnode → Account Settings → Developer → API Keys</strong>. Also copy your <strong>Publication ID</strong> from <em>Blog Dashboard → General → Publication ID</em>.</span>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Personal Access Token</label>
+                          <input type="password" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="Your Hashnode API token"
+                            value={hashnodeApiKey} onChange={e => setHashnodeApiKey(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Publication ID</label>
+                          <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="64a1b2c3d4e5f6..."
+                            value={hashnodePubId} onChange={e => setHashnodePubId(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-white/60 mb-1.5 block">Tags (comma-separated)</label>
+                          <input className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-teal-500/40"
+                            placeholder="AI, Marketing, Content"
+                            value={hashnodeTags} onChange={e => setHashnodeTags(e.target.value)} />
+                        </div>
+                      </div>
+                      <Button onClick={publishToSite} disabled={isPublishingToSite || !hashnodeApiKey || !hashnodePubId}
+                        className="w-full bg-teal-600 hover:bg-teal-500 text-white font-semibold h-11 rounded-xl">
+                        {isPublishingToSite ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing...</> : <><Upload className="w-4 h-4 mr-2" />Publish to Hashnode</>}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Result */}
+                  {publishSiteResult && (
+                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                      className={`mt-4 p-4 rounded-xl border ${publishSiteResult.success ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                      {publishSiteResult.success ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-emerald-400" />
+                            <span className="text-emerald-300 font-semibold text-sm">
+                              Published successfully as <span className="capitalize">{publishSiteResult.status}</span>!
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {publishSiteResult.url && (
+                              <a href={publishSiteResult.url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-medium hover:bg-emerald-500/30 transition-colors">
+                                <Eye className="w-3 h-3" /> View Post
+                              </a>
+                            )}
+                            {publishSiteResult.editUrl && (
+                              <a href={publishSiteResult.editUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-white/60 text-xs font-medium hover:bg-white/15 transition-colors">
+                                <Edit3 className="w-3 h-3" /> Edit in WordPress
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-red-300 font-semibold text-sm">Publish failed</p>
+                            <p className="text-red-400/70 text-xs mt-0.5">{publishSiteResult.error}</p>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -875,7 +1231,11 @@ export default function BlogWriterSection() {
                 </Button>
                 <Button size="sm" onClick={() => setShareOpen(true)}
                   className="bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 border border-pink-500/30 text-xs h-8 rounded-lg gap-1.5">
-                  <Share2 className="w-3 h-3" /> Share / Export
+                  <Share2 className="w-3 h-3" /> Export
+                </Button>
+                <Button size="sm" onClick={() => { setPublishSiteOpen(true); setShareOpen(false); setPublishSiteResult(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 text-xs h-8 rounded-lg gap-1.5">
+                  <Upload className="w-3 h-3" /> Publish to Site
                 </Button>
                 <Button size="sm" onClick={handleDownload}
                   className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs h-8 rounded-lg gap-1.5">
