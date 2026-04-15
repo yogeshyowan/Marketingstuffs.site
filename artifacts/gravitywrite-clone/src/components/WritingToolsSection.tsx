@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search, BookmarkPlus, Zap } from "lucide-react";
+import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search, BookmarkPlus, Zap, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { saveToMediaLibrary } from "@/components/MediaLibrary";
 
@@ -1703,11 +1703,31 @@ function FieldRenderer({ field, value, onChange }: { field:FieldDef; value:strin
   return null;
 }
 
+// ── Language options ──────────────────────────────────────────
+const LANGUAGES = [
+  { code: "English",  label: "English",  flag: "🇬🇧", native: "English"  },
+  { code: "Hindi",    label: "Hindi",    flag: "🇮🇳", native: "हिंदी"    },
+  { code: "Tamil",    label: "Tamil",    flag: "🇮🇳", native: "தமிழ்"    },
+  { code: "Kannada",  label: "Kannada",  flag: "🇮🇳", native: "ಕನ್ನಡ"   },
+] as const;
+type LangCode = typeof LANGUAGES[number]["code"];
+
+function langInstruction(lang: LangCode): string {
+  if (lang === "English") return "";
+  const scripts: Record<string, string> = {
+    Hindi:   "Devanagari (हिंदी)",
+    Tamil:   "Tamil script (தமிழ்)",
+    Kannada: "Kannada script (ಕನ್ನಡ)",
+  };
+  return `\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the ENTIRE response in ${lang} language using ${scripts[lang]}. Do NOT use English at all in the output — every word, heading, bullet, and sentence must be in ${lang}. Translate any English input terms naturally into ${lang}.`;
+}
+
 // ── Tool Modal ────────────────────────────────────────────────
 function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
   const [fields, setFields] = useState<Record<string,string>>({});
   const [output, setOutput] = useState(""); const [loading, setLoading] = useState(false); const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [lang, setLang] = useState<LangCode>("English");
   const outputRef = useRef<HTMLTextAreaElement>(null);
   const setField = useCallback((id:string,val:string)=>setFields(prev=>({...prev,[id]:val})),[]);
 
@@ -1721,8 +1741,13 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
   const generate = async () => {
     if (!fields[tool.fields[0].id]?.trim()) return;
     setLoading(true); setOutput(""); setSaved(false);
+    const langSuffix = langInstruction(lang);
+    const sysWithLang = tool.systemPrompt + langSuffix;
+    const userWithLang = lang !== "English"
+      ? tool.buildUserPrompt(fields) + `\n\nRespond entirely in ${lang}.`
+      : tool.buildUserPrompt(fields);
     try {
-      await streamTool(tool.systemPrompt, tool.buildUserPrompt(fields), chunk=>{
+      await streamTool(sysWithLang, userWithLang, chunk=>{
         setOutput(prev=>{
           const next=prev+chunk;
           setTimeout(()=>{if(outputRef.current) outputRef.current.scrollTop=outputRef.current.scrollHeight;},10);
@@ -1780,8 +1805,30 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
             <div className="p-6 space-y-4 border-r border-white/8">
               <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Configure Your Tool</p>
               {tool.fields.map(field=><FieldRenderer key={field.id} field={field} value={fields[field.id]??""} onChange={v=>setField(field.id,v)}/>)}
-              <Button onClick={generate} disabled={!canGenerate||loading} className="w-full h-11 font-bold text-sm rounded-xl text-black mt-2" style={{background:canGenerate&&!loading?tool.color:undefined}}>
-                {loading?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Generating…</>:<><Sparkles className="w-4 h-4 mr-2"/>Generate</>}
+
+              {/* Language selector */}
+              <div className="pt-1">
+                <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Globe2 className="w-3.5 h-3.5"/> Output Language
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {LANGUAGES.map(l=>(
+                    <button key={l.code} onClick={()=>setLang(l.code)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${lang===l.code?"border-violet-500/50 bg-violet-500/15 text-violet-300":"border-white/8 bg-white/3 text-white/50 hover:text-white hover:border-white/20"}`}>
+                      <span className="text-base leading-none">{l.flag}</span>
+                      <span className="flex flex-col items-start leading-tight">
+                        <span>{l.label}</span>
+                        <span className="text-[10px] opacity-60">{l.native}</span>
+                      </span>
+                      {lang===l.code&&<Check className="w-3 h-3 ml-auto text-violet-400"/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button onClick={generate} disabled={!canGenerate||loading} className="w-full h-11 font-bold text-sm rounded-xl text-black mt-1" style={{background:canGenerate&&!loading?tool.color:undefined}}>
+                {loading?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Generating…</>
+                  :<><Sparkles className="w-4 h-4 mr-2"/>Generate{lang!=="English"?` in ${lang}`:""}</>}
               </Button>
             </div>
 
