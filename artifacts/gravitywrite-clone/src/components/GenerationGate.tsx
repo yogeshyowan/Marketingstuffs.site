@@ -26,9 +26,11 @@ function getCredits(): number {
   return v === null ? -1 : parseInt(v, 10); // -1 = not initialized (not signed in)
 }
 function initCredits() { localStorage.setItem(LS_CREDITS, String(FREE_CREDITS)); }
+const CREDIT_COST = 5; // each generation costs 5 credits → 10 total with 50 free
+
 function decrementCredit() {
   if (isAdmin()) return FREE_CREDITS; // admin never loses credits
-  const c = Math.max(0, getCredits() - 1);
+  const c = Math.max(0, getCredits() - CREDIT_COST);
   localStorage.setItem(LS_CREDITS, String(c));
   return c;
 }
@@ -310,11 +312,11 @@ function LoginModal({
                   </div>
                   <div>
                     <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Step 2 of 2</p>
-                    <h3 className="text-white font-extrabold text-xl leading-tight">Unlock 50 Free Credits</h3>
+                    <h3 className="text-white font-extrabold text-xl leading-tight">Unlock 10 Free Generations</h3>
                   </div>
                 </div>
                 <p className="text-white/50 text-sm leading-relaxed">
-                  Sign in with Google to get <strong className="text-emerald-400">50 free AI generations</strong> — no credit card, no catch.
+                  Sign in with Google to get <strong className="text-emerald-400">10 free AI generations</strong> — no credit card, no catch.
                 </p>
               </div>
 
@@ -322,16 +324,16 @@ function LoginModal({
               <div className="mx-6 mb-4 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="text-2xl">⚡</div>
                 <div>
-                  <p className="text-white font-bold text-sm">{FREE_CREDITS} AI Credits — Free</p>
-                  <p className="text-slate-500 text-xs">Every blog, ad, image, video, email = 1 credit</p>
+                  <p className="text-white font-bold text-sm">{FREE_CREDITS / CREDIT_COST} AI Generations — Free</p>
+                  <p className="text-slate-500 text-xs">Every blog, ad, image, video, email = 5 credits</p>
                 </div>
-                <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS}</div>
+                <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS / CREDIT_COST}</div>
               </div>
 
               {/* Benefits */}
               <div className="px-6 pb-4 space-y-2">
                 {[
-                  "50 generations across all tools — Blog, Social, Ads, Email, Images…",
+                  "10 free generations across all tools — Blog, Social, Ads, Email, Images…",
                   "Your Growth Plan & history saved to your account",
                   "Access to all Growth Hub features",
                   "No credit card required, ever",
@@ -351,7 +353,7 @@ function LoginModal({
                   <button onClick={openGoogle}
                     className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-xl h-12 transition-all shadow-lg hover:shadow-xl hover:scale-[1.01]">
                     <GoogleIcon />
-                    Continue with Google — Get 50 Credits
+                    Continue with Google — Get 10 Free Generations
                   </button>
                 )}
                 {loginStep === "opening" && (
@@ -479,7 +481,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
                 <Crown className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-extrabold text-xl leading-tight">You've Used All 50 Free Credits</h3>
+                <h3 className="text-white font-extrabold text-xl leading-tight">You've Used All 10 Free Generations</h3>
                 <p className="text-white/45 text-sm mt-0.5">
                   Upgrade for unlimited AI generations — Blog, Social, Ads, Email, SMS, Growth Hub and more.
                 </p>
