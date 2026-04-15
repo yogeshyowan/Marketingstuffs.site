@@ -61,10 +61,8 @@ function loadProfile(): UserProfile {
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile>(loadProfile);
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
-    const p = loadProfile();
-    return !p.onboardingComplete;
-  });
+  // Never auto-show — only opens when user clicks a tool (gate triggers it)
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
 
   function setProfile(p: UserProfile) {
     setProfileState(p);

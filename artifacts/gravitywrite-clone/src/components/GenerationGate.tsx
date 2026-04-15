@@ -1,70 +1,188 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Zap, Crown, Package, Check, ChevronRight, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { X, Sparkles, Zap, Crown, Check, ChevronRight, Star, Flame } from "lucide-react";
+import { useUser } from "@/context/UserContext";
 
-// ── localStorage helpers ───────────────────────────────────
-const LS_COUNT  = "marketingstuffs_gen_count";
-const LS_LOGGED = "marketingstuffs_logged_in";
-const LS_BONUS  = "marketingstuffs_bonus_used";
+// ── localStorage helpers ───────────────────────────────────────────────────────
+const LS_GOOGLE  = "ms_google_signed_in";
+const LS_CREDITS = "ms_credits";
+const FREE_CREDITS = 50;
 
-function getCount()    { return parseInt(localStorage.getItem(LS_COUNT)  ?? "0", 10); }
-function incCount()    { localStorage.setItem(LS_COUNT, String(getCount() + 1)); }
-function isLoggedIn()  { return localStorage.getItem(LS_LOGGED) === "true"; }
-function setLoggedIn() { localStorage.setItem(LS_LOGGED, "true"); }
-function isBonusUsed() { return localStorage.getItem(LS_BONUS) === "true"; }
-function setBonusUsed(){ localStorage.setItem(LS_BONUS, "true"); }
+function isGoogleSignedIn(): boolean { return localStorage.getItem(LS_GOOGLE) === "true"; }
+function setGoogleSignedIn() { localStorage.setItem(LS_GOOGLE, "true"); }
+function getCredits(): number {
+  const v = localStorage.getItem(LS_CREDITS);
+  return v === null ? -1 : parseInt(v, 10); // -1 = not initialized (not signed in)
+}
+function initCredits() { localStorage.setItem(LS_CREDITS, String(FREE_CREDITS)); }
+function decrementCredit() {
+  const c = Math.max(0, getCredits() - 1);
+  localStorage.setItem(LS_CREDITS, String(c));
+  return c;
+}
 
-// ── Context ────────────────────────────────────────────────
-type GateCtx = { requestGeneration: (onProceed: () => void) => void };
-const GenerationGateContext = createContext<GateCtx>({ requestGeneration: (cb) => cb() });
+// ── Context ───────────────────────────────────────────────────────────────────
+type GateCtx = {
+  requestGeneration: (onProceed: () => void) => void;
+  credits: number;
+  googleSignedIn: boolean;
+};
+const GenerationGateContext = createContext<GateCtx>({
+  requestGeneration: (cb) => cb(),
+  credits: FREE_CREDITS,
+  googleSignedIn: false,
+});
 export function useGenerationGate() { return useContext(GenerationGateContext); }
 
-// ── Provider ───────────────────────────────────────────────
+// ── Provider ──────────────────────────────────────────────────────────────────
 export function GenerationGateProvider({ children }: { children: React.ReactNode }) {
+  const { profile, setShowOnboarding } = useUser();
   const [modal, setModal] = useState<"login" | "upgrade" | null>(null);
-  const [pending, setPending] = useState<(() => void) | null>(null);
   const [loginStep, setLoginStep] = useState<"idle" | "opening" | "confirm">("idle");
+  const [credits, setCredits] = useState<number>(() => {
+    const c = getCredits();
+    return c === -1 ? FREE_CREDITS : c;
+  });
+  const [googleSignedIn, setGoogleSignedInState] = useState(isGoogleSignedIn);
 
-  const closeModal = () => { setModal(null); setPending(null); setLoginStep("idle"); };
+  // Ref to hold the pending callback across gate stages
+  const pendingRef = useRef<(() => void) | null>(null);
+
+  // When onboarding completes → immediately move to Google Sign-In gate
+  const prevOnboarded = useRef(profile.onboardingComplete);
+  useEffect(() => {
+    if (!prevOnboarded.current && profile.onboardingComplete && pendingRef.current) {
+      prevOnboarded.current = true;
+      // Move to next gate: Google Sign-In
+      if (!isGoogleSignedIn()) {
+        setModal("login");
+        setLoginStep("idle");
+        // pending stays in pendingRef — login modal will pick it up
+      } else {
+        // Already signed in — check credits
+        resumeAfterLogin();
+      }
+    } else if (profile.onboardingComplete) {
+      prevOnboarded.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.onboardingComplete]);
+
+  function resumeAfterLogin() {
+    const cb = pendingRef.current;
+    pendingRef.current = null;
+    if (!cb) return;
+    const remaining = getCredits();
+    if (remaining <= 0) {
+      setModal("upgrade");
+      return;
+    }
+    const newCount = decrementCredit();
+    setCredits(newCount);
+    cb();
+    // Show upgrade modal if just hit 0
+    if (newCount <= 0) {
+      setTimeout(() => setModal("upgrade"), 800);
+    }
+  }
 
   const requestGeneration = useCallback((onProceed: () => void) => {
-    // TODO: re-enable gate before launch
-    onProceed();
-  }, []);
+    // ── Gate 1: Onboarding ─────────────────────────────────
+    if (!profile.onboardingComplete) {
+      pendingRef.current = onProceed;
+      setShowOnboarding(true);
+      return;
+    }
 
-  const handleLoginSuccess = () => {
-    setLoggedIn();
-    setBonusUsed();
-    incCount();
-    closeModal();
-    if (pending) { pending(); setPending(null); }
-  };
+    // ── Gate 2: Google Sign-In ─────────────────────────────
+    if (!isGoogleSignedIn()) {
+      pendingRef.current = onProceed;
+      setModal("login");
+      setLoginStep("idle");
+      return;
+    }
+
+    // ── Gate 3: Credits ────────────────────────────────────
+    const remaining = getCredits();
+    if (remaining <= 0) {
+      setModal("upgrade");
+      return;
+    }
+
+    // ── All gates passed: run generation ───────────────────
+    const newCount = decrementCredit();
+    setCredits(newCount);
+    onProceed();
+    if (newCount <= 0) {
+      setTimeout(() => setModal("upgrade"), 800);
+    }
+  }, [profile.onboardingComplete, setShowOnboarding]);
+
+  function handleLoginSuccess() {
+    setGoogleSignedIn();
+    setGoogleSignedInState(true);
+    if (getCredits() === -1) {
+      initCredits();
+      setCredits(FREE_CREDITS);
+    }
+    setModal(null);
+    setLoginStep("idle");
+    resumeAfterLogin();
+  }
+
+  function closeModal() {
+    setModal(null);
+    setLoginStep("idle");
+    pendingRef.current = null;
+  }
 
   return (
-    <GenerationGateContext.Provider value={{ requestGeneration }}>
+    <GenerationGateContext.Provider value={{ requestGeneration, credits, googleSignedIn }}>
       {children}
       <AnimatePresence>
-        {modal === "login"   && <LoginModal   loginStep={loginStep} setLoginStep={setLoginStep} onSuccess={handleLoginSuccess} onClose={closeModal} />}
-        {modal === "upgrade" && <UpgradeModal onClose={closeModal} />}
+        {modal === "login" && (
+          <LoginModal
+            key="login"
+            loginStep={loginStep}
+            setLoginStep={setLoginStep}
+            onSuccess={handleLoginSuccess}
+            onClose={closeModal}
+          />
+        )}
+        {modal === "upgrade" && (
+          <UpgradeModal key="upgrade" onClose={closeModal} />
+        )}
       </AnimatePresence>
     </GenerationGateContext.Provider>
   );
 }
 
-// ── Backdrop ───────────────────────────────────────────────
+// ── Backdrop ──────────────────────────────────────────────────────────────────
 function Backdrop({ onClose }: { onClose: () => void }) {
   return (
     <motion.div
       key="backdrop"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-40"
     />
   );
 }
 
-// ── Login Modal ────────────────────────────────────────────
+// ── Google SVG ────────────────────────────────────────────────────────────────
+function GoogleIcon() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      <path fill="none" d="M0 0h48v48H0z"/>
+    </svg>
+  );
+}
+
+// ── Login Modal ───────────────────────────────────────────────────────────────
 function LoginModal({
   loginStep, setLoginStep, onSuccess, onClose,
 }: {
@@ -73,58 +191,74 @@ function LoginModal({
   onSuccess: () => void;
   onClose: () => void;
 }) {
-  const openGoogle = () => {
+  function openGoogle() {
     window.open(
       "https://accounts.google.com/signin",
-      "google_login",
-      "width=480,height=600,scrollbars=yes,resizable=yes"
+      "ms_google_login",
+      "width=480,height=600,scrollbars=yes,resizable=yes,left=200,top=100"
     );
     setLoginStep("opening");
     setTimeout(() => setLoginStep("confirm"), 3000);
-  };
+  }
 
   return (
     <>
       <Backdrop onClose={onClose} />
       <motion.div
         key="login-modal"
-        initial={{ opacity: 0, scale: 0.94, y: 20 }}
+        initial={{ opacity: 0, scale: 0.92, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 20 }}
-        transition={{ type: "spring", stiffness: 350, damping: 28 }}
+        exit={{ opacity: 0, scale: 0.92, y: 24 }}
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="bg-[#0e0e1a] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto">
+        <div className="bg-[#0d0d1c] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden">
+
+          {/* Glow bar */}
+          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500" />
+
           {/* Header */}
-          <div className="relative p-6 pb-4 border-b border-white/10">
-            <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors">
+          <div className="relative p-6 pb-4">
+            <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white/70 transition-colors">
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-xs text-violet-400 font-semibold uppercase tracking-wide">Free limit reached</p>
-                <h3 className="text-white font-bold text-lg leading-tight">Sign in for 1 more free generation</h3>
+                <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Step 2 of 2</p>
+                <h3 className="text-white font-extrabold text-xl leading-tight">Unlock 50 Free Credits</h3>
               </div>
             </div>
-            <p className="text-white/50 text-sm">You've used your first free generation. Sign in with Google to unlock one more — no credit card needed.</p>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Sign in with Google to get <strong className="text-emerald-400">50 free AI generations</strong> — no credit card, no catch.
+            </p>
+          </div>
+
+          {/* Credits visual */}
+          <div className="mx-6 mb-4 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="text-2xl">⚡</div>
+            <div>
+              <p className="text-white font-bold text-sm">{FREE_CREDITS} AI Credits — Free</p>
+              <p className="text-slate-500 text-xs">Each blog, ad, email, or social post = 1 credit</p>
+            </div>
+            <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS}</div>
           </div>
 
           {/* Benefits */}
-          <div className="p-6 pb-4 space-y-2">
+          <div className="px-6 pb-4 space-y-2">
             {[
-              "1 additional free generation after sign-in",
-              "Save your generated content to history",
-              "Access to 11 AI social media tools",
-              "Faster generation with priority queue",
+              "50 generations across all tools — Blog, Social, Ads, Email…",
+              "Your Growth Plan & history saved to your account",
+              "Access to all Growth Hub features",
+              "No credit card required, ever",
             ].map(b => (
-              <div key={b} className="flex items-center gap-2.5">
-                <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <div key={b} className="flex items-start gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="w-2.5 h-2.5 text-emerald-400" />
                 </div>
-                <span className="text-white/70 text-sm">{b}</span>
+                <span className="text-white/65 text-sm">{b}</span>
               </div>
             ))}
           </div>
@@ -132,50 +266,36 @@ function LoginModal({
           {/* CTA */}
           <div className="px-6 pb-6 space-y-3">
             {loginStep === "idle" && (
-              <button
-                onClick={openGoogle}
-                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold rounded-xl h-12 transition-colors shadow-md"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 48 48">
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                  <path fill="none" d="M0 0h48v48H0z"/>
-                </svg>
-                Continue with Google
+              <button onClick={openGoogle}
+                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-xl h-12 transition-all shadow-lg hover:shadow-xl hover:scale-[1.01]">
+                <GoogleIcon />
+                Continue with Google — Get 50 Credits
               </button>
             )}
-
             {loginStep === "opening" && (
-              <div className="w-full flex items-center justify-center gap-3 bg-white/10 border border-white/10 rounded-xl h-12">
-                <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+              <div className="w-full flex items-center justify-center gap-3 bg-white/8 border border-white/10 rounded-xl h-12">
+                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
                 <span className="text-white/60 text-sm">Google sign-in opening…</span>
               </div>
             )}
-
             {loginStep === "confirm" && (
               <div className="space-y-3">
-                <p className="text-center text-sm text-yellow-400/80">
-                  ⏳ Signed in on Google? Click below to continue.
+                <p className="text-center text-sm text-yellow-400/80 bg-yellow-400/5 border border-yellow-400/15 rounded-xl py-2">
+                  ✅ Signed in on Google? Click below to claim your 50 credits.
                 </p>
-                <button
-                  onClick={onSuccess}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-pink-500 hover:from-violet-500 hover:to-pink-400 text-white font-bold rounded-xl h-12 transition-all shadow-lg"
-                >
-                  <Check className="w-4 h-4" /> I've signed in — Continue
+                <button onClick={onSuccess}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-white font-bold rounded-xl h-12 transition-all shadow-lg">
+                  <Zap className="w-4 h-4" fill="currentColor" /> I've signed in — Claim 50 Credits
                 </button>
                 <button onClick={openGoogle} className="w-full text-center text-xs text-white/30 hover:text-white/50 transition-colors py-1">
                   Didn't open? Try again →
                 </button>
               </div>
             )}
-
-            <p className="text-center text-xs text-white/25">
-              By signing in you agree to our{" "}
-              <a href="#" className="underline hover:text-white/50">Terms of Service</a>
-              {" "}and{" "}
-              <a href="#" className="underline hover:text-white/50">Privacy Policy</a>
+            <p className="text-center text-[11px] text-white/20">
+              By continuing you agree to our{" "}
+              <a href="#" className="underline hover:text-white/40">Terms</a> &amp;{" "}
+              <a href="#" className="underline hover:text-white/40">Privacy Policy</a>
             </p>
           </div>
         </div>
@@ -184,25 +304,24 @@ function LoginModal({
   );
 }
 
-// ── Upgrade Modal ──────────────────────────────────────────
+// ── Upgrade Modal ─────────────────────────────────────────────────────────────
 const PLANS = [
   {
     id: "plus",
     name: "Plus",
     emoji: "⚡",
-    price: "$8",
+    priceINR: "₹699",
+    priceUSD: "$8",
     period: "/mo",
-    billed: "Billed as $97/yr",
-    highlight: true,
     badge: "Most Popular",
-    badgeColor: "from-violet-500 to-pink-500",
-    borderColor: "border-violet-500/50",
+    badgeColor: "from-emerald-500 to-teal-500",
+    borderColor: "border-emerald-500/40",
+    highlight: true,
     features: [
-      "Unlimited blog posts",
-      "Unlimited website sections",
-      "Unlimited social media posts",
-      "Claude 3.5 Sonnet — far better writing",
-      "10× longer outputs & richer detail",
+      "500 AI credits/month",
+      "Blog Writer, Social, Ads, Email, SMS",
+      "Claude AI — better writing quality",
+      "10× longer outputs",
       "Priority generation queue",
       "Content history & saved projects",
     ],
@@ -211,41 +330,40 @@ const PLANS = [
     id: "pro",
     name: "Pro",
     emoji: "👑",
-    price: "$49",
+    priceINR: "₹2,999",
+    priceUSD: "$35",
     period: "/mo",
-    billed: "Billed as $599/yr",
-    highlight: false,
     badge: "Best Quality",
-    badgeColor: "from-amber-500 to-orange-500",
-    borderColor: "border-amber-500/30",
+    badgeColor: "from-violet-500 to-purple-600",
+    borderColor: "border-violet-500/30",
+    highlight: false,
     features: [
+      "3,000 AI credits/month",
       "Everything in Plus",
-      "Claude 3 Opus — highest quality AI",
+      "Claude 3 Opus — highest quality",
       "API access for automation",
       "White-label reports",
-      "SEO audit & keyword analysis",
       "Team collaboration (5 seats)",
-      "Dedicated support",
     ],
   },
   {
-    id: "bundle",
-    name: "Bundle",
-    emoji: "📦",
-    price: "$139",
+    id: "annual",
+    name: "Annual",
+    emoji: "🎯",
+    priceINR: "₹4,999",
+    priceUSD: "$59",
     period: "/yr",
-    billed: "Annual plan only",
-    highlight: false,
     badge: "Best Value",
-    badgeColor: "from-emerald-500 to-teal-500",
-    borderColor: "border-emerald-500/30",
+    badgeColor: "from-amber-500 to-orange-500",
+    borderColor: "border-amber-500/30",
+    highlight: false,
     features: [
+      "Unlimited AI credits",
       "Everything in Pro",
-      "n8n automation (self-hosted)",
       "WordPress hosting included",
-      "Free .xyz domain + SSL",
-      "One-click publish to WordPress",
+      "Free .in domain + SSL",
       "Unlimited team seats",
+      "Dedicated support",
     ],
   },
 ];
@@ -256,50 +374,55 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
       <Backdrop onClose={onClose} />
       <motion.div
         key="upgrade-modal"
-        initial={{ opacity: 0, scale: 0.94, y: 24 }}
+        initial={{ opacity: 0, scale: 0.92, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 24 }}
+        exit={{ opacity: 0, scale: 0.92, y: 24 }}
         transition={{ type: "spring", stiffness: 320, damping: 28 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="bg-[#0a0a14] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto pointer-events-auto">
+        <div className="bg-[#0a0a14] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto pointer-events-auto">
+
+          {/* Glow bar */}
+          <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-pink-500 to-amber-400" />
+
           {/* Header */}
-          <div className="sticky top-0 bg-[#0a0a14] border-b border-white/10 px-6 py-5 z-10">
-            <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors">
+          <div className="sticky top-0 bg-[#0a0a14] border-b border-white/8 px-6 py-5 z-10">
+            <button onClick={onClose} className="absolute top-5 right-5 text-white/30 hover:text-white/70 transition-colors">
               <X className="w-5 h-5" />
             </button>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
                 <Crown className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-xl leading-tight">Unlock Unlimited AI Content</h3>
-                <p className="text-white/50 text-sm mt-0.5">
-                  Free limit reached. Upgrade for unlimited generations powered by{" "}
-                  <span className="text-violet-400 font-semibold">Anthropic Claude</span> — the world's best AI writing model.
+                <h3 className="text-white font-extrabold text-xl leading-tight">You've Used All 50 Free Credits</h3>
+                <p className="text-white/45 text-sm mt-0.5">
+                  Upgrade for unlimited AI generations — Blog, Social, Ads, Email, SMS, Growth Hub and more.
                 </p>
               </div>
             </div>
 
-            {/* Claude advantage banner */}
-            <div className="mt-4 flex items-center gap-3 bg-gradient-to-r from-violet-900/40 to-pink-900/30 border border-violet-500/20 rounded-xl px-4 py-3">
-              <Star className="w-5 h-5 text-yellow-400 shrink-0" />
-              <div>
-                <p className="text-white text-xs font-semibold">Why Claude beats the free models</p>
-                <p className="text-white/40 text-xs mt-0.5">More nuanced writing, longer outputs, better SEO structure, richer ideas — and no rate limits. Free tier uses GPT-OSS / Gemma / Llama. Paid plans use Claude 3.5 Sonnet or Claude 3 Opus.</p>
+            {/* UPI badge */}
+            <div className="flex items-center gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-2.5">
+              <Flame className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">Pay via PhonePe / GPay / UPI — INR pricing available</p>
+                <p className="text-slate-500 text-[11px]">No international card needed · Instant activation</p>
               </div>
+              <span className="text-emerald-400 text-xs font-bold bg-emerald-500/15 px-2 py-0.5 rounded-full">🇮🇳 India</span>
             </div>
           </div>
 
           {/* Plans */}
           <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {PLANS.map(plan => (
-              <div
-                key={plan.id}
-                className={`relative flex flex-col rounded-xl border p-5 transition-all ${plan.highlight ? `${plan.borderColor} bg-gradient-to-b from-violet-900/20 to-transparent shadow-[0_0_32px_rgba(139,92,246,0.15)]` : `${plan.borderColor} bg-white/[0.03]`}`}
-              >
-                {/* Badge */}
-                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r ${plan.badgeColor} text-white text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap`}>
+              <div key={plan.id}
+                className={`relative flex flex-col rounded-xl border p-5 transition-all ${
+                  plan.highlight
+                    ? `${plan.borderColor} bg-gradient-to-b from-emerald-900/20 to-transparent shadow-[0_0_28px_rgba(16,185,129,0.12)]`
+                    : `${plan.borderColor} bg-white/[0.025]`
+                }`}>
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r ${plan.badgeColor} text-white text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap shadow-lg`}>
                   {plan.badge}
                 </div>
 
@@ -308,26 +431,29 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
                     <span className="text-2xl">{plan.emoji}</span>
                     <span className="text-white font-bold text-lg">{plan.name}</span>
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white">{plan.price}</span>
-                    <span className="text-white/40 text-sm">{plan.period}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-white">{plan.priceINR}</span>
+                    <span className="text-white/35 text-sm">{plan.period}</span>
                   </div>
-                  <p className="text-white/30 text-xs mt-1">{plan.billed}</p>
+                  <p className="text-white/30 text-xs mt-0.5">{plan.priceUSD} USD</p>
                 </div>
 
                 <ul className="flex-1 space-y-2 mb-5">
                   {plan.features.map(f => (
                     <li key={f} className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                      <span className="text-white/65 text-xs">{f}</span>
+                      <span className="text-white/60 text-xs">{f}</span>
                     </li>
                   ))}
                 </ul>
 
                 <button
                   onClick={() => { window.location.href = "#pricing"; onClose(); }}
-                  className={`w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all ${plan.highlight ? "bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/10"}`}
-                >
+                  className={`w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    plan.highlight
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-lg"
+                      : "bg-white/8 hover:bg-white/15 text-white border border-white/10"
+                  }`}>
                   Get {plan.name} <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -335,16 +461,18 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Footer */}
-          <div className="px-6 pb-6 text-center space-y-2">
-            <div className="flex items-center justify-center gap-4 text-xs text-white/30">
-              <span>✓ No credit card to try</span>
+          <div className="px-6 pb-6 text-center space-y-2 border-t border-white/5 pt-4">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/25">
+              <span>✓ Pay via UPI / PhonePe / GPay</span>
+              <span>·</span>
+              <span>✓ INR pricing</span>
               <span>·</span>
               <span>✓ Cancel anytime</span>
               <span>·</span>
-              <span>✓ Instant access</span>
+              <span>✓ Instant activation</span>
             </div>
-            <button onClick={onClose} className="text-xs text-white/20 hover:text-white/40 transition-colors underline">
-              Continue with 0 free generations remaining
+            <button onClick={onClose} className="text-xs text-white/18 hover:text-white/35 transition-colors underline mt-1 block mx-auto">
+              I'll upgrade later
             </button>
           </div>
         </div>
