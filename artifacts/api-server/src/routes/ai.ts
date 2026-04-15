@@ -499,33 +499,40 @@ router.post("/ai/generate-social-post", async (req, res) => {
     return;
   }
 
-  const lengthGuide: Record<string, string> = {
-    short: "1-2 sentences for Twitter/X, 2-3 for others",
-    medium: "3-4 sentences for Twitter/X, 1-2 paragraphs for others",
-    long: "full caption for Instagram/LinkedIn, thread for Twitter/X",
+  const platformList = platforms.join(", ");
+
+  // Per-platform format rules
+  const platformRules: Record<string, string> = {
+    "Instagram": `Instagram: Structure = Hook line (attention-grabbing, 1 sentence) → 2-3 body lines with story or value → Clear CTA (e.g. "Drop a 🙌 below" or "Link in bio"). Max 2200 chars. Use ${includeEmojis ? "emojis liberally" : "no emojis"}. End with a blank line then 25-30 hashtags (mix popular + niche). Hashtag array should have 25-30 tags.`,
+    "Facebook": `Facebook: Conversational and warm. Open with a relatable question or bold statement. 2-3 short paragraphs. End with a question to drive comments (e.g. "What do you think? 👇"). Max 500 chars for best reach. 3-5 hashtags only. ${includeEmojis ? "Use a few emojis." : "No emojis."}`,
+    "X (Twitter)": `X/Twitter: Max 280 characters STRICTLY — count every character. Punchy, witty, or bold. One clear idea. Optional thread hook ("🧵 Thread:"). 1-2 hashtags woven naturally or at end. ${includeEmojis ? "1-2 emojis max." : "No emojis."}`,
+    "LinkedIn": `LinkedIn: Professional long-form. Start with a bold insight or personal story hook (1 line). Then 3-5 short paragraphs with value, lessons, or data. End with a thought-provoking question to spark discussion. 1200-1500 chars ideal. 3-5 professional hashtags. ${includeEmojis ? "Minimal emojis (1-2 max)." : "No emojis."} NO "check out our product" language — share knowledge.`,
+    "TikTok": `TikTok: Ultra-short punchy caption. Start with a hook ("POV:", "Wait for it 👀", "Nobody talks about this:"). 1-2 lines only. Trending / Gen-Z friendly tone. 8-12 hashtags mixing trending (#fyp #foryou) + niche tags. ${includeEmojis ? "Heavy emoji use." : "No emojis."}`,
+    "Pinterest": `Pinterest: SEO-optimized. Start with keyword-rich title phrase (bolded in text). 2-3 sentences describing the content with keywords naturally embedded. Include a CTA ("Save this for later!", "Click to learn more"). 5-8 descriptive hashtags (topic-specific, no trending tags). ${includeEmojis ? "1-2 emojis." : "No emojis."}`,
   };
 
-  const platformList = platforms.join(", ");
+  const activeRules = platforms.map(p => platformRules[p] ?? `${p}: Write an engaging post appropriate for this platform.`).join("\n\n");
 
   const messages = [
     {
       role: "system" as const,
-      content: `You are a social media copywriter. You ALWAYS respond with ONLY a raw JSON object — no markdown, no code fences, no explanation before or after.`,
+      content: `You are an expert social media copywriter who writes platform-native content. Each platform has strict formatting rules that you follow exactly. You ALWAYS respond with ONLY a raw JSON object — no markdown, no code fences, no explanation before or after.`,
     },
     {
       role: "user" as const,
       content: `Write social media posts for these platforms: ${platformList}
-Topic: ${topic}
+
+Topic / Brief: ${topic}
 Tone: ${tone}
-${brand ? `Brand: ${brand}` : ""}
-Emojis: ${includeEmojis ? "yes" : "no"}
-Length: ${lengthGuide[postLength] ?? lengthGuide.medium}
-Hashtags per post: ${hashtagCount} (no # symbol in the array)
+${brand ? `Brand voice: ${brand}` : ""}
+
+PLATFORM-SPECIFIC RULES — follow each one exactly:
+${activeRules}
 
 RESPOND WITH ONLY THIS JSON — no text before or after, no code fences:
-{"posts":[{"platform":"Platform Name","content":"post text here","hashtags":["tag1","tag2"],"bestTime":"Tuesday 7-9 PM","tip":"one tip"}]}
+{"posts":[{"platform":"Platform Name","content":"post text here (following that platform's exact rules)","hashtags":["tag1","tag2"],"charCount":123,"bestTime":"Tuesday 7-9 PM","tip":"one platform-specific tip"}]}
 
-Generate one post object per platform listed above.`,
+Generate one post object per platform. The content field must NOT include hashtags (put them in the hashtags array). The charCount field should be the character count of the content field.`,
     },
   ];
 

@@ -534,6 +534,7 @@ function CreatePost({ onSave, connectedPlatforms = [] }: { onSave: (p: Post) => 
   const [queueMode, setQueueMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPosts, setGeneratedPosts] = useState<Record<string, string>>({});
+  const [postMeta, setPostMeta] = useState<Record<string, { hashtags: string[]; bestTime: string; tip: string }>>({});
   const [activePlatform, setActivePlatform] = useState("");
   const [copied, setCopied] = useState(false);
   const [savedId, setSavedId] = useState("");
@@ -545,16 +546,22 @@ function CreatePost({ onSave, connectedPlatforms = [] }: { onSave: (p: Post) => 
     if (!summary || !selectedPlatforms.length) return;
     setIsGenerating(true);
     setGeneratedPosts({});
-    const topic = `Campaign: ${campaignName || "Untitled"}\nType: ${CONTENT_TYPES.find(c => c.id === contentType)?.label}\n${summary}`;
+    setPostMeta({});
+    const topic = `Campaign: ${campaignName || "Untitled"}\nContent type: ${CONTENT_TYPES.find(c => c.id === contentType)?.label}\n\n${summary}`;
     try {
       const r = await fetch("/api/ai/generate-social-post", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, platforms: selectedPlatforms, tone: TONES.find(t => t.id === tone)?.label ?? tone, includeEmojis: true, hashtagCount: 5, postLength: "medium" }),
+        body: JSON.stringify({ topic, platforms: selectedPlatforms, tone: TONES.find(t => t.id === tone)?.label ?? tone, includeEmojis: true, hashtagCount: 10, postLength: "medium" }),
       });
-      const data = await r.json() as { posts?: Array<{ platform: string; content: string; hashtags: string[] }> };
-      const map: Record<string, string> = {};
-      data.posts?.forEach(p => { map[p.platform] = p.content + (p.hashtags?.length ? "\n\n" + p.hashtags.map(h => `#${h}`).join(" ") : ""); });
-      setGeneratedPosts(map);
+      const data = await r.json() as { posts?: Array<{ platform: string; content: string; hashtags: string[]; bestTime?: string; tip?: string }> };
+      const contentMap: Record<string, string> = {};
+      const metaMap: Record<string, { hashtags: string[]; bestTime: string; tip: string }> = {};
+      data.posts?.forEach(p => {
+        contentMap[p.platform] = p.content;
+        metaMap[p.platform] = { hashtags: p.hashtags ?? [], bestTime: p.bestTime ?? "", tip: p.tip ?? "" };
+      });
+      setGeneratedPosts(contentMap);
+      setPostMeta(metaMap);
       setActivePlatform(selectedPlatforms[0]);
     } finally { setIsGenerating(false); }
   };
@@ -640,46 +647,93 @@ function CreatePost({ onSave, connectedPlatforms = [] }: { onSave: (p: Post) => 
       {/* Generated output */}
       <AnimatePresence>
         {Object.keys(generatedPosts).length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 border border-slate-700 rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-white font-semibold">Generated Posts</h3>
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => { navigator.clipboard.writeText(generatedPosts[activePlatform] ?? ""); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors">
-                  {copied ? <><Check size={12} className="text-green-400" /> Copied!</> : <><Copy size={12} /> Copy</>}
-                </button>
-                <button onClick={() => savePost("draft")} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors">
-                  <BookOpen size={12} /> Save Draft
-                </button>
-                <button
-                  onClick={() => { setQueueMode(true); savePost("scheduled"); }}
-                  title="Add to auto-queue — picks the best next time slot"
-                  className="flex items-center gap-1.5 text-blue-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-blue-800 hover:bg-blue-800/40 transition-colors"
-                >
-                  <RefreshCw size={12} /> Add to Queue
-                </button>
-                <button onClick={() => savePost(scheduleDate ? "scheduled" : "published")} className="flex items-center gap-1.5 bg-pink-600 hover:bg-pink-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors">
-                  {savedId ? <><Check size={12} /> Saved!</> : scheduleDate ? <><Clock size={12} /> Schedule</> : <><Send size={12} /> Publish</>}
-                </button>
-              </div>
-            </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {/* Platform tabs */}
             <div className="flex gap-2 flex-wrap">
               {selectedPlatforms.filter(p => generatedPosts[p]).map(p => {
                 const pl = PLATFORMS.find(x => x.id === p)!;
                 return (
-                  <button key={p} onClick={() => setActivePlatform(p)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activePlatform === p ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}>
+                  <button key={p} onClick={() => setActivePlatform(p)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${activePlatform === p ? "text-white border-transparent" : "border-slate-700 text-slate-400 hover:text-white"}`}
+                    style={activePlatform === p ? { background: pl.color } : {}}
+                  >
                     {pl.emoji} {p}
                   </button>
                 );
               })}
             </div>
-            {/* Post preview */}
-            <textarea
-              className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:border-pink-500"
-              rows={8}
-              value={generatedPosts[activePlatform] ?? ""}
-              onChange={e => setGeneratedPosts(prev => ({ ...prev, [activePlatform]: e.target.value }))}
-            />
+
+            {/* Platform card preview */}
+            {(() => {
+              const pl = PLATFORMS.find(x => x.id === activePlatform)!;
+              const post = generatedPosts[activePlatform] ?? "";
+              const meta = postMeta[activePlatform];
+              const charLimit: Record<string, number> = { "X (Twitter)": 280, "Instagram": 2200, "LinkedIn": 3000, "Facebook": 63206, "TikTok": 2200, "Pinterest": 500 };
+              const limit = charLimit[activePlatform] ?? 2200;
+              const charCount = post.length;
+              const overLimit = activePlatform === "X (Twitter)" && charCount > 280;
+
+              return pl ? (
+                <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                  {/* Card header — platform brand bar */}
+                  <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-800" style={{ borderLeftWidth: 4, borderLeftColor: pl.color }}>
+                    <span className="text-2xl">{pl.emoji}</span>
+                    <div className="flex-1">
+                      <p className="text-white font-bold text-sm">{activePlatform} Post</p>
+                      {meta?.bestTime && <p className="text-slate-500 text-xs">⏰ Best time: {meta.bestTime}</p>}
+                    </div>
+                    <div className={`text-xs font-mono px-2 py-1 rounded-lg ${overLimit ? "bg-red-900/60 text-red-400" : "bg-slate-800 text-slate-400"}`}>
+                      {charCount}{limit < 63206 ? `/${limit}` : ""} chars
+                    </div>
+                  </div>
+
+                  {/* Editable post body */}
+                  <textarea
+                    className="w-full bg-transparent px-5 py-4 text-white text-sm resize-none focus:outline-none leading-relaxed"
+                    rows={activePlatform === "LinkedIn" ? 12 : activePlatform === "X (Twitter)" ? 4 : 8}
+                    value={post}
+                    onChange={e => setGeneratedPosts(prev => ({ ...prev, [activePlatform]: e.target.value }))}
+                    placeholder="Post content appears here..."
+                  />
+
+                  {/* Hashtags */}
+                  {meta?.hashtags?.length > 0 && (
+                    <div className="px-5 py-3 border-t border-slate-800 flex flex-wrap gap-1.5">
+                      {meta.hashtags.map((h: string) => (
+                        <span key={h} className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: pl.color + "25", color: pl.color }}>#{h}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Tip */}
+                  {meta?.tip && (
+                    <div className="px-5 py-2.5 border-t border-slate-800 bg-slate-800/30">
+                      <p className="text-slate-400 text-xs">💡 <span className="text-slate-300">{meta.tip}</span></p>
+                    </div>
+                  )}
+
+                  {/* Action bar */}
+                  <div className="flex items-center gap-2 px-5 py-3 border-t border-slate-800 flex-wrap">
+                    <button onClick={() => { navigator.clipboard.writeText(post + (meta?.hashtags?.length ? "\n\n" + meta.hashtags.map((h: string) => `#${h}`).join(" ") : "")); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                      className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors">
+                      {copied ? <><Check size={12} className="text-green-400" /> Copied!</> : <><Copy size={12} /> Copy + Hashtags</>}
+                    </button>
+                    <button onClick={() => savePost("draft")} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors">
+                      <BookOpen size={12} /> Save Draft
+                    </button>
+                    <button onClick={() => { setQueueMode(true); savePost("scheduled"); }}
+                      className="flex items-center gap-1.5 text-blue-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-blue-800 hover:bg-blue-800/40 transition-colors">
+                      <RefreshCw size={12} /> Queue
+                    </button>
+                    <button onClick={() => savePost(scheduleDate ? "scheduled" : "published")}
+                      className="ml-auto flex items-center gap-1.5 text-white text-xs px-4 py-1.5 rounded-lg font-bold transition-colors"
+                      style={{ background: pl.color }}>
+                      {savedId ? <><Check size={12} /> Saved!</> : scheduleDate ? <><Clock size={12} /> Schedule</> : <><Send size={12} /> Publish</>}
+                    </button>
+                  </div>
+                </div>
+              ) : null;
+            })()}
           </motion.div>
         )}
       </AnimatePresence>
