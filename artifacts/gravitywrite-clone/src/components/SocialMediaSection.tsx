@@ -6,10 +6,11 @@ import {
   Wrench, Loader2, Copy, Check, ChevronLeft, ChevronRight, Trash2,
   Clock, Send, Sparkles, Download, Upload, Zap,
   BookOpen, Edit3, CheckCircle2, AlertCircle, Link2, Search,
-  ListOrdered, Users, RefreshCw, Clapperboard,
+  ListOrdered, Users, RefreshCw, Clapperboard, Globe2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdCreatorTab from "@/components/AdCreatorTab";
+import SocialPageTab from "@/components/SocialPageTab";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ interface MediaItem {
   addedAt: string;
 }
 
-type Tab = "accounts" | "create" | "adcreator" | "calendar" | "dashboard" | "hashtags" | "tools" | "media" | "analytics";
+type Tab = "accounts" | "create" | "adcreator" | "calendar" | "dashboard" | "hashtags" | "tools" | "media" | "analytics" | "socialpage";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "tools",      label: "AI Tools Hub",     icon: <Wrench size={16} /> },
   { id: "media",      label: "Media Library",    icon: <ImageIcon size={16} /> },
   { id: "analytics",  label: "Analytics",        icon: <BarChart2 size={16} /> },
+  { id: "socialpage", label: "Social Page",      icon: <Globe2 size={16} /> },
 ];
 
 // ── SSE streaming helper ──────────────────────────────────────────────────────
@@ -206,9 +208,9 @@ export default function SocialMediaSection() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto">
+      <div className={`flex-1 overflow-auto ${tab === "socialpage" ? "flex flex-col" : ""}`}>
         <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+          <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className={tab === "socialpage" ? "flex-1 flex flex-col h-full" : ""}>
             {tab === "accounts"   && <ConnectAccounts accounts={accounts} onUpdate={setAccounts} onNext={() => setTab("create")} />}
             {tab === "create"     && <CreatePost onSave={addPost} connectedPlatforms={accounts.filter(a => a.connected).map(a => a.id)} />}
             {tab === "adcreator"  && <AdCreatorTab />}
@@ -218,6 +220,7 @@ export default function SocialMediaSection() {
             {tab === "tools"      && <AIToolsHub />}
             {tab === "media"      && <MediaLib items={media} onUpdate={setMedia} />}
             {tab === "analytics"  && <Analytics posts={posts} />}
+            {tab === "socialpage" && <SocialPageTab />}
           </motion.div>
         </AnimatePresence>
       </div>
