@@ -122,18 +122,13 @@ export default function Navbar() {
                   <Crown className="w-3 h-3 fill-yellow-400" /> Admin · Unlimited
                 </div>
               ) : (
-                (() => {
-                  const gensLeft = Math.floor(credits / 5);
-                  return (
-                    <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-colors ${
-                      gensLeft > 5 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" :
-                      gensLeft > 0 ? "bg-amber-500/10 border-amber-500/25 text-amber-400" :
-                                     "bg-red-500/10 border-red-500/25 text-red-400"
-                    }`}>
-                      ⚡ {gensLeft} gen{gensLeft !== 1 ? "s" : ""} left
-                    </div>
-                  );
-                })()
+                <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-colors ${
+                  credits > 20 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" :
+                  credits > 5  ? "bg-amber-500/10 border-amber-500/25 text-amber-400" :
+                                 "bg-red-500/10 border-red-500/25 text-red-400"
+                }`}>
+                  ⚡ {credits} credits
+                </div>
               )
             )}
 

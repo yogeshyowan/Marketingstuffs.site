@@ -26,18 +26,24 @@ function getCredits(): number {
   return v === null ? -1 : parseInt(v, 10); // -1 = not initialized (not signed in)
 }
 function initCredits() { localStorage.setItem(LS_CREDITS, String(FREE_CREDITS)); }
-const CREDIT_COST = 5; // each generation costs 5 credits → 10 total with 50 free
+export type GenerationType = "video" | "image" | "text";
 
-function decrementCredit() {
+function getCreditCost(type: GenerationType): number {
+  if (type === "video")  return 10;
+  if (type === "image")  return 5;
+  return 1; // text / everything else
+}
+
+function decrementCredit(type: GenerationType) {
   if (isAdmin()) return FREE_CREDITS; // admin never loses credits
-  const c = Math.max(0, getCredits() - CREDIT_COST);
+  const c = Math.max(0, getCredits() - getCreditCost(type));
   localStorage.setItem(LS_CREDITS, String(c));
   return c;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
 type GateCtx = {
-  requestGeneration: (onProceed: () => void) => void;
+  requestGeneration: (onProceed: () => void, type?: GenerationType) => void;
   credits: number;
   googleSignedIn: boolean;
   isAdminUser: boolean;
@@ -65,7 +71,8 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   const [isAdminUser, setIsAdminUser] = useState(isAdmin);
   const [userEmail, setUserEmailState] = useState(getUserEmail);
 
-  const pendingRef = useRef<(() => void) | null>(null);
+  const pendingRef  = useRef<(() => void) | null>(null);
+  const pendingType = useRef<GenerationType>("text");
 
   // When onboarding completes → move to Google Sign-In gate
   const prevOnboarded = useRef(profile.onboardingComplete);
@@ -85,37 +92,34 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   }, [profile.onboardingComplete]);
 
   function resumeAfterLogin() {
-    const cb = pendingRef.current;
+    const cb   = pendingRef.current;
+    const type = pendingType.current;
     pendingRef.current = null;
     if (!cb) return;
-    // Admin bypasses credits entirely
-    if (isAdmin()) {
-      cb();
-      return;
-    }
+    if (isAdmin()) { cb(); return; }
     const remaining = getCredits();
-    if (remaining <= 0) {
+    if (remaining < getCreditCost(type)) {
       setModal("upgrade");
       return;
     }
-    const newCount = decrementCredit();
+    const newCount = decrementCredit(type);
     setCredits(newCount);
     cb();
-    if (newCount <= 0) {
-      setTimeout(() => setModal("upgrade"), 800);
-    }
+    if (newCount <= 0) setTimeout(() => setModal("upgrade"), 800);
   }
 
-  const requestGeneration = useCallback((onProceed: () => void) => {
+  const requestGeneration = useCallback((onProceed: () => void, type: GenerationType = "text") => {
     // ── Gate 1: Onboarding ─────────────────────────────────
     if (!profile.onboardingComplete) {
-      pendingRef.current = onProceed;
+      pendingRef.current  = onProceed;
+      pendingType.current = type;
       setShowOnboarding(true);
       return;
     }
     // ── Gate 2: Google Sign-In ─────────────────────────────
     if (!isGoogleSignedIn()) {
-      pendingRef.current = onProceed;
+      pendingRef.current  = onProceed;
+      pendingType.current = type;
       setModal("login");
       setLoginStep("idle");
       return;
@@ -123,19 +127,19 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
     // ── Gate 3: Credits (admin bypasses) ───────────────────
     if (!isAdmin()) {
       const remaining = getCredits();
-      if (remaining <= 0) {
+      if (remaining < getCreditCost(type)) {
         setModal("upgrade");
         return;
       }
     }
     // ── All gates passed ───────────────────────────────────
-    if (!isAdmin()) {
-      const newCount = decrementCredit();
+    if (isAdmin()) {
+      onProceed();
+    } else {
+      const newCount = decrementCredit(type);
       setCredits(newCount);
       onProceed();
       if (newCount <= 0) setTimeout(() => setModal("upgrade"), 800);
-    } else {
-      onProceed(); // admin runs freely
     }
   }, [profile.onboardingComplete, setShowOnboarding]);
 
@@ -324,16 +328,16 @@ function LoginModal({
               <div className="mx-6 mb-4 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
                 <div className="text-2xl">⚡</div>
                 <div>
-                  <p className="text-white font-bold text-sm">{FREE_CREDITS / CREDIT_COST} AI Generations — Free</p>
-                  <p className="text-slate-500 text-xs">Every blog, ad, image, video, email = 5 credits</p>
+                  <p className="text-white font-bold text-sm">{FREE_CREDITS} AI Credits — Free</p>
+                  <p className="text-slate-500 text-xs">Text/Ads = 1 cr · Images = 5 cr · Videos = 10 cr</p>
                 </div>
-                <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS / CREDIT_COST}</div>
+                <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS}</div>
               </div>
 
               {/* Benefits */}
               <div className="px-6 pb-4 space-y-2">
                 {[
-                  "10 free generations across all tools — Blog, Social, Ads, Email, Images…",
+                  "50 free credits — Blog, Ads, Social, Email, Images & Video…",
                   "Your Growth Plan & history saved to your account",
                   "Access to all Growth Hub features",
                   "No credit card required, ever",

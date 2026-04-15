@@ -6,7 +6,8 @@ import {
   FileText, Layers, Clock, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getPlan, deductCredits, CREDIT_COSTS } from "@/lib/credits";
+import { getPlan } from "@/lib/credits";
+import { useGenerationGate } from "@/components/GenerationGate";
 
 // ── Pollinations helper ───────────────────────────────────────
 function pollinationsUrl(prompt: string, w: number, h: number, seed?: number) {
@@ -122,6 +123,7 @@ const VIDEO_MODES = [
 
 // ── Main component ────────────────────────────────────────────
 export default function VideoGeneratorSection() {
+  const { requestGeneration } = useGenerationGate();
   const [videoMode, setVideoMode] = useState("storyboard");
   const [platform, setPlatform] = useState(PLATFORMS[0]);
   const [topic, setTopic] = useState("");
@@ -220,7 +222,6 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
           } catch { /* skip */ }
         }
       }
-      deductCredits(CREDIT_COSTS.tool_medium.cost);
     } catch { setScript("Script generation failed. Try again."); }
     finally { setIsScriptLoading(false); }
   }
@@ -236,7 +237,6 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
 
     const generated = buildScenePrompts(topic, platform, style);
     setFrames(generated);
-    deductCredits(CREDIT_COSTS.tool_short.cost);
     setTimeout(() => setIsGenerating(false), 1000);
 
     // Generate script in parallel
@@ -267,7 +267,6 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
       pollinationsUrl(`${imgConcept}, ${shot}, cinematic photography, ultra high quality, professional composition`, 1280, 720, Math.floor(Math.random() * 99999) + i * 111)
     );
     setImgFrames(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsImgGen(false), 1500);
   }
 
@@ -332,7 +331,7 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
                 <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-xs text-indigo-300/70 leading-relaxed">
                   Generates <strong className="text-indigo-300">6 cinematic frames</strong> simulating the {imgMotion} camera motion from your scene description using AI imagery.
                 </div>
-                <Button onClick={generateImgToVideo} disabled={isImgGen || !imgConcept.trim()}
+                <Button onClick={() => requestGeneration(generateImgToVideo, "video")} disabled={isImgGen || !imgConcept.trim()}
                   className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold h-11 rounded-xl">
                   {isImgGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating frames...</> : <><Wand2 className="w-4 h-4 mr-2" />Generate Video Frames</>}
                 </Button>
@@ -483,7 +482,7 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
               </div>
             </div>
 
-            <Button onClick={handleGenerate} disabled={isGenerating || !topic.trim()}
+            <Button onClick={() => requestGeneration(handleGenerate, "video")} disabled={isGenerating || !topic.trim()}
               className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold h-11 rounded-xl">
               {isGenerating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating {platform.frames} scenes...</> : <><Wand2 className="w-4 h-4 mr-2" /> Generate Video Storyboard</>}
             </Button>

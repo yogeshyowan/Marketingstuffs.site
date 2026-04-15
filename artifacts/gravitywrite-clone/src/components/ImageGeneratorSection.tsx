@@ -6,7 +6,7 @@ import {
   Wand2, Star, ChevronRight, Monitor, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { deductCredits, CREDIT_COSTS } from "@/lib/credits";
+import { useGenerationGate } from "@/components/GenerationGate";
 
 // ── Pollinations helper ───────────────────────────────────────
 function pollinationsUrl(prompt: string, w: number, h: number, seed?: number) {
@@ -208,6 +208,7 @@ function ImageResult({ url, label, w, h, onRegenerate, downloading }: {
 
 // ── Main component ────────────────────────────────────────────
 export default function ImageGeneratorSection() {
+  const { requestGeneration } = useGenerationGate();
   const [activeTab, setActiveTab] = useState("text2img");
 
   // Text to Image state
@@ -285,7 +286,6 @@ export default function ImageGeneratorSection() {
       return { url: pollinationsUrl(fullPrompt, w, h, seed), seed };
     });
     setGeneratedImages(results);
-    deductCredits(CREDIT_COSTS.tool_short.cost * batchCount);
     setTimeout(() => setIsGenerating(false), 1500);
   }
 
@@ -310,7 +310,6 @@ export default function ImageGeneratorSection() {
     ];
     const urls = prompts.map(p => pollinationsUrl(p, w, h, Math.floor(Math.random() * 99999)));
     setSocialImages(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsSocialGen(false), 1500);
   }
 
@@ -328,7 +327,6 @@ export default function ImageGeneratorSection() {
     ];
     const urls = prompts.map(p => pollinationsUrl(p, 1280, 720, Math.floor(Math.random() * 99999)));
     setThumbImages(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsThumbGen(false), 1500);
   }
 
@@ -345,7 +343,6 @@ export default function ImageGeneratorSection() {
     ];
     const urls = prompts.map(p => pollinationsUrl(p, 800, 800, Math.floor(Math.random() * 99999)));
     setLogoImages(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsLogoGen(false), 1500);
   }
 
@@ -360,7 +357,6 @@ export default function ImageGeneratorSection() {
       pollinationsUrl(`${p}, clean professional design, white background, high quality graphic design, modern layout`, 800, 1000, Math.floor(Math.random() * 99999) + i * 77)
     );
     setTemplateImages(urls);
-    deductCredits(CREDIT_COSTS.tool_short.cost);
     setTimeout(() => setIsTemplateGen(false), 1200);
   }
 
@@ -378,7 +374,6 @@ export default function ImageGeneratorSection() {
     ];
     const urls = prompts.map(p => pollinationsUrl(p, 1024, 1024, Math.floor(Math.random() * 99999)));
     setArtImages(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsArtGen(false), 1500);
   }
 
@@ -396,7 +391,6 @@ export default function ImageGeneratorSection() {
     ];
     const urls = prompts.map(p => pollinationsUrl(p, w, h, Math.floor(Math.random() * 99999)));
     setDesignImages(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsDesignGen(false), 1500);
   }
 
@@ -415,7 +409,6 @@ export default function ImageGeneratorSection() {
     ];
     const urls = prompts.map(p => pollinationsUrl(p, 1024, 1024, Math.floor(Math.random() * 99999)));
     setProductImages(urls);
-    deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsProductGen(false), 1500);
   }
 
@@ -515,7 +508,7 @@ export default function ImageGeneratorSection() {
                       className="w-full accent-teal-400" />
                   </div>
 
-                  <Button onClick={generateText2Img} disabled={isGenerating || !prompt.trim()}
+                  <Button onClick={() => requestGeneration(generateText2Img, "image")} disabled={isGenerating || !prompt.trim()}
                     className="w-full bg-teal-500 hover:bg-teal-400 text-black font-semibold h-11 rounded-xl">
                     {isGenerating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate Image{batchCount > 1 ? "s" : ""}</>}
                   </Button>
@@ -589,7 +582,7 @@ export default function ImageGeneratorSection() {
                       placeholder={`e.g. "A healthy meal prep guide for busy professionals" or "Summer sale 50% off announcement for clothing brand"...`}
                       value={socialTopic} onChange={e => setSocialTopic(e.target.value)} />
                   </div>
-                  <Button onClick={generateSocial} disabled={isSocialGen || !socialTopic.trim()}
+                  <Button onClick={() => requestGeneration(generateSocial, "image")} disabled={isSocialGen || !socialTopic.trim()}
                     className="w-full bg-teal-500 hover:bg-teal-400 text-black font-semibold h-11 rounded-xl">
                     {isSocialGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating 4 variations...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate 4 {socialPlatform.label}s</>}
                   </Button>
@@ -651,7 +644,7 @@ export default function ImageGeneratorSection() {
                       value={thumbSubject} onChange={e => setThumbSubject(e.target.value)} />
                   </div>
 
-                  <Button onClick={generateThumbnail} disabled={isThumbGen || !thumbTitle.trim()}
+                  <Button onClick={() => requestGeneration(generateThumbnail, "image")} disabled={isThumbGen || !thumbTitle.trim()}
                     className="w-full bg-red-500 hover:bg-red-400 text-white font-semibold h-11 rounded-xl">
                     {isThumbGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating thumbnails...</> : <><Star className="w-4 h-4 mr-2" /> Generate 3 Thumbnails</>}
                   </Button>
@@ -716,7 +709,7 @@ export default function ImageGeneratorSection() {
                       value={logoColor} onChange={e => setLogoColor(e.target.value)} />
                   </div>
 
-                  <Button onClick={generateLogo} disabled={isLogoGen || !brandName.trim()}
+                  <Button onClick={() => requestGeneration(generateLogo, "image")} disabled={isLogoGen || !brandName.trim()}
                     className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold h-11 rounded-xl">
                     {isLogoGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating logos...</> : <><Palette className="w-4 h-4 mr-2" /> Generate 4 Logo Concepts</>}
                   </Button>
@@ -754,7 +747,7 @@ export default function ImageGeneratorSection() {
                   </div>
                   {TEMPLATE_CATS.map(cat => (
                     <button key={cat.id}
-                      onClick={() => { setTemplateCat(cat); generateTemplate(cat); }}
+                      onClick={() => { setTemplateCat(cat); requestGeneration(() => generateTemplate(cat), "image"); }}
                       className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${templateCat.id === cat.id ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-white/50 hover:text-white hover:bg-white/5"}`}>
                       <span>{cat.emoji}</span>
                       <span className="truncate">{cat.label}</span>
@@ -769,7 +762,7 @@ export default function ImageGeneratorSection() {
                       <h3 className="text-white font-semibold">{templateCat.label}</h3>
                       <p className="text-xs text-white/40 mt-0.5">Complete collection — click to generate</p>
                     </div>
-                    <Button onClick={() => generateTemplate(templateCat)} disabled={isTemplateGen} size="sm"
+                    <Button onClick={() => requestGeneration(() => generateTemplate(templateCat), "image")} disabled={isTemplateGen} size="sm"
                       className="bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs">
                       {isTemplateGen ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Loading...</> : <><RefreshCw className="w-3 h-3 mr-1" />Refresh</>}
                     </Button>
@@ -778,7 +771,7 @@ export default function ImageGeneratorSection() {
                     {templateImages.length === 0 ? (
                       Array.from({ length: 8 }).map((_, i) => (
                         <div key={i} className="aspect-[4/5] rounded-xl border border-dashed border-white/8 bg-white/[0.02] flex items-center justify-center cursor-pointer hover:bg-white/[0.04] transition-colors"
-                          onClick={() => generateTemplate(templateCat)}>
+                          onClick={() => requestGeneration(() => generateTemplate(templateCat), "image")}>
                           {isTemplateGen ? <Loader2 className="w-5 h-5 text-white/20 animate-spin" /> : <Layers className="w-5 h-5 text-white/10" />}
                         </div>
                       ))
@@ -828,7 +821,7 @@ export default function ImageGeneratorSection() {
                     <p className="text-xs text-white/30 mt-1 leading-relaxed">{artStyle.prompt}</p>
                   </div>
 
-                  <Button onClick={generateArt} disabled={isArtGen || !artPrompt.trim()}
+                  <Button onClick={() => requestGeneration(generateArt, "image")} disabled={isArtGen || !artPrompt.trim()}
                     className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold h-11 rounded-xl">
                     {isArtGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating artwork...</> : <><Wand2 className="w-4 h-4 mr-2" /> Generate 4 Artworks</>}
                   </Button>
@@ -891,7 +884,7 @@ export default function ImageGeneratorSection() {
                       value={designColors} onChange={e => setDesignColors(e.target.value)} />
                   </div>
 
-                  <Button onClick={generateDesign} disabled={isDesignGen || !designTopic.trim()}
+                  <Button onClick={() => requestGeneration(generateDesign, "image")} disabled={isDesignGen || !designTopic.trim()}
                     className="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold h-11 rounded-xl">
                     {isDesignGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Designing...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate 4 Designs</>}
                   </Button>
@@ -951,7 +944,7 @@ export default function ImageGeneratorSection() {
                     />
                   </div>
 
-                  <Button onClick={generateProduct} disabled={isProductGen || !productName.trim()}
+                  <Button onClick={() => requestGeneration(generateProduct, "image")} disabled={isProductGen || !productName.trim()}
                     className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold h-11 rounded-xl">
                     {isProductGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Shooting product...</> : <><Star className="w-4 h-4 mr-2" /> Generate 4 Product Shots</>}
                   </Button>
