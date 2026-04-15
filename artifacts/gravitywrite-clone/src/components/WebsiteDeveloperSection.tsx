@@ -6,6 +6,7 @@ import {
   Sparkles, RefreshCw, Zap, Phone, Mail, MapPin, Instagram, Twitter,
   Facebook, Monitor, Tablet, Smartphone, SkipForward, CheckCircle2,
   Upload, Palette, Type, Image as ImageIcon, ArrowRight, Plus, X,
+  Search, BarChart2, Link2, FileText, Shield, BookOpen, Map, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -124,18 +125,237 @@ async function streamSection(
   }
 }
 
-// ── Combine all sections into one HTML document ───────────────────────────────
+// ── SEO head injector ─────────────────────────────────────────────────────────
 
-function combinePages(sections: SectionState[]): string {
+interface SeoOptions {
+  bizName: string;
+  metaTitle: string;
+  metaDesc: string;
+  keywords: string;
+  domain: string;
+  gaId: string;
+  gscCode: string;
+  ogImage: string;
+  twitterHandle: string;
+  schemaType: string;
+  contactEmail: string;
+  contactPhone: string;
+  contactAddress: string;
+}
+
+function buildSeoHead(opts: SeoOptions): string {
+  const {
+    bizName, metaTitle, metaDesc, keywords, domain, gaId, gscCode,
+    ogImage, twitterHandle, schemaType, contactEmail, contactPhone, contactAddress,
+  } = opts;
+  const title = metaTitle || bizName;
+  const desc = metaDesc || `Welcome to ${bizName}. We provide professional services you can trust.`;
+  const canonical = domain ? (domain.startsWith("http") ? domain : `https://${domain}`) : "";
+  const today = new Date().toISOString().split("T")[0];
+
+  const schemaOrg = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": schemaType || "LocalBusiness",
+    "name": bizName,
+    "description": desc,
+    ...(canonical ? { "url": canonical } : {}),
+    ...(contactEmail ? { "email": `mailto:${contactEmail}` } : {}),
+    ...(contactPhone ? { "telephone": contactPhone } : {}),
+    ...(contactAddress ? { "address": { "@type": "PostalAddress", "streetAddress": contactAddress } } : {}),
+    ...(ogImage ? { "image": ogImage } : {}),
+  });
+
+  const websiteSchema = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": bizName,
+    ...(canonical ? { "url": canonical } : {}),
+    "potentialAction": canonical ? {
+      "@type": "SearchAction",
+      "target": `${canonical}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    } : undefined,
+  });
+
+  const breadcrumbSchema = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": canonical || "/" },
+    ],
+  });
+
+  return `
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title}</title>
+<meta name="description" content="${desc.replace(/"/g, "&quot;")}"/>
+${keywords ? `<meta name="keywords" content="${keywords.replace(/"/g, "&quot;")}"/>` : ""}
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
+<meta name="author" content="${bizName}"/>
+<meta name="generator" content="Marketingstuffs AI Website Builder"/>
+${canonical ? `<link rel="canonical" href="${canonical}"/>` : ""}
+${gscCode ? `<meta name="google-site-verification" content="${gscCode}"/>` : ""}
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="${title.replace(/"/g, "&quot;")}"/>
+<meta property="og:description" content="${desc.replace(/"/g, "&quot;")}"/>
+${ogImage ? `<meta property="og:image" content="${ogImage}"/>` : ""}
+${canonical ? `<meta property="og:url" content="${canonical}"/>` : ""}
+<meta property="og:site_name" content="${bizName}"/>
+<!-- Twitter Card -->
+<meta name="twitter:card" content="${ogImage ? "summary_large_image" : "summary"}"/>
+<meta name="twitter:title" content="${title.replace(/"/g, "&quot;")}"/>
+<meta name="twitter:description" content="${desc.replace(/"/g, "&quot;")}"/>
+${ogImage ? `<meta name="twitter:image" content="${ogImage}"/>` : ""}
+${twitterHandle ? `<meta name="twitter:site" content="${twitterHandle.startsWith("@") ? twitterHandle : "@" + twitterHandle}"/>` : ""}
+<!-- JSON-LD: ${schemaType || "LocalBusiness"} -->
+<script type="application/ld+json">${schemaOrg}</script>
+<!-- JSON-LD: WebSite -->
+<script type="application/ld+json">${websiteSchema}</script>
+<!-- JSON-LD: Breadcrumbs -->
+<script type="application/ld+json">${breadcrumbSchema}</script>
+${gaId ? `<!-- Google Analytics -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>\n<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}',{page_path:window.location.pathname});</script>` : ""}
+<!-- Sitemap reference -->
+${canonical ? `<link rel="sitemap" type="application/xml" href="${canonical}/sitemap.xml"/>` : ""}
+<!-- Last modified -->
+<meta name="last-modified" content="${today}"/>`.trim();
+}
+
+// ── Privacy & Terms generators ────────────────────────────────────────────────
+
+function buildPrivacyPage(bizName: string, contactEmail: string, domain: string): string {
+  const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  return `<section id="privacy-policy" style="max-width:800px;margin:4rem auto;padding:2rem 1.5rem;font-size:0.95rem;line-height:1.8;color:inherit">
+<h1 style="font-size:2rem;font-weight:800;margin-bottom:0.5rem">Privacy Policy</h1>
+<p style="opacity:.5;font-size:0.85rem;margin-bottom:2rem">Last updated: ${today}</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">1. Information We Collect</h2>
+<p>We collect information you provide directly to us, such as when you contact us, sign up for our newsletter, or use our services. This may include your name, email address, phone number, and any other information you choose to provide.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">2. How We Use Your Information</h2>
+<p>We use the information we collect to provide, maintain, and improve our services, communicate with you, and comply with legal obligations. We do not sell your personal information to third parties.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">3. Cookies</h2>
+<p>We use cookies and similar tracking technologies to track activity on our website and hold certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">4. Data Retention</h2>
+<p>We retain your personal information for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required by law.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">5. Third-Party Services</h2>
+<p>Our website may contain links to third-party websites. We have no control over the content and practices of those sites and accept no responsibility for their privacy policies.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">6. Your Rights</h2>
+<p>You have the right to access, update, or delete your personal information. To exercise these rights, please contact us at ${contactEmail || `the contact information provided on our website`}.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">7. Contact Us</h2>
+<p>If you have questions about this Privacy Policy, please contact us${contactEmail ? ` at <a href="mailto:${contactEmail}">${contactEmail}</a>` : " through our contact page"}.</p>
+<p style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.1);opacity:.5;font-size:0.8rem">© ${new Date().getFullYear()} ${bizName}. All rights reserved.${domain ? ` | ${domain}` : ""}</p>
+</section>`;
+}
+
+function buildTermsPage(bizName: string, contactEmail: string, domain: string): string {
+  const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  return `<section id="terms-of-service" style="max-width:800px;margin:4rem auto;padding:2rem 1.5rem;font-size:0.95rem;line-height:1.8;color:inherit">
+<h1 style="font-size:2rem;font-weight:800;margin-bottom:0.5rem">Terms of Service</h1>
+<p style="opacity:.5;font-size:0.85rem;margin-bottom:2rem">Last updated: ${today}</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">1. Acceptance of Terms</h2>
+<p>By accessing and using the services of ${bizName}, you accept and agree to be bound by the terms and provisions of this agreement.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">2. Use of Services</h2>
+<p>You agree to use our services only for lawful purposes and in accordance with these Terms. You agree not to use our services in any way that violates applicable local, national, or international law or regulation.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">3. Intellectual Property</h2>
+<p>The content, features, and functionality of our services are owned by ${bizName} and are protected by international copyright, trademark, and other intellectual property laws.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">4. Disclaimer of Warranties</h2>
+<p>Our services are provided on an "as is" and "as available" basis without any warranties of any kind, either express or implied, including but not limited to implied warranties of merchantability.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">5. Limitation of Liability</h2>
+<p>${bizName} shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the service.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">6. Changes to Terms</h2>
+<p>We reserve the right to modify these terms at any time. We will notify users of any changes by updating the date at the top of these Terms. Your continued use of our services after any changes constitutes your acceptance of the new Terms.</p>
+<h2 style="font-size:1.25rem;font-weight:700;margin:2rem 0 0.5rem">7. Contact Us</h2>
+<p>If you have questions about these Terms, please contact us${contactEmail ? ` at <a href="mailto:${contactEmail}">${contactEmail}</a>` : " through our contact page"}.</p>
+<p style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.1);opacity:.5;font-size:0.8rem">© ${new Date().getFullYear()} ${bizName}. All rights reserved.${domain ? ` | ${domain}` : ""}</p>
+</section>`;
+}
+
+function buildBlogPage(bizName: string, description: string): string {
+  return `<section id="blog" style="max-width:1000px;margin:4rem auto;padding:2rem 1.5rem">
+<h1 style="font-size:2rem;font-weight:800;margin-bottom:0.5rem">Blog & Insights</h1>
+<p style="opacity:.6;margin-bottom:3rem">Tips, news, and insights from the ${bizName} team</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:2rem">
+${["Industry Tips & Best Practices", "How to Get the Most From Our Services", "Latest News & Updates from " + bizName].map((title, i) => `
+<article style="border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;transition:transform .2s" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+  <div style="height:160px;background:linear-gradient(135deg,rgba(59,130,246,.3),rgba(139,92,246,.3));display:flex;align-items:center;justify-content:center;font-size:3rem">${["💡","🚀","📰"][i]}</div>
+  <div style="padding:1.25rem">
+    <div style="font-size:0.75rem;opacity:.5;margin-bottom:0.5rem">Coming Soon</div>
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem">${title}</h2>
+    <p style="font-size:0.875rem;opacity:.6;line-height:1.6">Stay tuned for our latest articles, tips, and updates from the ${bizName} team.</p>
+    <div style="margin-top:1rem;font-size:0.8rem;opacity:.4;font-weight:600">Read more →</div>
+  </div>
+</article>`).join("")}
+</div>
+<div style="margin-top:3rem;padding:2rem;border:1px dashed rgba(255,255,255,.15);border-radius:12px;text-align:center">
+  <p style="font-weight:700;margin-bottom:0.5rem">Subscribe to our newsletter</p>
+  <p style="font-size:0.875rem;opacity:.5;margin-bottom:1.5rem">Get our latest posts delivered straight to your inbox</p>
+  <form style="display:flex;gap:0.75rem;max-width:400px;margin:0 auto" onsubmit="event.preventDefault();alert('Thank you for subscribing!')">
+    <input type="email" placeholder="your@email.com" required style="flex:1;padding:0.6rem 1rem;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:inherit;font-size:0.875rem"/>
+    <button type="submit" style="padding:0.6rem 1.25rem;border-radius:8px;background:#3b82f6;color:white;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Subscribe</button>
+  </form>
+</div>
+</section>`;
+}
+
+// ── Sitemap XML builder ───────────────────────────────────────────────────────
+
+function buildSitemapXml(domain: string, sections: SectionState[], includeExtras: { blog: boolean; privacy: boolean; terms: boolean }): string {
+  const base = domain ? (domain.startsWith("http") ? domain.replace(/\/$/, "") : `https://${domain}`) : "https://example.com";
+  const today = new Date().toISOString().split("T")[0];
+  const urls = [
+    { loc: `${base}/`, priority: "1.0", changefreq: "weekly" },
+    { loc: `${base}/#about`, priority: "0.8", changefreq: "monthly" },
+    { loc: `${base}/#services`, priority: "0.8", changefreq: "monthly" },
+    { loc: `${base}/#portfolio`, priority: "0.7", changefreq: "monthly" },
+    { loc: `${base}/#contact`, priority: "0.7", changefreq: "monthly" },
+    ...(includeExtras.blog ? [{ loc: `${base}/#blog`, priority: "0.8", changefreq: "daily" }] : []),
+    ...(includeExtras.privacy ? [{ loc: `${base}/#privacy-policy`, priority: "0.3", changefreq: "yearly" }] : []),
+    ...(includeExtras.terms ? [{ loc: `${base}/#terms-of-service`, priority: "0.3", changefreq: "yearly" }] : []),
+  ];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+${urls.map(u => `  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+}
+
+// ── Combine all sections into one SEO-optimised HTML document ────────────────
+
+function combinePages(sections: SectionState[], seo?: SeoOptions, extras?: { blog: boolean; privacy: boolean; terms: boolean; description: string }): string {
   const homepage = sections.find(s => s.key === "homepage" && s.status === "done");
   if (!homepage?.html) return "";
   const others = sections.filter(s => s.key !== "homepage" && s.status === "done");
   const otherHtml = others.map(s => s.html).join("\n");
+
   // Strip the closing body/html and append other sections then close
-  const base = homepage.html
+  let base = homepage.html
     .replace(/<\/body>\s*<\/html>\s*$/i, "")
     .replace(/<\/body>\s*$/i, "");
-  return base + "\n" + otherHtml + "\n</body>\n</html>";
+
+  // Inject SEO into <head> if seo options provided
+  if (seo) {
+    const seoHtml = buildSeoHead(seo);
+    // Replace existing <head>...</head> OR inject after <head>
+    if (/<head>/i.test(base)) {
+      base = base.replace(/<head>/i, `<head>\n${seoHtml}`);
+    } else if (/<html[^>]*>/i.test(base)) {
+      base = base.replace(/<html([^>]*)>/i, `<html$1>\n<head>\n${seoHtml}\n</head>`);
+    }
+  }
+
+  const extraPages = extras ? [
+    extras.blog ? buildBlogPage(seo?.bizName ?? "", extras.description) : "",
+    extras.privacy ? buildPrivacyPage(seo?.bizName ?? "", seo?.contactEmail ?? "", seo?.domain ?? "") : "",
+    extras.terms ? buildTermsPage(seo?.bizName ?? "", seo?.contactEmail ?? "", seo?.domain ?? "") : "",
+  ].filter(Boolean).join("\n") : "";
+
+  return base + "\n" + otherHtml + "\n" + extraPages + "\n</body>\n</html>";
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -166,6 +386,21 @@ export default function WebsiteDeveloperSection() {
   const [contactInstagram, setContactInstagram] = useState("");
   const [contactTwitter, setContactTwitter] = useState("");
   const [contactFacebook, setContactFacebook] = useState("");
+
+  // ─ SEO & Publishing ─
+  const [seoKeywords, setSeoKeywords] = useState("");
+  const [seoMetaTitle, setSeoMetaTitle] = useState("");
+  const [seoMetaDesc, setSeoMetaDesc] = useState("");
+  const [seoDomain, setSeoDomain] = useState("");
+  const [seoGAId, setSeoGAId] = useState("");
+  const [seoGSCCode, setSeoGSCCode] = useState("");
+  const [seoOGImage, setSeoOGImage] = useState("");
+  const [seoTwitterHandle, setSeoTwitterHandle] = useState("");
+  const [seoSchemaType, setSeoSchemaType] = useState("LocalBusiness");
+  const [includeBlog, setIncludeBlog] = useState(true);
+  const [includePrivacy, setIncludePrivacy] = useState(true);
+  const [includeTerms, setIncludeTerms] = useState(true);
+  const [seoSectionOpen, setSeoSectionOpen] = useState<string | null>("basics");
 
   // ─ AI auto-fill ─
   const [autoFilling, setAutoFilling] = useState(false);
@@ -313,10 +548,16 @@ export default function WebsiteDeveloperSection() {
 
   // ─ Finalize — compute combined HTML from latest sections ─
   const finalizeSections = useCallback((latestSections: SectionState[]) => {
-    const combined = combinePages(latestSections);
+    const seoOpts: SeoOptions = {
+      bizName, metaTitle: seoMetaTitle, metaDesc: seoMetaDesc,
+      keywords: seoKeywords, domain: seoDomain, gaId: seoGAId,
+      gscCode: seoGSCCode, ogImage: seoOGImage, twitterHandle: seoTwitterHandle,
+      schemaType: seoSchemaType, contactEmail, contactPhone, contactAddress,
+    };
+    const combined = combinePages(latestSections, seoOpts, { blog: includeBlog, privacy: includePrivacy, terms: includeTerms, description });
     setFinalHtml(combined);
     setPhase("done");
-  }, []);
+  }, [bizName, seoMetaTitle, seoMetaDesc, seoKeywords, seoDomain, seoGAId, seoGSCCode, seoOGImage, seoTwitterHandle, seoSchemaType, contactEmail, contactPhone, contactAddress, includeBlog, includePrivacy, includeTerms, description]);
 
   const finalize = () => {
     setSections(prev => {
@@ -406,12 +647,13 @@ export default function WebsiteDeveloperSection() {
   // RENDER: WIZARD (4 steps)
   // ───────────────────────────────────────────────────────────────
   if (phase === "wizard") {
-    const STEP_LABELS = ["Business", "Content & AI", "Contact", "Style & Template"];
+    const STEP_LABELS = ["Business", "Content & AI", "Contact", "Style & Template", "SEO & Publishing"];
     const canNext = [
       bizType !== "" && bizName.trim() !== "",
       description.trim() !== "",
       true, // contact is optional
       true, // style/template always valid
+      true, // SEO is optional
     ];
 
     return (
@@ -616,6 +858,158 @@ export default function WebsiteDeveloperSection() {
                   </div>
                 </div>
               )}
+
+              {/* ── Step 4: SEO & Publishing ── */}
+              {wizardStep === 4 && (
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="text-white font-bold text-lg flex items-center gap-2"><Search size={18} className="text-green-400"/>SEO & Publishing Setup</h3>
+                    <p className="text-slate-400 text-sm mt-1">All fields are optional — fill in what you have to maximise search rankings.</p>
+                  </div>
+
+                  {/* Basics accordion */}
+                  {[
+                    {
+                      id: "basics", icon: <Search size={14} className="text-green-400"/>, label: "Basic SEO",
+                      content: (
+                        <div className="space-y-3 pt-3">
+                          {[
+                            { label: "Website Domain / URL", value: seoDomain, set: setSeoDomain, ph: "https://yourbusiness.com", hint: "Used for canonical URLs and Open Graph tags" },
+                            { label: "Target Keywords", value: seoKeywords, set: setSeoKeywords, ph: "e.g. photography studio, wedding photographer, portrait photos", hint: "Comma-separated — helps search engines understand your content" },
+                            { label: "SEO Meta Title", value: seoMetaTitle, set: setSeoMetaTitle, ph: bizName || "Your Business Name — Best Services in Your City", hint: "Shown in browser tab & Google results (55-60 chars ideal)" },
+                            { label: "Meta Description", value: seoMetaDesc, set: setSeoMetaDesc, ph: description ? description.slice(0, 155) : "Describe your business in 150-155 characters for Google search results…", hint: "Shown under your link in Google results (150-155 chars ideal)" },
+                          ].map(({ label, value, set, ph, hint }) => (
+                            <div key={label}>
+                              <label className="text-slate-300 font-medium text-xs mb-1 block">{label}</label>
+                              <input
+                                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors"
+                                placeholder={ph} value={value} onChange={e => set(e.target.value)}
+                              />
+                              <p className="text-slate-500 text-xs mt-0.5">{hint}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ),
+                    },
+                    {
+                      id: "analytics", icon: <BarChart2 size={14} className="text-blue-400"/>, label: "Google Analytics & Search Console",
+                      content: (
+                        <div className="space-y-3 pt-3">
+                          <div>
+                            <label className="text-slate-300 font-medium text-xs mb-1 block">Google Analytics ID (GA4)</label>
+                            <input
+                              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                              placeholder="G-XXXXXXXXXX" value={seoGAId} onChange={e => setSeoGAId(e.target.value)}
+                            />
+                            <p className="text-slate-500 text-xs mt-0.5">Find this in Google Analytics → Admin → Data Streams</p>
+                          </div>
+                          <div>
+                            <label className="text-slate-300 font-medium text-xs mb-1 block">Google Search Console Verification Code</label>
+                            <input
+                              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                              placeholder="Paste the content value from your meta tag" value={seoGSCCode} onChange={e => setSeoGSCCode(e.target.value)}
+                            />
+                            <p className="text-slate-500 text-xs mt-0.5">Search Console → Add property → HTML tag → copy the content="..." value only</p>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: "social", icon: <ImageIcon size={14} className="text-pink-400"/>, label: "Social Sharing (Open Graph & Twitter Cards)",
+                      content: (
+                        <div className="space-y-3 pt-3">
+                          <div>
+                            <label className="text-slate-300 font-medium text-xs mb-1 block">Social Share Image URL</label>
+                            <input
+                              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-pink-500 transition-colors"
+                              placeholder="https://yourdomain.com/og-image.jpg (1200×630px)" value={seoOGImage} onChange={e => setSeoOGImage(e.target.value)}
+                            />
+                            <p className="text-slate-500 text-xs mt-0.5">Shown when someone shares your site on Facebook, Twitter, LinkedIn (1200×630px recommended)</p>
+                          </div>
+                          <div>
+                            <label className="text-slate-300 font-medium text-xs mb-1 block">Twitter / X Handle</label>
+                            <input
+                              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-pink-500 transition-colors"
+                              placeholder="@yourbusiness" value={seoTwitterHandle} onChange={e => setSeoTwitterHandle(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: "schema", icon: <Link2 size={14} className="text-violet-400"/>, label: "Structured Data (Schema.org)",
+                      content: (
+                        <div className="space-y-3 pt-3">
+                          <div>
+                            <label className="text-slate-300 font-medium text-xs mb-2 block">Business Schema Type</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: "LocalBusiness", label: "Local Business" },
+                                { id: "Organization", label: "Organization" },
+                                { id: "Restaurant", label: "Restaurant" },
+                                { id: "MedicalBusiness", label: "Medical" },
+                                { id: "ProfessionalService", label: "Professional Service" },
+                                { id: "Store", label: "E-commerce Store" },
+                              ].map(st => (
+                                <button key={st.id} onClick={() => setSeoSchemaType(st.id)}
+                                  className={`px-3 py-2 rounded-lg border text-sm text-left transition-all ${seoSchemaType === st.id ? "border-violet-500 bg-violet-500/20 text-white" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}>
+                                  {st.label}
+                                </button>
+                              ))}
+                            </div>
+                            <p className="text-slate-500 text-xs mt-1.5">Helps Google display rich results (star ratings, business info) in search</p>
+                          </div>
+                          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-xs text-slate-400 space-y-1">
+                            <p className="text-slate-300 font-semibold text-xs mb-1.5">Automatically included in your website:</p>
+                            {["✅ JSON-LD structured data (LocalBusiness/Organization)", "✅ WebSite schema with SearchAction", "✅ BreadcrumbList schema", "✅ Open Graph meta tags (Facebook)", "✅ Twitter Card meta tags", "✅ Canonical URL tag", "✅ Robots meta (index, follow)", "✅ XML Sitemap (download separately)"].map(i => <p key={i}>{i}</p>)}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      id: "pages", icon: <FileText size={14} className="text-amber-400"/>, label: "Extra Pages",
+                      content: (
+                        <div className="space-y-3 pt-3">
+                          <p className="text-slate-400 text-xs">These pages are auto-generated and appended to your website:</p>
+                          {[
+                            { value: includeBlog, set: setIncludeBlog, icon: <BookOpen size={14} className="text-blue-400"/>, label: "Blog & Insights page", desc: "A professional blog listing page with newsletter signup" },
+                            { value: includePrivacy, set: setIncludePrivacy, icon: <Shield size={14} className="text-green-400"/>, label: "Privacy Policy", desc: "GDPR-compliant privacy policy page (auto-filled with your business info)" },
+                            { value: includeTerms, set: setIncludeTerms, icon: <FileText size={14} className="text-violet-400"/>, label: "Terms of Service", desc: "Standard terms & conditions page (auto-filled with your business info)" },
+                          ].map(({ value, set, icon, label, desc }) => (
+                            <button key={label} onClick={() => set(!value)}
+                              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${value ? "border-green-500/40 bg-green-500/10" : "border-slate-700 bg-slate-800/30 hover:border-slate-500"}`}>
+                              <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${value ? "bg-green-500" : "bg-slate-700"}`}>
+                                {value && <Check size={12} className="text-white"/>}
+                              </div>
+                              {icon}
+                              <div>
+                                <p className={`text-sm font-semibold ${value ? "text-white" : "text-slate-400"}`}>{label}</p>
+                                <p className="text-xs text-slate-500">{desc}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ),
+                    },
+                  ].map(({ id, icon, label, content }) => (
+                    <div key={id} className="border border-slate-700 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setSeoSectionOpen(seoSectionOpen === id ? null : id)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-slate-800/50 hover:bg-slate-800 transition-colors">
+                        <div className="flex items-center gap-2 text-sm font-medium text-slate-200">{icon}{label}</div>
+                        {seoSectionOpen === id ? <ChevronUp size={14} className="text-slate-500"/> : <ChevronDown size={14} className="text-slate-500"/>}
+                      </button>
+                      <AnimatePresence>
+                        {seoSectionOpen === id && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="px-4 pb-4">{content}</div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -629,7 +1023,7 @@ export default function WebsiteDeveloperSection() {
             >
               <ChevronLeft size={16} className="mr-1" /> Back
             </Button>
-            {wizardStep < 3 ? (
+            {wizardStep < 4 ? (
               <Button
                 onClick={() => setWizardStep(wizardStep + 1)}
                 disabled={!canNext[wizardStep]}
@@ -827,7 +1221,23 @@ export default function WebsiteDeveloperSection() {
               onClick={downloadHtml}
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors"
             >
-              <Download size={14} /> Download
+              <Download size={14} /> Download HTML
+            </button>
+            <button
+              onClick={() => {
+                const xml = buildSitemapXml(seoDomain, sections, { blog: includeBlog, privacy: includePrivacy, terms: includeTerms });
+                const blob = new Blob([xml], { type: "application/xml" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "sitemap.xml";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="flex items-center gap-1.5 bg-green-700 hover:bg-green-600 text-white text-sm px-3 py-1.5 rounded-lg font-semibold transition-colors"
+              title="Download sitemap.xml — upload to your web server root"
+            >
+              <Map size={14} /> Sitemap
             </button>
           </div>
         </div>
