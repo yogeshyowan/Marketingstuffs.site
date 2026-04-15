@@ -76,12 +76,57 @@ const LOGO_STYLES = [
   { id: "hand-drawn",     label: "Hand-Drawn",     emoji: "✍️" },
 ];
 
+// ── Arts & Drawing styles ─────────────────────────────────────
+const ART_STYLES = [
+  { id: "pencil-sketch",  label: "Pencil Sketch",    emoji: "✏️",  prompt: "detailed pencil sketch, graphite drawing, fine art, hand-drawn, realistic shading" },
+  { id: "charcoal",       label: "Charcoal Art",     emoji: "🖤",  prompt: "charcoal drawing, smudged dark tones, expressive black and white art, textured paper" },
+  { id: "watercolor",     label: "Watercolor",       emoji: "💧",  prompt: "soft watercolor painting, translucent washes of color, delicate brushwork, artistic" },
+  { id: "oil-painting",   label: "Oil Painting",     emoji: "🖼️",  prompt: "classical oil painting, rich textures, painterly strokes, museum quality fine art" },
+  { id: "comic-book",     label: "Comic Book",       emoji: "💥",  prompt: "comic book art style, bold ink outlines, halftone shading, vibrant colors, action panel" },
+  { id: "manga",          label: "Manga / Anime",    emoji: "🎌",  prompt: "manga illustration style, clean anime line art, expressive characters, Japanese art style" },
+  { id: "line-art",       label: "Line Art",         emoji: "〰️", prompt: "clean minimalist line art, single continuous lines, elegant contour drawing, white background" },
+  { id: "pixel-art",      label: "Pixel Art",        emoji: "🕹️",  prompt: "retro pixel art, 8-bit style, pixelated illustration, game art aesthetic" },
+  { id: "chalk-art",      label: "Chalk Art",        emoji: "🍋",  prompt: "chalk art on blackboard, textured chalk marks, vibrant colors on dark background" },
+  { id: "impressionist",  label: "Impressionist",    emoji: "🌸",  prompt: "impressionist painting style, Monet-inspired, dappled light, loose brushstrokes, color blending" },
+  { id: "surrealist",     label: "Surrealist",       emoji: "🌀",  prompt: "surrealist artwork, dreamlike impossible scene, Salvador Dali inspired, hyper-detailed" },
+  { id: "stained-glass",  label: "Stained Glass",    emoji: "🔆",  prompt: "stained glass window art, vibrant colored glass panels, lead lines, cathedral style" },
+];
+
+// ── Graphic Design templates ──────────────────────────────────
+const DESIGN_TEMPLATES = [
+  { id: "poster",       label: "Poster",             emoji: "📋", w: 794, h: 1123, desc: "A3 portrait poster",        prompt: "professional poster design, bold typography, strong visual hierarchy, print-ready, marketing poster" },
+  { id: "flyer",        label: "Event Flyer",        emoji: "🎫", w: 794, h: 1123, desc: "A4 portrait flyer",         prompt: "event flyer design, eye-catching layout, professional typography, promotional material" },
+  { id: "business-card",label: "Business Card",      emoji: "💳", w: 1050, h: 600, desc: "Standard business card",    prompt: "elegant business card design, professional layout, clean minimal design, corporate identity" },
+  { id: "banner",       label: "Web Banner",         emoji: "📣", w: 1200, h: 400, desc: "Leaderboard banner",        prompt: "web banner design, advertising banner, clean marketing layout, call to action" },
+  { id: "email-header", label: "Email Header",       emoji: "📧", w: 1200, h: 300, desc: "Email newsletter header",   prompt: "email newsletter header design, professional branding, clean marketing layout" },
+  { id: "book-cover",   label: "Book Cover",         emoji: "📚", w: 800, h: 1200, desc: "Book/ebook cover",          prompt: "professional book cover design, compelling artwork, bold title typography, genre-appropriate" },
+  { id: "album-art",    label: "Album Art",          emoji: "🎵", w: 1000, h: 1000, desc: "Music album cover",        prompt: "music album cover art, artistic design, square format, creative visual concept" },
+  { id: "presentation", label: "Slide / Keynote",   emoji: "📊", w: 1280, h: 720,  desc: "Presentation slide 16:9",  prompt: "presentation slide design, professional keynote slide, clean layout, data visualization" },
+  { id: "menu",         label: "Restaurant Menu",   emoji: "🍽️", w: 794, h: 1123, desc: "A4 menu card",              prompt: "elegant restaurant menu design, food photography layout, luxury dining aesthetic" },
+  { id: "certificate",  label: "Certificate",       emoji: "🏆", w: 1200, h: 850, desc: "Landscape certificate",     prompt: "professional certificate design, elegant border, award certificate, formal typography" },
+];
+
+// ── Product types ─────────────────────────────────────────────
+const PRODUCT_TYPES = [
+  { id: "white-bg",    label: "White Studio",       emoji: "⬜", prompt: "product photography on pure white background, professional studio lighting, clean commercial photo, e-commerce ready" },
+  { id: "lifestyle",   label: "Lifestyle Shot",     emoji: "🌿", prompt: "lifestyle product photography, contextual setting, natural lighting, aspirational scene, brand storytelling" },
+  { id: "flat-lay",    label: "Flat Lay",           emoji: "📐", prompt: "flat lay product photography, overhead bird's eye view, styled composition, minimalist props, clean background" },
+  { id: "packaging",   label: "Packaging Mockup",   emoji: "📦", prompt: "professional packaging mockup, box design visualization, branding on packaging, studio render" },
+  { id: "3d-render",   label: "3D Product Render",  emoji: "🎭", prompt: "3D product render, photorealistic CGI, studio lighting, high gloss product visualization" },
+  { id: "outdoor",     label: "Outdoor / Scenic",   emoji: "🏔️", prompt: "outdoor product photography, natural scenic background, adventure lifestyle brand, golden hour lighting" },
+  { id: "on-model",    label: "On Model / Person",  emoji: "👤", prompt: "product in use, person using product, lifestyle model photography, natural authentic use case" },
+  { id: "closeup",     label: "Detail Close-up",    emoji: "🔍", prompt: "macro product photography, extreme close-up detail shot, texture and material showcase, high detail" },
+];
+
 // ── Tabs ──────────────────────────────────────────────────────
 const TABS = [
-  { id: "text2img",   label: "Text to Image",         emoji: "✨" },
-  { id: "social",     label: "Social Media Images",   emoji: "📱" },
-  { id: "thumbnail",  label: "Thumbnail Maker",       emoji: "🎬" },
-  { id: "logo",       label: "Logo Studio",           emoji: "🎨" },
+  { id: "text2img",   label: "Text to Image",       emoji: "✨" },
+  { id: "arts",       label: "Arts & Drawing",      emoji: "🖼️" },
+  { id: "social",     label: "Social Media",        emoji: "📱" },
+  { id: "thumbnail",  label: "Thumbnails",          emoji: "🎬" },
+  { id: "graphics",   label: "Graphic Designs",     emoji: "📐" },
+  { id: "product",    label: "Product Studio",      emoji: "📦" },
+  { id: "logo",       label: "Logo Studio",         emoji: "🎨" },
 ];
 
 // ── Image card ────────────────────────────────────────────────
@@ -181,6 +226,26 @@ export default function ImageGeneratorSection() {
   const [logoImages, setLogoImages] = useState<string[]>([]);
   const [isLogoGen, setIsLogoGen] = useState(false);
 
+  // Arts & Drawing state
+  const [artPrompt, setArtPrompt] = useState("");
+  const [artStyle, setArtStyle] = useState(ART_STYLES[0]);
+  const [artImages, setArtImages] = useState<string[]>([]);
+  const [isArtGen, setIsArtGen] = useState(false);
+
+  // Graphic Design state
+  const [designTemplate, setDesignTemplate] = useState(DESIGN_TEMPLATES[0]);
+  const [designTopic, setDesignTopic] = useState("");
+  const [designColors, setDesignColors] = useState("blue and white");
+  const [designImages, setDesignImages] = useState<string[]>([]);
+  const [isDesignGen, setIsDesignGen] = useState(false);
+
+  // Product Studio state
+  const [productName, setProductName] = useState("");
+  const [productType, setProductType] = useState(PRODUCT_TYPES[0]);
+  const [productDesc, setProductDesc] = useState("");
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [isProductGen, setIsProductGen] = useState(false);
+
   const ASPECT_DIMS: Record<string, [number, number]> = {
     "1:1": [1024, 1024], "4:3": [1280, 960], "16:9": [1280, 720], "9:16": [720, 1280], "4:5": [960, 1200],
   };
@@ -264,6 +329,61 @@ export default function ImageGeneratorSection() {
     setTimeout(() => setIsLogoGen(false), 1500);
   }
 
+  // ── Arts & Drawing generate ────────────────────────────────
+  async function generateArt() {
+    if (!artPrompt.trim()) return;
+    setIsArtGen(true);
+    setArtImages([]);
+    const stylePrompt = artStyle.prompt;
+    const prompts = [
+      `${artPrompt}, ${stylePrompt}, masterpiece, ultra detailed`,
+      `${artPrompt}, ${stylePrompt}, high quality artwork, professional artist`,
+      `${artPrompt}, ${stylePrompt}, award winning art, stunning composition`,
+      `${artPrompt}, ${stylePrompt}, fine art, beautiful rendering`,
+    ];
+    const urls = prompts.map(p => pollinationsUrl(p, 1024, 1024, Math.floor(Math.random() * 99999)));
+    setArtImages(urls);
+    deductCredits(CREDIT_COSTS.tool_medium.cost);
+    setTimeout(() => setIsArtGen(false), 1500);
+  }
+
+  // ── Graphic Design generate ────────────────────────────────
+  async function generateDesign() {
+    if (!designTopic.trim()) return;
+    setIsDesignGen(true);
+    setDesignImages([]);
+    const { w, h, prompt: tmplPrompt, label } = designTemplate;
+    const prompts = [
+      `${label}: "${designTopic}", ${tmplPrompt}, ${designColors} color scheme, clean layout, high quality`,
+      `Professional ${label} design for "${designTopic}", ${tmplPrompt}, ${designColors} palette, modern aesthetic`,
+      `${label} template: ${designTopic}, ${tmplPrompt}, ${designColors}, creative layout, print-ready quality`,
+      `${designTopic} ${label}, ${tmplPrompt}, ${designColors} branding, sleek design, professional result`,
+    ];
+    const urls = prompts.map(p => pollinationsUrl(p, w, h, Math.floor(Math.random() * 99999)));
+    setDesignImages(urls);
+    deductCredits(CREDIT_COSTS.tool_medium.cost);
+    setTimeout(() => setIsDesignGen(false), 1500);
+  }
+
+  // ── Product Studio generate ────────────────────────────────
+  async function generateProduct() {
+    if (!productName.trim()) return;
+    setIsProductGen(true);
+    setProductImages([]);
+    const typePrompt = productType.prompt;
+    const desc = productDesc.trim() ? `, ${productDesc}` : "";
+    const prompts = [
+      `${productName}${desc}, ${typePrompt}, commercial photography, ultra HD`,
+      `${productName}${desc}, ${typePrompt}, professional product shot, studio quality`,
+      `${productName}${desc}, ${typePrompt}, high resolution commercial image, premium brand`,
+      `${productName}${desc}, ${typePrompt}, photorealistic render, product catalog quality`,
+    ];
+    const urls = prompts.map(p => pollinationsUrl(p, 1024, 1024, Math.floor(Math.random() * 99999)));
+    setProductImages(urls);
+    deductCredits(CREDIT_COSTS.tool_medium.cost);
+    setTimeout(() => setIsProductGen(false), 1500);
+  }
+
   return (
     <section id="ai-image" className="py-24 relative overflow-hidden">
       <div className="absolute right-0 top-1/4 w-[600px] h-[600px] bg-teal-500/8 rounded-full blur-[140px] pointer-events-none" />
@@ -285,12 +405,12 @@ export default function ImageGeneratorSection() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex overflow-x-auto gap-1.5 mb-8 p-1.5 bg-black/40 rounded-2xl border border-white/8 max-w-3xl mx-auto scrollbar-hide">
+        <div className="flex overflow-x-auto gap-1 mb-8 p-1.5 bg-black/40 rounded-2xl border border-white/8 max-w-5xl mx-auto scrollbar-hide">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-1 justify-center ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex-1 justify-center min-w-[100px] ${
                 activeTab === tab.id
                   ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
                   : "text-white/50 hover:text-white hover:bg-white/5"
@@ -579,6 +699,186 @@ export default function ImageGeneratorSection() {
                       <ImageResult key={i} url={url} label={`${brandName} Logo ${i + 1}`}
                         w={800} h={800}
                         onRegenerate={generateLogo} />
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {/* ─── Tab 5: Arts & Drawing ─── */}
+          {activeTab === "arts" && (
+            <motion.div key="arts" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+              className="max-w-6xl mx-auto glass-card rounded-2xl border border-white/10 p-6">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-white/80 mb-2">What do you want to draw?</label>
+                    <textarea
+                      className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/25 h-28 focus:outline-none focus:border-purple-500/40 resize-none text-sm"
+                      placeholder="A majestic lion resting in a savanna at golden hour, surrounded by tall grass and acacia trees..."
+                      value={artPrompt}
+                      onChange={e => setArtPrompt(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Art Style</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {ART_STYLES.map(s => (
+                        <button key={s.id} onClick={() => setArtStyle(s)}
+                          className={`p-2.5 rounded-xl text-xs font-medium transition-all border flex items-center gap-1.5 ${artStyle.id === s.id ? "border-purple-500/40 bg-purple-500/10 text-purple-400" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white"}`}>
+                          <span className="text-base">{s.emoji}</span> {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5">
+                    <p className="text-xs text-purple-300/70 font-medium">Selected: <span className="text-purple-300">{artStyle.emoji} {artStyle.label}</span></p>
+                    <p className="text-xs text-white/30 mt-1 leading-relaxed">{artStyle.prompt}</p>
+                  </div>
+
+                  <Button onClick={generateArt} disabled={isArtGen || !artPrompt.trim()}
+                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold h-11 rounded-xl">
+                    {isArtGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating artwork...</> : <><Wand2 className="w-4 h-4 mr-2" /> Generate 4 Artworks</>}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {artImages.length === 0 ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="aspect-square rounded-xl border border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center">
+                        <Palette className="w-8 h-8 text-white/10" />
+                      </div>
+                    ))
+                  ) : (
+                    artImages.map((url, i) => (
+                      <ImageResult key={i} url={url} label={`${artStyle.label} Art ${i + 1}`}
+                        w={1024} h={1024}
+                        onRegenerate={generateArt} />
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── Tab 6: Graphic Designs ─── */}
+          {activeTab === "graphics" && (
+            <motion.div key="graphics" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+              className="max-w-6xl mx-auto glass-card rounded-2xl border border-white/10 p-6">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Design Template</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {DESIGN_TEMPLATES.map(t => (
+                        <button key={t.id} onClick={() => setDesignTemplate(t)}
+                          className={`p-2.5 rounded-xl text-xs font-medium transition-all border flex items-center gap-2 ${designTemplate.id === t.id ? "border-orange-500/40 bg-orange-500/10 text-orange-400" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white"}`}>
+                          <span className="text-base">{t.emoji}</span>
+                          <span className="text-left">
+                            <div className="font-semibold">{t.label}</div>
+                            <div className="text-white/30 text-[10px]">{t.desc}</div>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-white/80 mb-2">Topic / Subject</label>
+                    <input type="text"
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-orange-500/40 text-sm"
+                      placeholder="e.g. Summer Music Festival 2025, Tech Conference, New Product Launch..."
+                      value={designTopic} onChange={e => setDesignTopic(e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Color Scheme</label>
+                    <input type="text"
+                      className="w-full bg-black/40 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/30"
+                      placeholder="e.g. deep purple and gold, navy and coral, black and electric blue"
+                      value={designColors} onChange={e => setDesignColors(e.target.value)} />
+                  </div>
+
+                  <Button onClick={generateDesign} disabled={isDesignGen || !designTopic.trim()}
+                    className="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold h-11 rounded-xl">
+                    {isDesignGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Designing...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate 4 Designs</>}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {designImages.length === 0 ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className={`rounded-xl border border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center ${designTemplate.h > designTemplate.w ? "aspect-[3/4]" : "aspect-video"}`}>
+                        <Layers className="w-8 h-8 text-white/10" />
+                      </div>
+                    ))
+                  ) : (
+                    designImages.map((url, i) => (
+                      <ImageResult key={i} url={url} label={`${designTemplate.label} ${i + 1}`}
+                        w={designTemplate.w} h={designTemplate.h}
+                        onRegenerate={generateDesign} />
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── Tab 7: Product Studio ─── */}
+          {activeTab === "product" && (
+            <motion.div key="product" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+              className="max-w-6xl mx-auto glass-card rounded-2xl border border-white/10 p-6">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-white/80 mb-2">Product Name</label>
+                    <input type="text"
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/40 text-sm font-medium"
+                      placeholder="e.g. Wireless Headphones, Luxury Watch, Skincare Serum..."
+                      value={productName} onChange={e => setProductName(e.target.value)} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Photography Style</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PRODUCT_TYPES.map(t => (
+                        <button key={t.id} onClick={() => setProductType(t)}
+                          className={`p-2.5 rounded-xl text-xs font-medium transition-all border flex items-center gap-2 ${productType.id === t.id ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-400" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white"}`}>
+                          <span className="text-base">{t.emoji}</span> {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-white/80 mb-2">Product Description <span className="text-white/30 font-normal">(optional)</span></label>
+                    <textarea
+                      className="w-full bg-black/40 border border-white/8 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30 resize-none text-sm h-20"
+                      placeholder="e.g. matte black finish, premium leather strap, minimalist design..."
+                      value={productDesc} onChange={e => setProductDesc(e.target.value)}
+                    />
+                  </div>
+
+                  <Button onClick={generateProduct} disabled={isProductGen || !productName.trim()}
+                    className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold h-11 rounded-xl">
+                    {isProductGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Shooting product...</> : <><Star className="w-4 h-4 mr-2" /> Generate 4 Product Shots</>}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {productImages.length === 0 ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="aspect-square rounded-xl border border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-white/10" />
+                      </div>
+                    ))
+                  ) : (
+                    productImages.map((url, i) => (
+                      <ImageResult key={i} url={url} label={`${productName} — ${productType.label} ${i + 1}`}
+                        w={1024} h={1024}
+                        onRegenerate={generateProduct} />
                     ))
                   )}
                 </div>
