@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search, BookmarkPlus, Zap, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { saveToMediaLibrary } from "@/components/MediaLibrary";
+import { getPlan, deductCredits, CREDIT_COSTS } from "@/lib/credits";
 
 // ── Field types ───────────────────────────────────────────────
 interface ChipField     { type: "chips";    id: string; label: string; options: string[]; }
@@ -19,8 +20,8 @@ interface ToolDef {
 }
 
 // ── SSE helper ────────────────────────────────────────────────
-async function streamTool(sys: string, usr: string, onChunk: (t: string) => void) {
-  const r = await fetch("/api/ai/tool-generate", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({systemPrompt:sys,userPrompt:usr}) });
+async function streamTool(sys: string, usr: string, onChunk: (t: string) => void, plan = "free") {
+  const r = await fetch("/api/ai/tool-generate", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({systemPrompt:sys,userPrompt:usr,plan}) });
   if (!r.ok || !r.body) throw new Error("Network error");
   const reader = r.body.getReader(); const dec = new TextDecoder(); let buf="";
   while(true){
@@ -1746,14 +1747,19 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
     const userWithLang = lang !== "English"
       ? tool.buildUserPrompt(fields) + `\n\nRespond entirely in ${lang}.`
       : tool.buildUserPrompt(fields);
+    const currentPlan = getPlan();
+    let generated = "";
     try {
       await streamTool(sysWithLang, userWithLang, chunk=>{
+        generated += chunk;
         setOutput(prev=>{
           const next=prev+chunk;
           setTimeout(()=>{if(outputRef.current) outputRef.current.scrollTop=outputRef.current.scrollHeight;},10);
           return next;
         });
-      });
+      }, currentPlan);
+      // Deduct credits: short output = 2, medium/longer = 4
+      if (generated) deductCredits(generated.length > 800 ? CREDIT_COSTS.tool_medium.cost : CREDIT_COSTS.tool_short.cost);
     } catch { setOutput("Generation failed. Please try again."); }
     finally { setLoading(false); }
   };

@@ -44,7 +44,57 @@ const FREE_MODELS = [
   "meta-llama/llama-3.3-70b-instruct:free",            // Llama 3.3 70B  65k ctx — #8
 ];
 
-type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+// ── Claude paid models via OpenRouter ──────────────────────────
+// Used for Plus / Pro / Bundle plans. Same OpenRouter keys, paid tier.
+const CLAUDE_HAIKU  = "anthropic/claude-haiku-4-5";   // Fast, efficient — short outputs
+const CLAUDE_SONNET = "anthropic/claude-sonnet-4-5";  // Best quality — long-form content
+
+function pickClaudeModel(wordCount?: number): string {
+  return (!wordCount || wordCount <= 1100) ? CLAUDE_HAIKU : CLAUDE_SONNET;
+}
+
+/**
+ * Stream using Claude via OpenRouter (paid models).
+ * Tries each key in order; falls back to free models on total failure.
+ */
+async function streamWithClaude(
+  messages: ChatMessage[],
+  onChunk: (text: string) => void,
+  onHeartbeat?: () => void,
+  model: string = CLAUDE_HAIKU,
+  maxTokens = 12000
+): Promise<{ key: number; model: string }> {
+  const errors: string[] = [];
+
+  for (let ki = 0; ki < CLIENTS.length; ki++) {
+    try {
+      const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
+      let success = false;
+      try {
+        const stream = await CLIENTS[ki].chat.completions.create({
+          model,
+          max_tokens: maxTokens,
+          messages,
+          stream: true,
+        });
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content;
+          if (content) onChunk(content);
+        }
+        success = true;
+      } finally {
+        if (hbInterval) clearInterval(hbInterval);
+      }
+      if (success) return { key: ki + 1, model };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`key${ki + 1}/${model}: ${msg.slice(0, 120)}`);
+    }
+  }
+
+  // Full fallback to free models if Claude quota exhausted
+  return streamWithFallback(messages, onChunk, onHeartbeat, maxTokens);
+}
 
 /**
  * Always retry on any error — we have 5 keys × 6 models = 30 combos.
@@ -165,6 +215,7 @@ router.post("/ai/generate-blog", async (req, res) => {
     language = "English",
     introStyle = "engaging",
     blogStyle = "How-To Guide",
+    plan = "free",
   } = req.body as {
     topic: string;
     keywords?: string;
@@ -173,7 +224,9 @@ router.post("/ai/generate-blog", async (req, res) => {
     language?: string;
     introStyle?: string;
     blogStyle?: string;
+    plan?: string;
   };
+  const isPaid = plan !== "free";
 
   if (!topic) { res.status(400).json({ error: "topic is required" }); return; }
 
@@ -219,13 +272,13 @@ CONTENT RULES:
 
   const userPrompt = `Write a complete, publication-ready blog post about: "${topic}"${keywords ? `\n\nPrimary keywords to include naturally: ${keywords}` : ""}`;
 
+  const msgs = [{ role: "system" as const, content: systemPrompt }, { role: "user" as const, content: userPrompt }];
+
   try {
-    const { key, model } = await streamWithFallback(
-      [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      (text) => send({ content: text }),
-      heartbeat
-    );
-    send({ done: true, _meta: { key, model } });
+    const { key, model } = isPaid
+      ? await streamWithClaude(msgs, (text) => send({ content: text }), heartbeat, pickClaudeModel(wordCount), 12000)
+      : await streamWithFallback(msgs, (text) => send({ content: text }), heartbeat);
+    send({ done: true, _meta: { key, model, plan } });
     res.end();
   } catch (err: unknown) {
     req.log.error({ err }, "Blog generation failed");
@@ -257,6 +310,7 @@ router.post("/ai/generate-website", async (req, res) => {
     fontBody = "Inter",
     colorScheme = "dark professional",
     style = "professional",
+    plan = "free",
   } = req.body as {
     websiteType?: string;
     businessName?: string;
@@ -276,7 +330,9 @@ router.post("/ai/generate-website", async (req, res) => {
     fontBody?: string;
     colorScheme?: string;
     style?: string;
+    plan?: string;
   };
+  const isPaidWeb = plan !== "free";
 
   if (!description && !businessName) {
     res.status(400).json({ error: "businessName or description is required" });
@@ -343,13 +399,13 @@ CTA Text: ${ctaText || "Get Started"}
 
 Generate the complete HTML file now.`;
 
+  const webMsgs = [{ role: "system" as const, content: systemPrompt }, { role: "user" as const, content: userPrompt }];
+
   try {
-    const { key, model } = await streamWithFallback(
-      [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      (text) => send({ content: text }),
-      heartbeat
-    );
-    send({ done: true, _meta: { key, model } });
+    const { key, model } = isPaidWeb
+      ? await streamWithClaude(webMsgs, (text) => send({ content: text }), heartbeat, CLAUDE_SONNET, 16000)
+      : await streamWithFallback(webMsgs, (text) => send({ content: text }), heartbeat);
+    send({ done: true, _meta: { key, model, plan } });
     res.end();
   } catch (err: unknown) {
     req.log.error({ err }, "Website generation failed");
@@ -1011,13 +1067,15 @@ Respond with ONLY this exact JSON structure (no other text):
 
 // ── POST /api/ai/tool-generate ── Generic streaming tool endpoint ──
 router.post("/ai/tool-generate", async (req, res) => {
-  const { systemPrompt, userPrompt } = req.body as { systemPrompt: string; userPrompt: string };
+  const { systemPrompt, userPrompt, plan = "free" } = req.body as { systemPrompt: string; userPrompt: string; plan?: string };
   if (!systemPrompt || !userPrompt) { res.status(400).json({ error: "systemPrompt and userPrompt required" }); return; }
 
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
   ];
+
+  const isPaidTool = plan !== "free";
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -1028,12 +1086,11 @@ router.post("/ai/tool-generate", async (req, res) => {
   heartbeat();
 
   try {
-    await streamWithFallback(
-      messages,
-      (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); },
-      heartbeat,
-      6000
-    );
+    if (isPaidTool) {
+      await streamWithClaude(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, CLAUDE_HAIKU, 8000);
+    } else {
+      await streamWithFallback(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, 6000);
+    }
     res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
   } catch {
     res.write("data: " + JSON.stringify({ error: "Generation failed. Please try again." }) + "\n\n");

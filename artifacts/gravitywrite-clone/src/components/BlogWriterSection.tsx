@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGenerationGate } from "@/components/GenerationGate";
+import { getPlan, deductCredits, blogCreditKey, CREDIT_COSTS } from "@/lib/credits";
 
 // ── Templates ──────────────────────────────────────────────
 const TEMPLATES = [
@@ -414,6 +415,9 @@ export default function BlogWriterSection() {
 
     const selectedStyle = BLOG_STYLES.find(s => s.id === blogStyle)?.label ?? blogStyle;
     const selectedVoice = VOICES.find(v => v.id === voice)?.label ?? voice;
+    const currentPlan = getPlan();
+    const creditKey = blogCreditKey(wordCount);
+    const creditCost = CREDIT_COSTS[creditKey].cost;
 
     let fullContent = "";
 
@@ -427,6 +431,7 @@ export default function BlogWriterSection() {
           wordCount, language,
           blogStyle: selectedStyle,
           introStyle: blogStyle === "how-to" ? "step opening" : blogStyle === "opinion" ? "contrarian view" : "engaging hook",
+          plan: currentPlan,
         }),
       });
 
@@ -457,6 +462,9 @@ export default function BlogWriterSection() {
           } catch { /* malformed chunk */ }
         }
       }
+
+      // Deduct credits after successful generation
+      if (fullContent) deductCredits(creditCost);
 
       // Generate images now that we have the full content
       if (imageCount > 0 && fullContent) {
