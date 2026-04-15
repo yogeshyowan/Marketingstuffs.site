@@ -998,11 +998,18 @@ router.post("/ai/tool-generate", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const heartbeat = () => res.write(": ping\n\n");
+  heartbeat();
 
   try {
-    await streamWithFallback(messages, (chunk) => {
-      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
-    }, res, 2500);
+    await streamWithFallback(
+      messages,
+      (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); },
+      heartbeat,
+      6000
+    );
     res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
   } catch {
     res.write("data: " + JSON.stringify({ error: "Generation failed. Please try again." }) + "\n\n");
