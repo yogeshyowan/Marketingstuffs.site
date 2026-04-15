@@ -1,9 +1,17 @@
-# GrowBiz — AI Content & Growth Platform
+# Marketingstuffs — AI Content & Growth Platform
 
 ## Overview
 
-pnpm workspace monorepo. Two active artifacts: GrowBiz frontend + API server.
+pnpm workspace monorepo. Two active artifacts: Marketingstuffs frontend + API server.
 Zero Replit credits — uses 5 user-provided OpenRouter API keys (OPENROUTER_KEY_1–5) with an 8-model free-tier fallback chain. Images via Pollinations.ai (free).
+
+## Navigation Structure (Navbar)
+
+Blog Writer | Website Builder | Writing Tools | Social Media | **AI Image ✨** | **AI Video 🎬** | AI Tools | Resources | Pricing
+
+- **AI Image** → `#ai-image` → `ImageGeneratorSection.tsx` (4 tabs: Text to Image, Social Media Images, Thumbnail Maker, Logo Studio)
+- **AI Video** → `#ai-video` → `VideoGeneratorSection.tsx` (6 platforms: YouTube, Shorts, Reels, TikTok, Facebook, Twitter)
+- **Resources** → `#resources` → `ResourcesSection.tsx` (tabs: Image Library, Content Library — merges ImageLibrary + MediaLibrary)
 
 ## Stack
 

@@ -6,8 +6,9 @@ import WebsiteDeveloperSection from "@/components/WebsiteDeveloperSection";
 import SocialMediaSection from "@/components/SocialMediaSection";
 import AIToolsHub from "@/components/AIToolsHub";
 import WritingToolsSection from "@/components/WritingToolsSection";
-import ImageLibrary from "@/components/ImageLibrary";
-import MediaLibrary from "@/components/MediaLibrary";
+import ImageGeneratorSection from "@/components/ImageGeneratorSection";
+import VideoGeneratorSection from "@/components/VideoGeneratorSection";
+import ResourcesSection from "@/components/ResourcesSection";
 import ToolsSection from "@/components/ToolsSection";
 import WhyGravityWrite from "@/components/WhyGravityWrite";
 import PricingSection from "@/components/PricingSection";
@@ -28,8 +29,9 @@ export default function Home() {
         <section id="social-media-section"><SocialMediaSection /></section>
         <AIToolsHub />
         <WritingToolsSection />
-        <ImageLibrary />
-        <MediaLibrary />
+        <ImageGeneratorSection />
+        <VideoGeneratorSection />
+        <ResourcesSection />
         <ToolsSection />
         <WhyGravityWrite />
         <PricingSection />

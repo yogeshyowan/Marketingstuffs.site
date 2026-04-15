@@ -1,17 +1,18 @@
-import { Menu, X, Zap } from "lucide-react";
+import { Menu, X, Zap, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import CreditsDisplay from "@/components/CreditsDisplay";
 
 const NAV_LINKS = [
-  { label: "Blog Writer",     href: "#blog-writer" },
-  { label: "Website Builder", href: "#website-developer" },
-  { label: "Writing Tools",   href: "#writing-tools" },
-  { label: "Social Media",    href: "#social-media-section" },
-  { label: "Image Library",   href: "#image-library" },
-  { label: "Media Library",   href: "#media-library" },
-  { label: "AI Tools",        href: "#ai-tools" },
-  { label: "Pricing",         href: "#pricing" },
+  { label: "Blog Writer",      href: "#blog-writer" },
+  { label: "Website Builder",  href: "#website-developer" },
+  { label: "Writing Tools",    href: "#writing-tools" },
+  { label: "Social Media",     href: "#social-media-section" },
+  { label: "AI Image",         href: "#ai-image",   badge: "✨" },
+  { label: "AI Video",         href: "#ai-video",   badge: "🎬" },
+  { label: "AI Tools",         href: "#ai-tools" },
+  { label: "Resources",        href: "#resources" },
+  { label: "Pricing",          href: "#pricing" },
 ];
 
 export default function Navbar() {
@@ -49,8 +50,15 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-0.5 text-sm font-medium">
             {NAV_LINKS.map(link => (
               <button key={link.label} onClick={() => scrollTo(link.href)}
-                className="px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors text-xs">
+                className={`relative px-3 py-2 rounded-lg transition-colors text-xs whitespace-nowrap ${
+                  link.badge === "✨" ? "text-teal-400 hover:text-teal-300 hover:bg-teal-500/10" :
+                  link.badge === "🎬" ? "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" :
+                  "text-white/60 hover:text-white hover:bg-white/5"
+                }`}>
                 {link.label}
+                {link.badge && (
+                  <span className="ml-1 text-[10px]">{link.badge}</span>
+                )}
               </button>
             ))}
           </div>
@@ -76,7 +84,12 @@ export default function Navbar() {
           <div className="lg:hidden border-t border-white/5 bg-[#0a0a1a]/95 px-4 py-4 space-y-1">
             {NAV_LINKS.map(link => (
               <button key={link.label} onClick={() => scrollTo(link.href)}
-                className="w-full text-left px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors text-sm">
+                className={`w-full text-left px-4 py-3 rounded-xl transition-colors text-sm flex items-center gap-2 ${
+                  link.badge === "✨" ? "text-teal-400 hover:bg-teal-500/10" :
+                  link.badge === "🎬" ? "text-indigo-400 hover:bg-indigo-500/10" :
+                  "text-white/70 hover:text-white hover:bg-white/5"
+                }`}>
+                {link.badge && <span>{link.badge}</span>}
                 {link.label}
               </button>
             ))}
