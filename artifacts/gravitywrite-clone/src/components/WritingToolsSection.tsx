@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search, BookmarkPlus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1841,6 +1841,16 @@ export default function WritingToolsSection() {
   const [activeCat, setActiveCat] = useState<Cat|"all">("all");
   const [openTool, setOpenTool] = useState<ToolDef|null>(null);
   const [search, setSearch] = useState("");
+
+  // Listen for category-select events dispatched by ToolsSection chips
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const cat = (e as CustomEvent<{ cat: string }>).detail?.cat as Cat | "all";
+      if (cat) { setActiveCat(cat); setSearch(""); }
+    };
+    window.addEventListener("set-writing-cat", handler);
+    return () => window.removeEventListener("set-writing-cat", handler);
+  }, []);
 
   const filtered = TOOLS.filter(t => {
     const matchCat = activeCat==="all" || t.category===activeCat;
