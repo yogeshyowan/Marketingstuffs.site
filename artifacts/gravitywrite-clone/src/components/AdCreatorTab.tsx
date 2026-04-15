@@ -33,6 +33,8 @@ interface AdScript {
   caption: string;
   voiceover: string;
   hashtags: string[];
+  features?: string[];
+  stats?: { label: string; value: string }[];
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -56,11 +58,11 @@ const PLATFORMS = [
 ];
 
 const OBJECTIVES = [
-  { id: "product",   emoji: "✨", label: "Product Launch" },
-  { id: "sale",      emoji: "🎁", label: "Sale / Promo" },
-  { id: "awareness", emoji: "📢", label: "Brand Awareness" },
-  { id: "event",     emoji: "🎉", label: "Event Promo" },
-  { id: "service",   emoji: "💼", label: "Service Ad" },
+  { id: "product",    emoji: "✨", label: "Product Launch" },
+  { id: "sale",       emoji: "🎁", label: "Sale / Promo" },
+  { id: "awareness",  emoji: "📢", label: "Brand Awareness" },
+  { id: "event",      emoji: "🎉", label: "Event Promo" },
+  { id: "service",    emoji: "💼", label: "Service Ad" },
   { id: "testimonial",emoji: "⭐", label: "Testimonial" },
 ];
 
@@ -75,12 +77,13 @@ const DURATIONS = [15, 30, 60];
 
 // ── Easing helpers ─────────────────────────────────────────────────────────────
 
-const easeOut = (t: number) => 1 - Math.pow(1 - Math.min(t, 1), 3);
+const easeOut  = (t: number) => 1 - Math.pow(1 - Math.min(t, 1), 3);
+const easeIn   = (t: number) => Math.pow(Math.min(t, 1), 2);
 const easeInOut = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * clamp01(t);
+const clamp01  = (v: number) => Math.max(0, Math.min(1, v));
+const lerp     = (a: number, b: number, t: number) => a + (b - a) * clamp01(t);
 
-// ── Canvas draw ────────────────────────────────────────────────────────────────
+// ── Canvas helpers ─────────────────────────────────────────────────────────────
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -121,10 +124,55 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   return ty;
 }
 
+// Draw a glowing star
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string, alpha: number) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+    const innerAngle = angle + (2 * Math.PI) / 10;
+    if (i === 0) ctx.moveTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+    else ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+    ctx.lineTo(cx + (r * 0.4) * Math.cos(innerAngle), cy + (r * 0.4) * Math.sin(innerAngle));
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Draw sparkle particle
+function drawSparkle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, alpha: number) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 6;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x - size, y); ctx.lineTo(x + size, y);
+  ctx.moveTo(x, y - size); ctx.lineTo(x, y + size);
+  ctx.moveTo(x - size * 0.6, y - size * 0.6); ctx.lineTo(x + size * 0.6, y + size * 0.6);
+  ctx.moveTo(x + size * 0.6, y - size * 0.6); ctx.lineTo(x - size * 0.6, y + size * 0.6);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Seeded pseudo-random for consistent particles
+function seededRand(seed: number) {
+  const x = Math.sin(seed + 1) * 10000;
+  return x - Math.floor(x);
+}
+
+// ── Main renderFrame ────────────────────────────────────────────────────────────
+
 function renderFrame(
   ctx: CanvasRenderingContext2D,
-  t: number,           // current second
-  total: number,       // total seconds
+  t: number,
+  total: number,
   data: AdData,
   script: AdScript,
   bgImg: HTMLImageElement | null,
@@ -136,207 +184,608 @@ function renderFrame(
 
   ctx.clearRect(0, 0, W, H);
 
-  // ── Background ──────────────────────────────────────────────────────────────
+  // ── 1. BACKGROUND ────────────────────────────────────────────────────────────
   if (bgImg) {
-    // Cover-fit the uploaded image
     const scale = Math.max(W / bgImg.width, H / bgImg.height);
     const iw = bgImg.width * scale, ih = bgImg.height * scale;
     ctx.drawImage(bgImg, (W - iw) / 2, (H - ih) / 2, iw, ih);
-    // Dark scrim
-    ctx.fillStyle = "rgba(0,0,0,0.58)";
+    // Gradient scrim so text is readable
+    const scrim = ctx.createLinearGradient(0, 0, 0, H);
+    scrim.addColorStop(0, "rgba(0,0,0,0.70)");
+    scrim.addColorStop(0.4, "rgba(0,0,0,0.45)");
+    scrim.addColorStop(0.7, "rgba(0,0,0,0.55)");
+    scrim.addColorStop(1, "rgba(0,0,0,0.80)");
+    ctx.fillStyle = scrim;
     ctx.fillRect(0, 0, W, H);
   } else {
-    // Gradient bg
-    const g = ctx.createLinearGradient(0, 0, W, H);
+    const g = ctx.createLinearGradient(0, W * 0.3, W, H);
     g.addColorStop(0, scheme.bg[0]);
-    g.addColorStop(1, scheme.bg[1]);
+    g.addColorStop(0.6, scheme.bg[1]);
+    g.addColorStop(1, scheme.bg[0]);
     ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Ambient radial glow
+    const pulse = 0.65 + 0.35 * Math.sin(t * 1.8);
+    const gr = ctx.createRadialGradient(W * 0.5, H * 0.42, 80, W * 0.5, H * 0.42, 420);
+    gr.addColorStop(0, `rgba(${ar},${ag},${ab},${0.22 * pulse})`);
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, W, H);
+
+    // Corner accent glows
+    const cr1 = ctx.createRadialGradient(0, 0, 0, 0, 0, 220);
+    cr1.addColorStop(0, `rgba(${ar},${ag},${ab},0.12)`);
+    cr1.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = cr1;
+    ctx.fillRect(0, 0, W, H);
+
+    const cr2 = ctx.createRadialGradient(W, H, 0, W, H, 280);
+    cr2.addColorStop(0, `rgba(${ar},${ag},${ab},0.10)`);
+    cr2.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = cr2;
     ctx.fillRect(0, 0, W, H);
   }
 
-  // ── Subtle grid lines (template: minimal / gradient) ─────────────────────────
+  // ── 2. GRID LINES (minimal / gradient) ──────────────────────────────────────
   if (data.template === "minimal" || data.template === "gradient") {
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.07)`;
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.06)`;
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 54) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y < H; y += 54) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   }
 
-  // ── Neon glow radial (template: neon) ─────────────────────────────────────
+  // ── 3. FLOATING PARTICLES ───────────────────────────────────────────────────
+  const particleCount = 18;
+  for (let i = 0; i < particleCount; i++) {
+    const px = seededRand(i * 7) * W;
+    const baseY = seededRand(i * 13) * H;
+    const speed = 18 + seededRand(i * 3) * 30;
+    const py = ((baseY - t * speed * 0.5) % H + H) % H;
+    const size = 2 + seededRand(i * 5) * 4;
+    const alpha = (0.15 + seededRand(i * 11) * 0.35) * (0.6 + 0.4 * Math.sin(t * 2 + i));
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(px, py, size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Sparkle bursts at corners and mid-points
+  const sparklePts = [
+    [80, 150], [460, 100], [30, 480], [510, 520], [270, 80], [160, 840], [380, 870],
+  ];
+  for (let i = 0; i < sparklePts.length; i++) {
+    const [sx, sy] = sparklePts[i];
+    const phase = (t * 1.5 + i * 0.9) % 3;
+    const alpha = phase < 1.5 ? easeOut(phase / 1.5) * 0.6 : easeOut((3 - phase) / 1.5) * 0.6;
+    const size = 4 + seededRand(i * 7) * 5;
+    drawSparkle(ctx, sx, sy, size, accent, alpha);
+  }
+
+  // ── 4. TOP ACCENT BARS ───────────────────────────────────────────────────────
+  const barAlpha = clamp01(easeOut(t / 0.4));
+  ctx.fillStyle = `rgba(${ar},${ag},${ab},${barAlpha})`;
+  ctx.fillRect(0, 0, W, 4);
+
+  // Thin vertical accent lines (bold / neon)
+  if (data.template === "bold" || data.template === "neon") {
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},${barAlpha * 0.4})`;
+    ctx.fillRect(0, 0, 3, H);
+    ctx.fillRect(W - 3, 0, 3, H);
+  }
+
+  // ── 5. NEON GLOW OVERLAY ─────────────────────────────────────────────────────
   if (data.template === "neon") {
     const pulse = 0.7 + 0.3 * Math.sin(t * 3);
-    const gr = ctx.createRadialGradient(W / 2, H / 2, 50, W / 2, H / 2, 500);
-    gr.addColorStop(0, `rgba(${ar},${ag},${ab},${0.18 * pulse})`);
+    const gr = ctx.createRadialGradient(W / 2, H * 0.45, 30, W / 2, H * 0.45, 460);
+    gr.addColorStop(0, `rgba(${ar},${ag},${ab},${0.22 * pulse})`);
     gr.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = gr;
     ctx.fillRect(0, 0, W, H);
   }
 
-  // ── Decorative accent bar top ──────────────────────────────────────────────
-  const barAlpha = clamp01(easeOut(t / 0.5));
-  ctx.fillStyle = `rgba(${ar},${ag},${ab},${barAlpha})`;
-  ctx.fillRect(0, 0, W, 4);
-
-  // ── Brand name (phase 0: 0-2s) ────────────────────────────────────────────
-  const brandAlpha = easeOut(clamp01(t / 0.6));
-  const brandSlide = lerp(-30, 0, easeOut(clamp01(t / 0.6)));
+  // ── 6. BRAND PILL (top-left) ─────────────────────────────────────────────────
+  const brandP = easeOut(clamp01(t / 0.5));
   ctx.save();
-  ctx.globalAlpha = brandAlpha;
-  ctx.translate(0, brandSlide);
+  ctx.globalAlpha = brandP;
+  ctx.translate(lerp(-60, 0, easeOut(clamp01(t / 0.5))), 0);
 
-  // Brand pill
-  ctx.fillStyle = `rgba(${ar},${ag},${ab},0.25)`;
-  drawRoundedRect(ctx, 30, 36, 200, 36, 18);
+  // Pill bg
+  ctx.fillStyle = `rgba(${ar},${ag},${ab},0.22)`;
+  drawRoundedRect(ctx, 24, 32, 210, 38, 19);
   ctx.fill();
-  ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.6)`;
+  ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.65)`;
   ctx.lineWidth = 1.5;
-  drawRoundedRect(ctx, 30, 36, 200, 36, 18);
+  drawRoundedRect(ctx, 24, 32, 210, 38, 19);
   ctx.stroke();
 
-  ctx.font = "bold 16px Inter, Arial, sans-serif";
+  ctx.font = "bold 15px Inter, Arial, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
-  ctx.fillText("🚀 " + (data.brandName || "Your Brand").toUpperCase(), 48, 60);
+  ctx.fillText("🚀 " + (data.brandName || "Your Brand").toUpperCase().slice(0, 18), 44, 57);
   ctx.restore();
 
-  // ── Platform badge (top right) ─────────────────────────────────────────────
+  // ── 7. PLATFORM BADGE (top-right) ────────────────────────────────────────────
   ctx.save();
-  ctx.globalAlpha = brandAlpha;
-  ctx.font = "13px Inter, Arial, sans-serif";
-  ctx.fillStyle = `rgba(255,255,255,0.5)`;
-  ctx.textAlign = "right";
-  ctx.fillText(data.platform, W - 30, 58);
+  ctx.globalAlpha = brandP;
+  const platEmoji = PLATFORMS.find(p => p.id === data.platform)?.emoji ?? "📱";
+  ctx.fillStyle = `rgba(255,255,255,0.10)`;
+  drawRoundedRect(ctx, W - 110, 32, 90, 34, 17);
+  ctx.fill();
+  ctx.font = "12px Inter, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  ctx.textAlign = "center";
+  ctx.fillText(platEmoji + " " + data.platform.split(" ")[0], W - 65, 54);
   ctx.restore();
 
-  // ── Headline (phase 1: 1.5-4s) ────────────────────────────────────────────
-  const hlP = clamp01((t - 1.2) / 1.0);
-  const hlAlpha = easeOut(hlP);
-  const hlSlide = lerp(50, 0, easeOut(hlP));
+  // ── 8. OBJECTIVE ICON BURST (0.5–1.5s) ──────────────────────────────────────
+  const objP = clamp01((t - 0.4) / 0.7);
+  if (objP > 0) {
+    const objEmoji = OBJECTIVES.find(o => o.id === data.objective)?.emoji ?? "✨";
+    ctx.save();
+    ctx.globalAlpha = easeOut(objP) * (objP < 0.5 ? 1 : lerp(1, 0, easeIn((objP - 0.5) * 2)));
+    const scale = lerp(0.5, 1.2, easeOut(objP));
+    ctx.translate(W / 2, H * 0.22);
+    ctx.scale(scale, scale);
+    ctx.font = "56px Inter, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(objEmoji, 0, 0);
+    ctx.textBaseline = "alphabetic";
+    ctx.restore();
+  }
 
+  // ── 9. HEADLINE (1.2–3s) ─────────────────────────────────────────────────────
+  const hlP = clamp01((t - 1.0) / 1.0);
   ctx.save();
-  ctx.globalAlpha = hlAlpha;
-  ctx.translate(0, hlSlide);
+  ctx.globalAlpha = easeOut(hlP);
+  ctx.translate(0, lerp(60, 0, easeOut(hlP)));
   ctx.textAlign = "center";
 
   if (data.template === "neon") {
     ctx.shadowColor = accent;
-    ctx.shadowBlur = 30;
+    ctx.shadowBlur = 28;
   }
   if (data.template === "bold") {
-    // Big accent block behind headline
-    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.15)`;
-    ctx.fillRect(0, H * 0.34 - 10, W, 160);
+    const bgH = 170;
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.13)`;
+    ctx.fillRect(0, H * 0.30 - 16, W, bgH);
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.25)`;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, H * 0.30 - 16, W, bgH);
   }
-
-  ctx.font = "bold 56px Inter, Arial, sans-serif";
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowBlur = data.template === "neon" ? 20 : 0;
-  wrapText(ctx, (script.headline || data.keyMessage).toUpperCase(), W / 2, H * 0.38, W - 60, 68);
-
-  ctx.shadowBlur = 0;
-  ctx.restore();
-
-  // ── Tagline (phase 2: 2.8-5.5s) ───────────────────────────────────────────
-  const tlP = clamp01((t - 2.5) / 1.2);
-  ctx.save();
-  ctx.globalAlpha = easeInOut(tlP);
-  ctx.translate(0, lerp(20, 0, easeOut(tlP)));
-  ctx.textAlign = "center";
-
   if (data.template === "gradient") {
-    ctx.fillStyle = `rgba(255,255,255,0.12)`;
-    drawRoundedRect(ctx, 40, H * 0.55 - 12, W - 80, 80, 12);
+    ctx.fillStyle = `rgba(255,255,255,0.06)`;
+    drawRoundedRect(ctx, 20, H * 0.29 - 14, W - 40, 175, 16);
     ctx.fill();
   }
 
-  ctx.font = "20px Inter, Arial, sans-serif";
-  ctx.fillStyle = `rgba(255,255,255,0.85)`;
-  wrapText(ctx, script.tagline || "", W / 2, H * 0.57, W - 100, 28);
+  ctx.font = "bold 54px Inter, Arial, sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowBlur = data.template === "neon" ? 22 : 0;
+  wrapText(ctx, (script.headline || data.keyMessage).toUpperCase(), W / 2, H * 0.33, W - 60, 66);
+  ctx.shadowBlur = 0;
   ctx.restore();
 
-  // ── Product name badge (phase 3: 4s+) ─────────────────────────────────────
+  // ── 10. TAGLINE (2.3–4s) ──────────────────────────────────────────────────────
+  const tlP = clamp01((t - 2.2) / 1.2);
+  ctx.save();
+  ctx.globalAlpha = easeInOut(tlP);
+  ctx.translate(0, lerp(24, 0, easeOut(tlP)));
+  ctx.textAlign = "center";
+
+  if (data.template === "gradient" && tlP > 0.1) {
+    ctx.fillStyle = `rgba(255,255,255,0.10)`;
+    drawRoundedRect(ctx, 36, H * 0.50 - 14, W - 72, 82, 14);
+    ctx.fill();
+  }
+
+  ctx.font = "italic 19px Inter, Arial, sans-serif";
+  ctx.fillStyle = `rgba(255,255,255,0.88)`;
+  wrapText(ctx, script.tagline || "", W / 2, H * 0.52, W - 100, 30);
+  ctx.restore();
+
+  // ── 11. PRODUCT NAME BADGE (2.8s+) ───────────────────────────────────────────
   if (data.productName) {
-    const pdP = clamp01((t - 3.8) / 0.8);
+    const pdP = clamp01((t - 2.6) / 0.7);
     ctx.save();
     ctx.globalAlpha = easeOut(pdP);
     ctx.textAlign = "center";
-    ctx.font = "bold 15px Inter, Arial, sans-serif";
+
+    // Accent pill
+    const ptw = Math.min(ctx.measureText("✦ " + data.productName + " ✦").width + 40, W - 80);
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.30)`;
+    drawRoundedRect(ctx, (W - ptw) / 2, H * 0.463 - 16, ptw, 30, 15);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.7)`;
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, (W - ptw) / 2, H * 0.463 - 16, ptw, 30, 15);
+    ctx.stroke();
+
+    ctx.font = "bold 14px Inter, Arial, sans-serif";
     ctx.fillStyle = accent;
-    ctx.fillText("✦ " + data.productName + " ✦", W / 2, H * 0.50);
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 10;
+    ctx.fillText("✦ " + data.productName + " ✦", W / 2, H * 0.463);
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 
-  // ── Divider line ──────────────────────────────────────────────────────────
-  const divP = clamp01((t - 3.5) / 0.6);
-  ctx.save();
-  ctx.globalAlpha = easeOut(divP);
-  const lineW = lerp(0, W - 120, easeOut(divP));
-  ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.5)`;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo((W - lineW) / 2, H * 0.67);
-  ctx.lineTo((W + lineW) / 2, H * 0.67);
-  ctx.stroke();
-  ctx.restore();
+  // ── 12. FEATURE BULLETS (3.2–5s, staggered) ──────────────────────────────────
+  const features = script.features?.length
+    ? script.features.slice(0, 3)
+    : [
+        data.keyMessage.split(".")[0].split(",")[0].slice(0, 40) || "Premium Quality",
+        "Fast Delivery",
+        "100% Satisfaction Guaranteed",
+      ];
 
-  // ── Hashtags row (phase 4: 5s+) ───────────────────────────────────────────
+  for (let fi = 0; fi < features.length; fi++) {
+    const fP = clamp01((t - (3.0 + fi * 0.35)) / 0.6);
+    if (fP <= 0) continue;
+    const fx = lerp(-W * 0.6, 0, easeOut(fP));
+    ctx.save();
+    ctx.globalAlpha = easeOut(fP);
+    ctx.translate(fx, 0);
+
+    const fy = H * 0.635 + fi * 44;
+
+    // Bullet line bg
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.12)`;
+    drawRoundedRect(ctx, 32, fy - 15, W - 64, 34, 17);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.35)`;
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, 32, fy - 15, W - 64, 34, 17);
+    ctx.stroke();
+
+    // Check icon
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(58, fy + 2, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.font = "bold 11px Inter, Arial, sans-serif";
+    ctx.fillStyle = "#000";
+    ctx.textAlign = "center";
+    ctx.fillText("✓", 58, fy + 6);
+
+    // Feature text
+    ctx.font = "13px Inter, Arial, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.fillText(features[fi].slice(0, 42), 78, fy + 6);
+
+    ctx.restore();
+  }
+
+  // ── 13. STAR RATING (4.0s+) ───────────────────────────────────────────────────
+  const starP = clamp01((t - 3.9) / 0.8);
+  if (starP > 0 && data.objective !== "awareness") {
+    ctx.save();
+    ctx.globalAlpha = easeOut(starP);
+    const starY = H * 0.635 + 3 * 44 + 18;
+    ctx.textAlign = "center";
+    const stars = "★★★★★";
+    const shown = Math.round(5 * starP);
+    ctx.font = "bold 20px Inter, Arial, sans-serif";
+    ctx.fillStyle = "#fbbf24";
+    ctx.shadowColor = "#fbbf24";
+    ctx.shadowBlur = 10;
+    ctx.fillText(stars.slice(0, shown), W / 2 - 30, starY);
+    ctx.shadowBlur = 0;
+    ctx.font = "12px Inter, Arial, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.65)";
+    ctx.fillText("4.9 · 2,800+ reviews", W / 2 + 48, starY);
+    ctx.restore();
+  }
+
+  // ── 14. VOICEOVER KARAOKE TEXT (4.5s–end-5s) ─────────────────────────────────
+  const voiceText = script.voiceover || "";
+  if (voiceText) {
+    const karaokeStart = 4.2;
+    const karaokeEnd = total - 4.5;
+    const karaokeP = clamp01((t - karaokeStart) / 0.5);
+
+    if (karaokeP > 0 && t < karaokeEnd + 1) {
+      const words = voiceText.split(" ");
+      const totalWords = words.length;
+      const wordsPerSec = totalWords / Math.max(karaokeEnd - karaokeStart, 1);
+      const wordsShown = Math.min(totalWords, Math.floor((t - karaokeStart) * wordsPerSec) + 1);
+
+      // Show a sliding window of ~6 words at a time
+      const windowSize = 6;
+      const windowStart = Math.max(0, wordsShown - windowSize);
+      const windowWords = words.slice(windowStart, wordsShown);
+
+      ctx.save();
+      ctx.globalAlpha = easeOut(karaokeP) * (t > karaokeEnd ? easeOut(clamp01((karaokeEnd + 1 - t))) : 1);
+
+      // Karaoke box bg
+      const kbY = H * 0.835;
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      drawRoundedRect(ctx, 24, kbY - 20, W - 48, 64, 14);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.40)`;
+      ctx.lineWidth = 1;
+      drawRoundedRect(ctx, 24, kbY - 20, W - 48, 64, 14);
+      ctx.stroke();
+
+      // Mic icon
+      ctx.font = "14px Inter, Arial, sans-serif";
+      ctx.fillStyle = accent;
+      ctx.textAlign = "left";
+      ctx.fillText("🎙", 38, kbY + 5);
+
+      // Karaoke words
+      ctx.font = "bold 15px Inter, Arial, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      const karaokeStr = windowWords.join(" ");
+      ctx.fillText(karaokeStr.slice(0, 55), W / 2 + 10, kbY + 5);
+
+      // Animated cursor
+      const blink = Math.floor(t * 2) % 2 === 0;
+      if (blink) {
+        const tw = ctx.measureText(karaokeStr.slice(0, 55)).width;
+        ctx.fillStyle = accent;
+        ctx.fillRect(W / 2 + 10 + tw / 2 + 4, kbY - 10, 2, 22);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // ── 15. ANIMATED DIVIDER ─────────────────────────────────────────────────────
+  const divP = clamp01((t - 2.8) / 0.7);
+  if (divP > 0) {
+    ctx.save();
+    ctx.globalAlpha = easeOut(divP);
+    const lineW = lerp(0, W - 100, easeOut(divP));
+    const lineY = H * 0.608;
+    // Left half
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.55)`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, lineY);
+    ctx.lineTo(W / 2 - lineW / 2, lineY);
+    ctx.stroke();
+    // Right half
+    ctx.beginPath();
+    ctx.moveTo(W / 2, lineY);
+    ctx.lineTo(W / 2 + lineW / 2, lineY);
+    ctx.stroke();
+    // Center diamond
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 10;
+    ctx.save();
+    ctx.translate(W / 2, lineY);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-5, -5, 10, 10);
+    ctx.restore();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  // ── 16. HASHTAG PILLS (4.2s+) ────────────────────────────────────────────────
   if (script.hashtags?.length) {
-    const htp = clamp01((t - 5) / 1);
+    const htp = clamp01((t - 4.0) / 0.9);
+    const tags = script.hashtags.slice(0, 3);
     ctx.save();
     ctx.globalAlpha = easeOut(htp);
-    ctx.textAlign = "center";
-    ctx.font = "12px Inter, Arial, sans-serif";
-    ctx.fillStyle = `rgba(${ar},${ag},${ab},0.8)`;
-    const tags = script.hashtags.slice(0, 4).join("  ");
-    ctx.fillText(tags, W / 2, H * 0.70);
+
+    let hx = 32;
+    const hy = H * 0.795;
+    for (const tag of tags) {
+      const tw = ctx.measureText(tag).width;
+      const pw = tw + 22;
+      if (hx + pw > W - 32) break;
+      ctx.fillStyle = `rgba(${ar},${ag},${ab},0.20)`;
+      drawRoundedRect(ctx, hx, hy - 14, pw, 26, 13);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.5)`;
+      ctx.lineWidth = 1;
+      drawRoundedRect(ctx, hx, hy - 14, pw, 26, 13);
+      ctx.stroke();
+      ctx.font = "11px Inter, Arial, sans-serif";
+      ctx.fillStyle = `rgba(${ar},${ag},${ab},1)`;
+      ctx.textAlign = "left";
+      ctx.fillText(tag, hx + 11, hy + 4);
+      hx += pw + 8;
+    }
     ctx.restore();
   }
 
-  // ── CTA button (phase 5: last 5s) ─────────────────────────────────────────
-  const ctaStart = Math.max(total - 6, 5);
+  // ── 17. CTA BUTTON (last 6s) ──────────────────────────────────────────────────
+  const ctaStart = Math.max(total - 6.5, 4.5);
   const ctaP = clamp01((t - ctaStart) / 1.2);
-  const ctaPulse = 1 + 0.04 * Math.sin(t * 4);
+  const ctaPulse = 1 + 0.05 * Math.sin(t * 4.5);
 
   ctx.save();
   ctx.globalAlpha = easeOut(ctaP);
-  ctx.translate(W / 2, H * 0.80);
+  ctx.translate(W / 2, H * 0.755);
   ctx.scale(ctaPulse, ctaPulse);
 
-  // Button shadow
-  ctx.shadowColor = `rgba(${ar},${ag},${ab},0.5)`;
-  ctx.shadowBlur = 24;
-
-  // Button bg
-  const btG = ctx.createLinearGradient(-120, 0, 120, 0);
+  // Outer glow ring
+  ctx.shadowColor = `rgba(${ar},${ag},${ab},0.7)`;
+  ctx.shadowBlur = 30 * ctaPulse;
+  const btG = ctx.createLinearGradient(-130, 0, 130, 0);
   btG.addColorStop(0, accent);
-  btG.addColorStop(1, `rgba(${ar},${ag},${ab},0.7)`);
+  btG.addColorStop(0.5, `rgba(${ar},${ag},${ab},0.85)`);
+  btG.addColorStop(1, accent);
   ctx.fillStyle = btG;
-  drawRoundedRect(ctx, -120, -24, 240, 48, 24);
+  drawRoundedRect(ctx, -130, -26, 260, 52, 26);
   ctx.fill();
 
+  // Button text
   ctx.shadowBlur = 0;
-  ctx.font = "bold 18px Inter, Arial, sans-serif";
+  ctx.font = "bold 19px Inter, Arial, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
-  ctx.fillText((data.cta || "Learn More").toUpperCase(), 0, 7);
+  ctx.fillText((data.cta || "Shop Now").toUpperCase(), 0, 7);
+
+  // Arrow indicator
+  ctx.font = "14px Inter, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.fillText("→", 100, 7);
+
   ctx.restore();
 
-  // ── Bottom brand strip ─────────────────────────────────────────────────────
-  const btmP = clamp01((t - 0.3) / 0.7);
+  // ── 18. PROGRESS BAR ─────────────────────────────────────────────────────────
+  const progAlpha = clamp01(easeOut((t - 0.2) / 0.5));
+  const progress = t / total;
+  ctx.save();
+  ctx.globalAlpha = progAlpha * 0.45;
+  ctx.fillStyle = `rgba(255,255,255,0.12)`;
+  ctx.fillRect(0, H - 70, W, 2);
+  ctx.fillStyle = `rgba(${ar},${ag},${ab},1)`;
+  ctx.fillRect(0, H - 70, W * progress, 2);
+  ctx.restore();
+
+  // ── 19. BOTTOM STRIP ─────────────────────────────────────────────────────────
+  const btmP = clamp01((t - 0.2) / 0.6);
   ctx.save();
   ctx.globalAlpha = easeOut(btmP);
 
-  ctx.fillStyle = `rgba(0,0,0,0.5)`;
-  ctx.fillRect(0, H - 60, W, 60);
+  // Gradient strip
+  const bsg = ctx.createLinearGradient(0, H - 66, 0, H);
+  bsg.addColorStop(0, "rgba(0,0,0,0)");
+  bsg.addColorStop(0.3, "rgba(0,0,0,0.65)");
+  bsg.addColorStop(1, "rgba(0,0,0,0.85)");
+  ctx.fillStyle = bsg;
+  ctx.fillRect(0, H - 66, W, 66);
 
+  // Bottom accent bar
   ctx.fillStyle = `rgba(${ar},${ag},${ab},1)`;
   ctx.fillRect(0, H - 4, W, 4);
 
-  ctx.font = "13px Inter, Arial, sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  // Brand name (bottom center)
+  ctx.font = "12px Inter, Arial, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.50)";
   ctx.textAlign = "center";
-  ctx.fillText(data.brandName || "Your Brand", W / 2, H - 20);
+  ctx.fillText("marketingstuffs.site · " + (data.brandName || "Your Brand"), W / 2, H - 14);
+
   ctx.restore();
+
+  // ── 20. FLOATING EMOJI ACCENTS (scattered around) ────────────────────────────
+  const emojiSet = ["✨", "🔥", "💎", "⚡", "🎯", "💫"];
+  for (let ei = 0; ei < 4; ei++) {
+    const ep = clamp01((t - (0.8 + ei * 0.6)) / 0.5);
+    if (ep <= 0) continue;
+    const ex = [60, W - 60, 45, W - 45][ei];
+    const ey = [250, 280, 680, 700][ei];
+    const floatY = ey + Math.sin(t * 1.2 + ei) * 8;
+    ctx.save();
+    ctx.globalAlpha = easeOut(ep) * 0.55;
+    ctx.font = "22px Inter, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(emojiSet[ei % emojiSet.length], ex, floatY);
+    ctx.restore();
+  }
+
+  // ── 21. WAVEFORM ANIMATION (bottom, near brand) ───────────────────────────────
+  const waveP = clamp01((t - 0.5) / 0.8);
+  if (waveP > 0) {
+    ctx.save();
+    ctx.globalAlpha = easeOut(waveP) * 0.4;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5;
+    const bars = 24;
+    const barW = 6;
+    const gap = (W * 0.5) / bars;
+    const waveY = H - 38;
+    for (let bi = 0; bi < bars; bi++) {
+      const barH = 4 + Math.abs(Math.sin(t * 3 + bi * 0.5)) * 14;
+      const bx = W * 0.25 + bi * gap;
+      ctx.beginPath();
+      ctx.moveTo(bx, waveY - barH);
+      ctx.lineTo(bx, waveY + barH);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ── Build ambient background music via AudioContext ─────────────────────────────
+
+function buildAmbientAudio(
+  audioCtx: AudioContext,
+  dest: MediaStreamAudioDestinationNode,
+  duration: number,
+  accentColor: string,
+) {
+  const { r, g, b } = hexToRgb(accentColor);
+  // Pick a musical scale based on color warmth
+  const warmth = (r - b) / 255;
+  const baseFreq = warmth > 0.3 ? 261.63 : warmth < -0.3 ? 220.00 : 246.94; // C4, A3, or B3
+  const scale = [1, 1.25, 1.5, 2, 2.5, 3].map(f => baseFreq * f);
+
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.setValueAtTime(0, 0);
+  masterGain.gain.linearRampToValueAtTime(0.18, 0.5);
+  masterGain.gain.setValueAtTime(0.18, duration - 1.5);
+  masterGain.gain.linearRampToValueAtTime(0, duration);
+  masterGain.connect(dest);
+
+  // Pad chords every 2 seconds
+  for (let beat = 0; beat < duration; beat += 2) {
+    const chord = [scale[0], scale[2], scale[4]];
+    chord.forEach((freq, ci) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq * (ci === 2 ? 0.5 : 1);
+      g.gain.setValueAtTime(0, beat);
+      g.gain.linearRampToValueAtTime(0.06, beat + 0.1);
+      g.gain.setValueAtTime(0.06, beat + 1.7);
+      g.gain.linearRampToValueAtTime(0, beat + 2.0);
+      osc.connect(g);
+      g.connect(masterGain);
+      osc.start(beat);
+      osc.stop(beat + 2.1);
+    });
+  }
+
+  // Subtle hi-hat rhythm
+  for (let beat = 0; beat < duration; beat += 0.5) {
+    const bufSz = audioCtx.sampleRate * 0.04;
+    const buf = audioCtx.createBuffer(1, bufSz, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSz; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSz, 3);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const hiG = audioCtx.createGain();
+    hiG.gain.value = beat % 1 === 0 ? 0.04 : 0.02;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 6000;
+    src.connect(filter);
+    filter.connect(hiG);
+    hiG.connect(masterGain);
+    src.start(beat);
+  }
+
+  // Kick drum on every beat
+  for (let beat = 0; beat < duration; beat += 1) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.frequency.setValueAtTime(120, beat);
+    osc.frequency.exponentialRampToValueAtTime(40, beat + 0.15);
+    g.gain.setValueAtTime(0.12, beat);
+    g.gain.exponentialRampToValueAtTime(0.001, beat + 0.3);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(beat);
+    osc.stop(beat + 0.4);
+  }
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -361,7 +810,6 @@ export default function AdCreatorTab() {
   const [loadingScript, setLoadingScript] = useState(false);
   const [scriptError, setScriptError] = useState("");
 
-  // Canvas / video state
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
@@ -370,14 +818,13 @@ export default function AdCreatorTab() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const rafRef = useRef<number>(0);
   const bgImgRef = useRef<HTMLImageElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Voice
   const [speaking, setSpeaking] = useState(false);
   const [copied, setCopied] = useState<string>("");
 
   const set = (k: keyof AdData, v: unknown) => setData(d => ({ ...d, [k]: v }));
 
-  // Load AI image when format is image/video
   const loadBg = useCallback(async () => {
     if (data.uploadedImage) {
       const img = new Image();
@@ -386,20 +833,19 @@ export default function AdCreatorTab() {
       return;
     }
     bgImgRef.current = null;
-    // Optionally fetch Pollinations background
     if (script) {
       const prompt = encodeURIComponent(
-        `${data.template} style advertisement background for ${data.productName || data.brandName}, ${data.objective}, color scheme ${data.colorScheme}, professional, cinematic, no text`
+        `${data.template} style advertisement for ${data.productName || data.brandName}, ${data.objective}, ${data.colorScheme} color scheme, professional product photography, cinematic lighting, no text, high quality`
       );
-      const url = `https://image.pollinations.ai/prompt/${prompt}?width=540&height=960&nologo=true&seed=${Date.now()}`;
+      const url = `https://image.pollinations.ai/prompt/${prompt}?width=540&height=960&nologo=true&seed=${Date.now() % 9999}`;
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => { bgImgRef.current = img; };
+      img.onerror = () => { bgImgRef.current = null; };
       img.src = url;
     }
   }, [data, script]);
 
-  // Generate AI script
   const generateScript = async () => {
     setLoadingScript(true);
     setScriptError("");
@@ -422,21 +868,20 @@ export default function AdCreatorTab() {
       setScript(json.script);
       setStep(3);
     } catch (e) {
-      setScriptError(e instanceof Error ? e.message : "Error");
+      setScriptError(e instanceof Error ? e.message : "Error generating script");
     } finally {
       setLoadingScript(false);
     }
   };
 
-  // Render static image
   const renderImage = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas || !script) return;
     setGenerating(true);
     await loadBg();
-    await new Promise(r => setTimeout(r, 1200)); // wait for bg image
+    await new Promise(r => setTimeout(r, 1400));
     const ctx = canvas.getContext("2d")!;
-    renderFrame(ctx, data.duration * 0.4, data.duration, data, script, bgImgRef.current);
+    renderFrame(ctx, data.duration * 0.45, data.duration, data, script, bgImgRef.current);
     const url = canvas.toDataURL("image/png");
     setOutputUrl(url);
     setGenerated(true);
@@ -444,24 +889,60 @@ export default function AdCreatorTab() {
     setStep(4);
   }, [data, script, loadBg]);
 
-  // Render animated video
   const renderVideo = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas || !script) return;
     setGenerating(true);
     setRecording(true);
-    await loadBg();
-    await new Promise(r => setTimeout(r, 1200));
 
-    const stream = canvas.captureStream(30);
-    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-      ? "video/webm;codecs=vp9"
-      : "video/webm";
-    const recorder = new MediaRecorder(stream, { mimeType: mime });
+    await loadBg();
+    await new Promise(r => setTimeout(r, 1400));
+
+    // ── Setup AudioContext with ambient music ──────────────────────────────────
+    const audioCtx = new AudioContext();
+    audioCtxRef.current = audioCtx;
+    const audioDest = audioCtx.createMediaStreamDestination();
+    const scheme = COLOR_SCHEMES.find(c => c.id === data.colorScheme) || COLOR_SCHEMES[0];
+    buildAmbientAudio(audioCtx, audioDest, data.duration, scheme.accent);
+
+    // ── Start voiceover (user hears it live; text shown on canvas) ────────────
+    if (script.voiceover && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(script.voiceover);
+      utter.rate = 0.88;
+      utter.pitch = data.voiceGender === "female" ? 1.1 : 0.85;
+      const voices = window.speechSynthesis.getVoices();
+      const pick = voices.find(v =>
+        data.voiceGender === "female"
+          ? /female|samantha|google uk english female/i.test(v.name)
+          : /male|daniel/i.test(v.name)
+      ) || voices.find(v => v.lang === "en-US") || voices[0];
+      if (pick) utter.voice = pick;
+      // Start at 4.2s offset matching karaoke timing
+      setTimeout(() => {
+        window.speechSynthesis.speak(utter);
+      }, 4200);
+    }
+
+    // ── Combine canvas video + audio ──────────────────────────────────────────
+    const canvasStream = canvas.captureStream(30);
+    const videoTrack = canvasStream.getVideoTracks()[0];
+    const audioTrack = audioDest.stream.getAudioTracks()[0];
+    const combinedStream = new MediaStream([videoTrack, audioTrack]);
+
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+        ? "video/webm;codecs=vp8,opus"
+        : "video/webm";
+
+    const recorder = new MediaRecorder(combinedStream, { mimeType: mime });
     recorderRef.current = recorder;
     const chunks: Blob[] = [];
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     recorder.onstop = () => {
+      window.speechSynthesis.cancel();
+      audioCtx.close();
       const blob = new Blob(chunks, { type: mime });
       const url = URL.createObjectURL(blob);
       setOutputUrl(url);
@@ -492,6 +973,7 @@ export default function AdCreatorTab() {
 
   const stopRecording = () => {
     cancelAnimationFrame(rafRef.current);
+    window.speechSynthesis.cancel();
     recorderRef.current?.stop();
   };
 
@@ -500,7 +982,6 @@ export default function AdCreatorTab() {
     else await renderImage();
   };
 
-  // Voiceover playback
   const playVoiceover = () => {
     if (!script?.voiceover) return;
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
@@ -510,8 +991,8 @@ export default function AdCreatorTab() {
     const voices = window.speechSynthesis.getVoices();
     const pick = voices.find(v =>
       data.voiceGender === "female"
-        ? v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("samantha") || v.name.toLowerCase().includes("google uk english female")
-        : v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("daniel")
+        ? /female|samantha|google uk english female/i.test(v.name)
+        : /male|daniel/i.test(v.name)
     ) || voices.find(v => v.lang === "en-US") || voices[0];
     if (pick) utter.voice = pick;
     utter.onend = () => setSpeaking(false);
@@ -519,7 +1000,11 @@ export default function AdCreatorTab() {
     window.speechSynthesis.speak(utter);
   };
 
-  useEffect(() => () => { window.speechSynthesis.cancel(); cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => () => {
+    window.speechSynthesis.cancel();
+    cancelAnimationFrame(rafRef.current);
+    audioCtxRef.current?.close();
+  }, []);
 
   const copyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -527,10 +1012,7 @@ export default function AdCreatorTab() {
     setTimeout(() => setCopied(""), 2000);
   };
 
-  // ── Canvas dims ────────────────────────────────────────────────────────────
-  const CW = 270, CH = 480; // display half of 540×960
-
-  // ── Steps ──────────────────────────────────────────────────────────────────
+  const CW = 270, CH = 480;
   const STEP_LABELS = ["Format", "Details", "Content", "AI Script", "Export"];
 
   return (
@@ -571,7 +1053,7 @@ export default function AdCreatorTab() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               {([
                 { id: "image", icon: <ImageIcon size={32} />, label: "Image Ad", desc: "Static poster — perfect for feed posts, stories, and banners", tags: ["PNG", "Any platform", "Instant"] },
-                { id: "video", icon: <Video size={32} />, label: "Video Reel", desc: "Animated short-form video with text motion effects", tags: ["WebM", "9:16 reel", "15-60s"] },
+                { id: "video", icon: <Video size={32} />, label: "Video Reel", desc: "Animated reel with motion effects, karaoke voiceover & background music", tags: ["WebM", "9:16 reel", "15-60s", "Audio"] },
                 { id: "audio", icon: <Mic size={32} />, label: "Audio / Script", desc: "AI-generated voiceover script with one-click playback", tags: ["Script", "Voiceover", "Shareable"] },
               ] as { id: AdFormat; icon: React.ReactNode; label: string; desc: string; tags: string[] }[]).map(f => (
                 <button key={f.id} onClick={() => set("format", f.id)}
@@ -709,15 +1191,13 @@ export default function AdCreatorTab() {
               )}
             </div>
 
-            {/* Visual options */}
             {data.format !== "audio" && (
               <>
                 <div>
                   <label className="text-slate-300 text-sm font-medium block mb-2.5 flex items-center gap-1.5"><Palette size={14} /> Color Scheme</label>
                   <div className="flex gap-2 flex-wrap">
                     {COLOR_SCHEMES.map(c => (
-                      <button key={c.id} onClick={() => set("colorScheme", c.id)}
-                        className={`flex flex-col items-center gap-1 transition-all`}>
+                      <button key={c.id} onClick={() => set("colorScheme", c.id)} className="flex flex-col items-center gap-1 transition-all">
                         <div className={`w-10 h-10 rounded-xl border-2 ${data.colorScheme === c.id ? "border-white scale-110" : "border-transparent"}`}
                           style={{ background: `linear-gradient(135deg, ${c.bg[0]}, ${c.bg[1]})`, boxShadow: data.colorScheme === c.id ? `0 0 10px ${c.accent}` : "none" }} />
                         <span className="text-xs text-slate-400">{c.label}</span>
@@ -732,9 +1212,7 @@ export default function AdCreatorTab() {
                     {TEMPLATES.map(t => (
                       <button key={t.id} onClick={() => set("template", t.id)}
                         className={`py-2.5 px-3 rounded-xl border text-left transition-all ${
-                          data.template === t.id
-                            ? "border-pink-500 bg-pink-500/10"
-                            : "border-slate-700 bg-slate-900 hover:border-slate-600"
+                          data.template === t.id ? "border-pink-500 bg-pink-500/10" : "border-slate-700 bg-slate-900 hover:border-slate-600"
                         }`}>
                         <div className={`text-sm font-bold ${data.template === t.id ? "text-pink-300" : "text-white"}`}>{t.label}</div>
                         <div className="text-xs text-slate-500 mt-0.5">{t.desc}</div>
@@ -745,7 +1223,6 @@ export default function AdCreatorTab() {
               </>
             )}
 
-            {/* Voice gender for audio */}
             {(data.format === "audio" || data.format === "video") && (
               <div>
                 <label className="text-slate-300 text-sm font-medium block mb-2.5">Voiceover Voice</label>
@@ -753,9 +1230,7 @@ export default function AdCreatorTab() {
                   {(["female", "male"] as const).map(g => (
                     <button key={g} onClick={() => set("voiceGender", g)}
                       className={`px-5 py-2 rounded-xl border text-sm font-medium capitalize transition-all ${
-                        data.voiceGender === g
-                          ? "border-pink-500 bg-pink-500/10 text-pink-300"
-                          : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"
+                        data.voiceGender === g ? "border-pink-500 bg-pink-500/10 text-pink-300" : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"
                       }`}>{g === "female" ? "👩 Female" : "👨 Male"}</button>
                   ))}
                 </div>
@@ -785,16 +1260,15 @@ export default function AdCreatorTab() {
             </div>
 
             {[
-              { key: "headline",  label: "🔥 Headline",       val: script.headline },
-              { key: "tagline",   label: "✨ Tagline",        val: script.tagline },
-              { key: "caption",   label: "📱 Social Caption", val: script.caption },
-              { key: "voiceover", label: "🎙️ Voiceover Script", val: script.voiceover },
+              { key: "headline",  label: "🔥 Headline",         val: script.headline },
+              { key: "tagline",   label: "✨ Tagline",           val: script.tagline },
+              { key: "caption",   label: "📱 Social Caption",    val: script.caption },
+              { key: "voiceover", label: "🎙️ Voiceover Script",  val: script.voiceover },
             ].map(({ key, label, val }) => (
               <div key={key} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-slate-300 text-sm font-semibold">{label}</span>
-                  <button onClick={() => copyText(val, key)}
-                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-white transition-colors">
+                  <button onClick={() => copyText(val, key)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-white transition-colors">
                     {copied === key ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
                   </button>
                 </div>
@@ -817,14 +1291,21 @@ export default function AdCreatorTab() {
               </div>
             </div>
 
-            {/* Voiceover playback */}
             <div className="flex items-center gap-3 p-4 bg-slate-900 border border-slate-800 rounded-xl">
               <Button size="sm" onClick={playVoiceover}
                 className={`${speaking ? "bg-red-600 hover:bg-red-500" : "bg-violet-600 hover:bg-violet-500"} text-white flex items-center gap-2`}>
                 {speaking ? <><Square size={13} />Stop</> : <><Volume2 size={13} />Play Voiceover</>}
               </Button>
-              <span className="text-slate-400 text-xs">Browser text-to-speech — hear your script before exporting</span>
+              <span className="text-slate-400 text-xs">Preview your voiceover before generating the reel</span>
             </div>
+
+            {data.format === "video" && (
+              <div className="p-3 bg-violet-950/40 border border-violet-500/20 rounded-xl">
+                <p className="text-violet-300 text-xs leading-relaxed">
+                  🎵 <strong>Video reel includes:</strong> animated karaoke voiceover text, floating particles, feature bullets, star rating, waveform, background music, and a pulsing CTA button — all rendered on the canvas and exported as a WebM video with audio.
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-between pt-2">
               <Button variant="ghost" onClick={() => setStep(2)} className="text-slate-400"><ChevronLeft size={16} className="mr-1" /> Back</Button>
@@ -848,7 +1329,7 @@ export default function AdCreatorTab() {
                     style={{ width: CW, height: CH, display: "block" }} />
                   {!generated && !generating && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900">
-                      <div className="text-5xl mb-3">🎨</div>
+                      <div className="text-5xl mb-3">🎬</div>
                       <p className="text-slate-400 text-sm text-center px-4">Click Generate to render your ad</p>
                     </div>
                   )}
@@ -856,18 +1337,21 @@ export default function AdCreatorTab() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
                       <Loader2 size={36} className="animate-spin text-pink-400 mb-3" />
                       <p className="text-white text-sm font-medium">
-                        {recording ? `Recording ${data.format === "video" ? "video" : ""}…` : "Rendering…"}
+                        {recording ? `Recording ${data.duration}s reel…` : "Rendering…"}
                       </p>
                       {recording && (
-                        <Button size="sm" variant="ghost" onClick={stopRecording}
-                          className="mt-3 text-slate-400 text-xs border border-slate-600">
-                          <Square size={12} className="mr-1" /> Stop Early
-                        </Button>
+                        <>
+                          <p className="text-slate-400 text-xs mt-1">🎵 Music playing · 🎙️ Voiceover starting at 4s</p>
+                          <Button size="sm" variant="ghost" onClick={stopRecording}
+                            className="mt-3 text-slate-400 text-xs border border-slate-600">
+                            <Square size={12} className="mr-1" /> Stop Early
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}
                 </div>
-                <p className="text-slate-500 text-xs mt-2">Preview (540×960 render)</p>
+                <p className="text-slate-500 text-xs mt-2">Preview (540×960 · 9:16 format)</p>
               </div>
 
               {/* Actions */}
@@ -884,8 +1368,7 @@ export default function AdCreatorTab() {
                     <Button onClick={playVoiceover} className={`w-full font-bold ${speaking ? "bg-red-600 hover:bg-red-500" : "bg-violet-600 hover:bg-violet-500"} text-white`}>
                       {speaking ? <><Square size={15} className="mr-2" />Stop Playback</> : <><Volume2 size={15} className="mr-2" />Play Full Voiceover</>}
                     </Button>
-                    <Button onClick={() => copyText(script?.voiceover || "", "full")} variant="outline"
-                      className="w-full border-slate-600 text-slate-300">
+                    <Button onClick={() => copyText(script?.voiceover || "", "full")} variant="outline" className="w-full border-slate-600 text-slate-300">
                       {copied === "full" ? <><Check size={15} className="mr-2 text-green-400" />Copied!</> : <><Copy size={15} className="mr-2" />Copy Script</>}
                     </Button>
                     <p className="text-slate-500 text-xs">Use this script for your own recording, video editing tool, or professional voiceover service.</p>
@@ -896,7 +1379,7 @@ export default function AdCreatorTab() {
                       <Button onClick={handleGenerate} disabled={generating}
                         className="bg-gradient-to-r from-pink-600 to-violet-600 hover:from-pink-500 hover:to-violet-500 text-white font-bold py-3 text-base disabled:opacity-50">
                         {generating
-                          ? <><Loader2 size={18} className="animate-spin mr-2" />{data.format === "video" ? `Recording ${data.duration}s video…` : "Rendering image…"}</>
+                          ? <><Loader2 size={18} className="animate-spin mr-2" />{data.format === "video" ? `Recording ${data.duration}s reel…` : "Rendering image…"}</>
                           : <><Sparkles size={18} className="mr-2" />Generate {data.format === "video" ? "Video Reel" : "Image Ad"}</>}
                       </Button>
                     ) : (
@@ -915,13 +1398,13 @@ export default function AdCreatorTab() {
                     )}
 
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2 text-sm">
-                      <div className="flex justify-between"><span className="text-slate-500">Format</span><span className="text-white capitalize">{data.format === "video" ? `${data.duration}s WebM Video` : "PNG Image"}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Format</span><span className="text-white capitalize">{data.format === "video" ? `${data.duration}s WebM + Audio` : "PNG Image"}</span></div>
                       <div className="flex justify-between"><span className="text-slate-500">Dimensions</span><span className="text-white">540 × 960 px (9:16)</span></div>
                       <div className="flex justify-between"><span className="text-slate-500">Platform</span><span className="text-white">{data.platform}</span></div>
                       <div className="flex justify-between"><span className="text-slate-500">Template</span><span className="text-white capitalize">{data.template}</span></div>
+                      {data.format === "video" && <div className="flex justify-between"><span className="text-slate-500">Audio</span><span className="text-white">Background music + karaoke text</span></div>}
                     </div>
 
-                    {/* Caption quick copy */}
                     {script && (
                       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                         <div className="flex items-center justify-between mb-2">
