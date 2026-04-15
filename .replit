@@ -38,3 +38,8 @@ externalPort = 3000
 [[ports]]
 localPort = 24340
 externalPort = 3002
+
+[userenv]
+
+[userenv.shared]
+VITE_ADOBE_CLIENT_ID = "fab2fd7e44be4de39283bc6a53fccc87"
