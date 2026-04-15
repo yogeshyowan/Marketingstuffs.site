@@ -1517,9 +1517,31 @@ router.post("/ai/yt-coach", async (req, res) => {
 
   const systemMessage: ChatMessage = {
     role: "system",
-    content: `You are YT Growstuffs AI Coach — an expert YouTube growth strategist with deep knowledge of the YouTube algorithm, content strategy, SEO, monetization, audience psychology, and creator business. You have helped thousands of channels grow from 0 to 100k+ subscribers.
+    content: `You are the Marketingstuffs Growth Coach — a world-class digital marketing advisor trained on everything from YouTube basics to advanced full-funnel marketing strategy. You help creators, product sellers, influencers, SaaS founders, eCommerce brands, and service providers scale their business from scratch to 7 figures.
 
-Be conversational, direct, and actionable. Give specific tactics, not generic advice. Use bullet points for lists. Keep responses focused and under 400 words unless a detailed explanation is genuinely needed. Always end with a follow-up question or next step to keep the conversation going.`,
+The user is on Marketingstuffs.site, which has these AI tools you should actively reference and recommend:
+• Blog Writer (#blog-writer) — AI blog post & article generator
+• Website Builder (#website-developer) — 5-step AI website wizard
+• Writing Tools (#writing-tools) — 100+ AI content templates
+• Social Media Manager (#social-media-section) — multi-platform social content
+• YT Growstuffs (#yt-growstuffs) — YouTube growth command center
+• Ad Campaigns (#ad-campaigns) — Google, Facebook, Instagram ad creator
+• Email Marketing (#email-marketing) — email campaign generator
+• SMS Marketing (#sms-marketing) — SMS broadcast creator
+• AI Image Studio (#ai-image) — AI image generation
+• AI Video Studio (#ai-video) — AI video scripts & content
+• AI Voice Studio (#ai-voice) — AI voice generation
+• AI Tools Hub (#ai-tools) — 50+ specialized AI tools
+
+Your growth methodology (basics to advanced):
+1. Foundation — Website + Blog + Brand (use Website Builder, Blog Writer)
+2. Audience — YouTube Shorts → long-form videos → Social Blast (use YT Growstuffs, Social Media)
+3. Capture — Lead magnets + email/SMS list building (use Email Marketing, SMS Marketing)
+4. Sell — Free content → paid product → webinar funnel (use Ad Campaigns, Writing Tools)
+5. Scale — Google Ads + Retargeting + Community + Membership (use Ad Campaigns, AI Tools)
+6. Retain — Email sequences + SMS campaigns + exclusive content (use Email Marketing, SMS Marketing)
+
+When advising: be specific and direct. Always reference which Marketingstuffs tool to use for each action. Use bullet points. Keep responses under 350 words. End with a clear next step or question.`,
   };
 
   try {
@@ -1703,6 +1725,304 @@ Opt-out line to include at end of each SMS: "${optOutLine}"`,
   } catch (err: any) {
     return res.status(500).json({ error: err.message ?? "SMS generation failed" });
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// YT GROWSTUFFS — Digital Marketing Command Center Endpoints
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MARKETINGSTUFFS_TOOLS = `
+Marketingstuffs.site tools the user can access:
+• Blog Writer (#blog-writer) — AI blog post & article writer
+• Website Builder (#website-developer) — 5-step AI website wizard
+• Writing Tools (#writing-tools) — 100+ AI content writing templates
+• Social Media Manager (#social-media-section) — multi-platform social content creator
+• YT Growstuffs (#yt-growstuffs) — YouTube growth command center (this tool)
+• Ad Campaigns (#ad-campaigns) — Google, Facebook, Instagram ad creator
+• Email Marketing (#email-marketing) — email campaign sequence generator
+• SMS Marketing (#sms-marketing) — SMS broadcast campaign creator
+• AI Image Studio (#ai-image) — AI image & visual generation
+• AI Video Studio (#ai-video) — AI video script & content generator
+• AI Voice Studio (#ai-voice) — AI voice generation
+• AI Tools Hub (#ai-tools) — 50+ specialized AI productivity tools
+`;
+
+// ── Growth Advisor (Personalized Roadmap) ─────────────────────────────────────
+router.post("/ai/yt-growth-advisor", async (req, res) => {
+  const { name, businessType, businessLabel, goal } = req.body as {
+    name: string; businessType: string; businessLabel: string; goal: string;
+  };
+  if (!businessType) return res.status(400).json({ error: "businessType required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are the Marketingstuffs Digital Marketing Growth Advisor. You create personalized, step-by-step marketing roadmaps for users based on their business type, following a complete digital marketing methodology from basics to advanced.
+
+${MARKETINGSTUFFS_TOOLS}
+
+Digital Marketing Growth Methodology (ALWAYS follow this order):
+Phase 1 - Foundation: Website + Blog + Brand identity
+Phase 2 - Audience: YouTube Shorts → long-form videos → Social Media
+Phase 3 - Capture: Lead magnets + Email list + SMS subscribers
+Phase 4 - Sell: Free content → Paid product → Webinar funnel
+Phase 5 - Advertise: Google Ads + Facebook/Instagram Ads + YouTube Ads
+Phase 6 - Scale: Retargeting + Community + Membership + Partnerships
+
+Generate a personalized 10-step roadmap. Return ONLY valid JSON (no markdown):
+{
+  "greeting": "string (warm, personalized 2-sentence welcome using their name and business type)",
+  "businessSummary": "string (what success looks like in 12 months for their specific business type — be concrete and inspiring)",
+  "steps": [
+    {
+      "step": number,
+      "phase": "string (Foundation|Audience|Capture|Sell|Advertise|Scale)",
+      "title": "string (action-oriented, specific step title)",
+      "description": "string (2-3 sentences on exactly what to do in this step for their business type)",
+      "action": "string (single most important immediate action — be very specific, e.g. 'Use the Blog Writer to write 3 SEO-optimized articles about your niche')",
+      "tools": [
+        {
+          "name": "string (exact tool name from the list above)",
+          "anchor": "string (exact anchor like #blog-writer)",
+          "reason": "string (1 sentence on why this specific tool for this step)"
+        }
+      ],
+      "timeline": "string (e.g. 'Day 1–3', 'Week 1', 'Month 2')",
+      "metric": "string (how to know this step is done, e.g. '5 blog posts published')"
+    }
+  ],
+  "quickWin": "string (one thing they can do in the next 30 minutes on Marketingstuffs to make immediate progress)",
+  "warningSign": "string (the #1 mistake people with this exact business type make that kills their growth — be specific)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Name: ${name || "there"}\nBusiness Type: ${businessLabel || businessType}\nPrimary Goal: ${goal || "build audience and generate revenue"}`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Channel & Content Analyzer ────────────────────────────────────────────────
+router.post("/ai/yt-channel-analyzer", async (req, res) => {
+  const { channelName, niche, views, ctr, watchTime, likes, comments, subscribers, videoTitle } = req.body as {
+    channelName?: string; niche: string; views?: string; ctr?: string;
+    watchTime?: string; likes?: string; comments?: string; subscribers?: string; videoTitle?: string;
+  };
+  if (!niche) return res.status(400).json({ error: "niche required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a YouTube and digital marketing performance analyst. Analyze the given channel metrics, diagnose specific problems, and recommend which Marketingstuffs tools to use to fix each problem.
+
+${MARKETINGSTUFFS_TOOLS}
+
+Industry benchmarks:
+- Good CTR: 6–10% | Low: <4% | Excellent: >10%
+- Good Watch Time: 50–70% | Low: <40%
+- Engagement Rate (likes+comments/views): Good: 4–8% | Low: <2%
+- Subscriber conversion (subscribers/views): Good: 2–5% | Low: <1%
+
+Return ONLY valid JSON (no markdown):
+{
+  "overallHealth": "string (Excellent|Good|Needs Work|Critical)",
+  "healthScore": number (0–100),
+  "summary": "string (2-3 sentence overall diagnosis)",
+  "issues": [
+    {
+      "area": "string (e.g. 'Low CTR', 'Poor Watch Retention', 'No Email Capture')",
+      "severity": "string (Critical|High|Medium|Low)",
+      "diagnosis": "string (why this is happening — be specific and educational)",
+      "fix": "string (exact step to fix this problem)",
+      "tools": [
+        {"name": "string", "anchor": "string (#anchor)", "reason": "string"}
+      ]
+    }
+  ],
+  "strengths": ["string",...up to 3 things they're doing well],
+  "topPriority": "string (the single most important thing to fix first and why)",
+  "contentStrategy": "string (3-4 sentences on what type of content they should focus on based on their niche and metrics)",
+  "adReadiness": "string (whether they're ready to run YouTube/Facebook ads and what they need to do first)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Channel: ${channelName || "Not specified"}\nNiche: ${niche}\nVideo Title: ${videoTitle || "Not specified"}\nViews: ${views || "Not specified"}\nCTR: ${ctr || "Not specified"}%\nWatch Time: ${watchTime || "Not specified"}%\nLikes: ${likes || "Not specified"}\nComments: ${comments || "Not specified"}\nNew Subscribers: ${subscribers || "Not specified"}\n\nAnalyze these metrics, identify problems, and recommend specific Marketingstuffs tools to fix each issue.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Full-Funnel Content Machine ───────────────────────────────────────────────
+router.post("/ai/yt-content-machine", async (req, res) => {
+  const { niche, product, audience, goal } = req.body as {
+    niche: string; product?: string; audience?: string; goal?: string;
+  };
+  if (!niche) return res.status(400).json({ error: "niche required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a full-funnel digital marketing content strategist. Create a complete content plan that turns a creator/business from unknown to selling — using every content channel available.
+
+${MARKETINGSTUFFS_TOOLS}
+
+Return ONLY valid JSON (no markdown):
+{
+  "funnelOverview": "string (3-sentence explanation of how this funnel works for their specific niche + product)",
+  "youtube": {
+    "videos": [
+      {"title": "string", "type": "string (Short|Long-form)", "purpose": "string (Awareness|Education|Trust|Sale)", "hook": "string (first line)", "cta": "string"}
+    ],
+    "toolLink": {"name": "AI Video Studio", "anchor": "#ai-video"}
+  },
+  "blog": {
+    "posts": [
+      {"title": "string (SEO-optimized)", "keyword": "string", "purpose": "string", "outline": ["string",...3-4 points]}
+    ],
+    "toolLink": {"name": "Blog Writer", "anchor": "#blog-writer"}
+  },
+  "social": {
+    "instagramThemes": ["string",...3 themes],
+    "linkedinAngle": "string",
+    "twitterSeries": "string (thread series concept)",
+    "toolLink": {"name": "Social Media Manager", "anchor": "#social-media-section"}
+  },
+  "email": {
+    "sequences": [
+      {"name": "string (sequence name)", "trigger": "string (when sent)", "emails": number, "goal": "string"}
+    ],
+    "toolLink": {"name": "Email Marketing", "anchor": "#email-marketing"}
+  },
+  "sms": {
+    "campaigns": [
+      {"type": "string", "timing": "string", "goal": "string"}
+    ],
+    "toolLink": {"name": "SMS Marketing", "anchor": "#sms-marketing"}
+  },
+  "ads": {
+    "googleConcept": "string (search ad angle for this niche)",
+    "facebookConcept": "string (ad concept + targeting)",
+    "youtubeConcept": "string (video ad concept)",
+    "toolLink": {"name": "Ad Campaigns", "anchor": "#ad-campaigns"}
+  },
+  "weeklySchedule": "string (day-by-day content posting schedule for week 1)",
+  "conversionPath": "string (the exact journey: from first YouTube video to paid customer — describe each touchpoint)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service: ${product || "Not specified yet"}\nTarget Audience: ${audience || "General"}\nGoal: ${goal || "Build audience and generate revenue"}\n\nCreate a complete multi-channel content machine. Be specific to this niche — not generic. Include exactly what to write/create in each channel.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Webinar Funnel ────────────────────────────────────────────────────────────
+router.post("/ai/yt-webinar", async (req, res) => {
+  const { topic, product, audience, niche } = req.body as {
+    topic: string; product?: string; audience?: string; niche?: string;
+  };
+  if (!topic) return res.status(400).json({ error: "topic required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a webinar marketing expert. Design a complete webinar promotion and execution plan that drives registrations, attendance, and sales.
+
+${MARKETINGSTUFFS_TOOLS}
+
+Return ONLY valid JSON (no markdown):
+{
+  "webinarTitle": "string (compelling, benefit-focused title using the '3 secrets to X' or 'How to X without Y' formula)",
+  "hook": "string (2-sentence opening that hooks attendees in the first 30 seconds)",
+  "agenda": [
+    {"minute": "string (e.g. '0-5 min')", "topic": "string", "purpose": "string (Intro|Value|Pitch|Q&A)"}
+  ],
+  "promotion": {
+    "youtube": {"videoTitle": "string (YT video to promote webinar)", "timing": "string (when to post)", "toolLink": {"name": "AI Video Studio", "anchor": "#ai-video"}},
+    "blog": {"postTitle": "string", "toolLink": {"name": "Blog Writer", "anchor": "#blog-writer"}},
+    "social": {"postAngle": "string (organic social strategy)", "toolLink": {"name": "Social Media Manager", "anchor": "#social-media-section"}},
+    "email": {"subject": "string (registration email subject)", "sequence": "string (3-email sequence overview)", "toolLink": {"name": "Email Marketing", "anchor": "#email-marketing"}},
+    "sms": {"message": "string (reminder SMS, under 160 chars)", "toolLink": {"name": "SMS Marketing", "anchor": "#sms-marketing"}},
+    "ads": {"concept": "string (Facebook/YouTube ad to drive registrations)", "toolLink": {"name": "Ad Campaigns", "anchor": "#ad-campaigns"}}
+  },
+  "pitch": {
+    "timing": "string (when to pitch product in the webinar)",
+    "script": "string (2-3 sentence transition from value to pitch)",
+    "offer": "string (what special offer to make during the webinar)",
+    "urgency": "string (how to create urgency)"
+  },
+  "followUp": {"email24h": "string (subject line + 1-sentence summary of replay email)", "sms": "string (replay SMS)", "toolLinks": [{"name": "string", "anchor": "string"}]}
+}`,
+      },
+      {
+        role: "user",
+        content: `Webinar Topic: ${topic}\nProduct to sell: ${product || "Not specified"}\nTarget Audience: ${audience || "General"}\nNiche: ${niche || "General"}\n\nCreate a complete webinar system — from planning to promotion to follow-up — using Marketingstuffs tools at each stage.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Revenue Scale Plan (Free→Paid→Membership) ────────────────────────────────
+router.post("/ai/yt-scale-plan", async (req, res) => {
+  const { niche, product, currentRevenue, targetRevenue, businessType } = req.body as {
+    niche: string; product?: string; currentRevenue?: string; targetRevenue?: string; businessType?: string;
+  };
+  if (!niche) return res.status(400).json({ error: "niche required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a digital business revenue scaling expert. Create a complete 3-phase revenue roadmap from free content creator to monetized business using all available marketing tools.
+
+${MARKETINGSTUFFS_TOOLS}
+
+Return ONLY valid JSON (no markdown):
+{
+  "currentState": "string (honest assessment of where they likely are based on their inputs)",
+  "targetState": "string (what achieving target revenue looks like — concrete and specific)",
+  "phases": [
+    {
+      "phase": number,
+      "name": "string (e.g. 'Free Content Machine', 'First ₹1L Revenue', 'Scale to ₹10L/month')",
+      "duration": "string (e.g. 'Month 1–2')",
+      "monthlyRevenueTarget": "string",
+      "strategies": [
+        {
+          "strategy": "string (specific action)",
+          "description": "string (how to execute)",
+          "tools": [{"name": "string", "anchor": "string (#anchor)", "reason": "string"}]
+        }
+      ],
+      "milestone": "string (what success looks like at the end of this phase)"
+    }
+  ],
+  "revenueStreams": [
+    {"stream": "string (e.g. YouTube AdSense, Digital Products, Consulting)", "potential": "string (monthly estimate)", "tools": [{"name": "string", "anchor": "string"}], "howToStart": "string"}
+  ],
+  "adStrategy": {"whenToStart": "string (when they're ready for paid ads)", "budget": "string (recommended starting budget)", "platform": "string (which ad platform first and why)", "toolLink": {"name": "Ad Campaigns", "anchor": "#ad-campaigns"}},
+  "yearOneProjection": "string (realistic 12-month revenue projection based on their inputs)",
+  "biggestLever": "string (the single highest-impact action they can take right now to accelerate revenue)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service: ${product || "Not launched yet"}\nCurrent Revenue: ${currentRevenue || "₹0 (just starting)"}\nRevenue Target: ${targetRevenue || "₹1,00,000/month"}\nBusiness Type: ${businessType || "Content creator"}\n\nCreate a realistic, phased revenue scaling plan using Marketingstuffs tools. Include specific YouTube Ads and Google Ads strategy.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
