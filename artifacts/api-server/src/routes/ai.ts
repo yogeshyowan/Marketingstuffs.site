@@ -924,4 +924,44 @@ router.post("/ai/pinterest-post", async (req, res) => {
   } catch (err) { send({ error: err instanceof Error ? err.message : "Failed" }); res.end(); }
 });
 
+// POST /api/ai/generate-ad-script  (JSON, not SSE)
+// ───────────────────────────────────────────────
+router.post("/ai/generate-ad-script", async (req, res) => {
+  const { brandName = "", productName = "", keyMessage = "", cta = "", platform = "Instagram", objective = "product", format = "image" } = req.body as Record<string, string>;
+  if (!brandName || !keyMessage) { res.status(400).json({ error: "brandName and keyMessage are required" }); return; }
+  try {
+    let fullText = "";
+    await streamWithFallback([
+      { role: "system", content: `You are an elite advertising copywriter specialising in short-form social media ads. Always respond with ONLY valid JSON. No markdown, no code fences, no explanation.` },
+      { role: "user", content: `Create a complete ad script for:
+Brand: ${brandName}
+Product/Service: ${productName || brandName}
+Key Message: ${keyMessage}
+Call to Action: ${cta || "Learn More"}
+Platform: ${platform}
+Objective: ${objective}
+Format: ${format}
+
+Return ONLY this JSON object:
+{
+  "headline": "Bold punchy 5-8 word headline",
+  "tagline": "Supporting 10-15 word tagline",
+  "caption": "Complete platform-native caption with emojis, 80-120 words",
+  "voiceover": "Natural engaging voiceover script 20-40 seconds when read aloud",
+  "hashtags": ["#tag1","#tag2","#tag3","#tag4","#tag5","#tag6","#tag7","#tag8"]
+}` },
+    ], (c) => { fullText += c; }, () => {}, 1200);
+    try {
+      const clean = fullText.replace(/```json|```/g, "").trim();
+      const start = clean.indexOf("{"); const end = clean.lastIndexOf("}");
+      const parsed = JSON.parse(clean.slice(start, end + 1));
+      res.json({ ok: true, script: parsed });
+    } catch {
+      res.status(500).json({ error: "AI returned malformed JSON. Please retry." });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 export default router;

@@ -6,9 +6,10 @@ import {
   Wrench, Loader2, Copy, Check, ChevronLeft, ChevronRight, Trash2,
   Clock, Send, Sparkles, Download, Upload, Zap,
   BookOpen, Edit3, CheckCircle2, AlertCircle, Link2, Search,
-  ListOrdered, Users, RefreshCw,
+  ListOrdered, Users, RefreshCw, Clapperboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AdCreatorTab from "@/components/AdCreatorTab";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ interface MediaItem {
   addedAt: string;
 }
 
-type Tab = "accounts" | "create" | "calendar" | "dashboard" | "hashtags" | "tools" | "media" | "analytics";
+type Tab = "accounts" | "create" | "adcreator" | "calendar" | "dashboard" | "hashtags" | "tools" | "media" | "analytics";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -85,14 +86,15 @@ const AI_TOOLS = [
 ];
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "accounts",  label: "Connect Accounts", icon: <Link2 size={16} /> },
-  { id: "create",    label: "Create Post",      icon: <Plus size={16} /> },
-  { id: "calendar",  label: "Calendar",         icon: <Calendar size={16} /> },
-  { id: "dashboard", label: "Dashboard",        icon: <ListOrdered size={16} /> },
-  { id: "hashtags",  label: "Hashtag Manager",  icon: <Hash size={16} /> },
-  { id: "tools",     label: "AI Tools Hub",     icon: <Wrench size={16} /> },
-  { id: "media",     label: "Media Library",    icon: <ImageIcon size={16} /> },
-  { id: "analytics", label: "Analytics",        icon: <BarChart2 size={16} /> },
+  { id: "accounts",   label: "Connect Accounts", icon: <Link2 size={16} /> },
+  { id: "create",     label: "Create Post",      icon: <Plus size={16} /> },
+  { id: "adcreator",  label: "Ad Creator",       icon: <Clapperboard size={16} /> },
+  { id: "calendar",   label: "Calendar",         icon: <Calendar size={16} /> },
+  { id: "dashboard",  label: "Dashboard",        icon: <ListOrdered size={16} /> },
+  { id: "hashtags",   label: "Hashtag Manager",  icon: <Hash size={16} /> },
+  { id: "tools",      label: "AI Tools Hub",     icon: <Wrench size={16} /> },
+  { id: "media",      label: "Media Library",    icon: <ImageIcon size={16} /> },
+  { id: "analytics",  label: "Analytics",        icon: <BarChart2 size={16} /> },
 ];
 
 // ── SSE streaming helper ──────────────────────────────────────────────────────
@@ -207,14 +209,15 @@ export default function SocialMediaSection() {
       <div className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-            {tab === "accounts"  && <ConnectAccounts accounts={accounts} onUpdate={setAccounts} onNext={() => setTab("create")} />}
-            {tab === "create"    && <CreatePost onSave={addPost} connectedPlatforms={accounts.filter(a => a.connected).map(a => a.id)} />}
-            {tab === "calendar"  && <ContentCalendar posts={posts} onSchedule={addPost} />}
-            {tab === "dashboard" && <PostDashboard posts={posts} onDelete={deletePost} onUpdate={updatePost} onDuplicate={duplicatePost} />}
-            {tab === "hashtags"  && <HashtagMgr sets={hashtagSets} onUpdate={setHashtagSets} />}
-            {tab === "tools"     && <AIToolsHub />}
-            {tab === "media"     && <MediaLib items={media} onUpdate={setMedia} />}
-            {tab === "analytics" && <Analytics posts={posts} />}
+            {tab === "accounts"   && <ConnectAccounts accounts={accounts} onUpdate={setAccounts} onNext={() => setTab("create")} />}
+            {tab === "create"     && <CreatePost onSave={addPost} connectedPlatforms={accounts.filter(a => a.connected).map(a => a.id)} />}
+            {tab === "adcreator"  && <AdCreatorTab />}
+            {tab === "calendar"   && <ContentCalendar posts={posts} onSchedule={addPost} />}
+            {tab === "dashboard"  && <PostDashboard posts={posts} onDelete={deletePost} onUpdate={updatePost} onDuplicate={duplicatePost} />}
+            {tab === "hashtags"   && <HashtagMgr sets={hashtagSets} onUpdate={setHashtagSets} />}
+            {tab === "tools"      && <AIToolsHub />}
+            {tab === "media"      && <MediaLib items={media} onUpdate={setMedia} />}
+            {tab === "analytics"  && <Analytics posts={posts} />}
           </motion.div>
         </AnimatePresence>
       </div>
