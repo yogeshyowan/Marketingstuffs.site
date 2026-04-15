@@ -52,7 +52,32 @@ meta-llama/llama-3.3-70b-instruct:free
 
 All SSE endpoints: `res.flushHeaders()` immediately + `: ping` heartbeat every 8s to prevent proxy timeout.
 
-## Frontend Features
+## Frontend Features (updated April 2026)
+
+### Image Library (`ImageLibrary.tsx`)
+- 10 categories × 12 curated prompts = 120 pre-defined Pollinations.ai images
+- Categories: Business & Marketing, Social Media, Blog & Content, Product Photography, People & Portraits, Nature & Travel, Technology & AI, Abstract & Backgrounds, Food & Lifestyle, Education & Learning
+- Custom image generator (free-text prompt → Pollinations.ai → displayed inline)
+- Image lightbox: view full-size, edit prompt, regenerate with new seed, copy URL, download
+- Search across all images by label or prompt text
+- Lazy-loaded image cards with hover overlay (copy URL / download buttons)
+- Mounted in Home.tsx at `<ImageLibrary />` with nav anchor `#image-library`
+
+### Media Library (`MediaLibrary.tsx`)
+- localStorage-based saved content hub (`marketingstuffs_media_library`, max 200 items)
+- Exported helper: `saveToMediaLibrary(toolName, toolEmoji, category, content)` called from WritingToolsSection
+- Features: search, star/unstar, filter starred, bulk export (TXT download), delete individual, clear all
+- Full-screen view modal for any saved item with copy-all and delete
+- Mounted in Home.tsx at `<MediaLibrary />` with nav anchor `#media-library`
+
+### Writing Tools — Template Examples
+- `TEMPLATES` record in `WritingToolsSection.tsx` with 2–3 quick-fill examples for 30+ key tools
+- Each tool modal shows a "Quick examples" bar (below header, above form) with clickable template pills
+- Clicking a template auto-fills all form fields so users can generate with one more click
+- "Save to Library" button appears in the output panel after content is generated → calls `saveToMediaLibrary()`
+- "Save" button shows green "Saved!" confirmation for 2.5s after clicking
+
+
 
 ### Blog Writer (6-step wizard)
 1. Template (4 templates with mini-previews)

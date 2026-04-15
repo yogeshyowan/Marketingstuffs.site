@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search } from "lucide-react";
+import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search, BookmarkPlus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { saveToMediaLibrary } from "@/components/MediaLibrary";
 
 // ── Field types ───────────────────────────────────────────────
 interface ChipField     { type: "chips";    id: string; label: string; options: string[]; }
@@ -32,6 +33,140 @@ async function streamTool(sys: string, usr: string, onChunk: (t: string) => void
     }
   }
 }
+
+// ── Template examples (quick-fill for each tool) ─────────────
+// Each template: { label, values: Record<fieldId, value> }
+interface TemplateExample { label: string; values: Record<string, string>; }
+const TEMPLATES: Record<string, TemplateExample[]> = {
+  "blog-generator": [
+    { label: "10 ways to grow Instagram", values: { topic: "10 proven ways to grow your Instagram following organically in 2025", keywords: "grow instagram, instagram followers, organic growth", tone: "Casual", length: "Medium (~1000w)" } },
+    { label: "Beginner guide to investing", values: { topic: "The Complete Beginner's Guide to Stock Market Investing in 2025", keywords: "stock market, investing for beginners, how to invest", tone: "Friendly", length: "Long (~2000w)" } },
+    { label: "Remote work productivity", values: { topic: "7 Proven Productivity Hacks for Remote Workers That Actually Work", keywords: "remote work, work from home, productivity tips", tone: "Professional", length: "Medium (~1000w)" } },
+  ],
+  "blog-titles": [
+    { label: "Email marketing blog", values: { topic: "email marketing tips for small businesses", audience: "small business owners", style: "Listicle", count: "10 Titles" } },
+    { label: "Weight loss content", values: { topic: "how to lose weight without going to the gym", audience: "busy parents", style: "How-To", count: "10 Titles" } },
+    { label: "Side hustle ideas", values: { topic: "side hustle ideas to make extra money online", audience: "millennials looking for extra income", style: "Curiosity-Gap", count: "10 Titles" } },
+  ],
+  "blog-outline": [
+    { label: "SEO for beginners", values: { topic: "The Complete Beginner's Guide to SEO in 2025", keywords: "SEO for beginners", type: "Ultimate Guide" } },
+    { label: "Email marketing guide", values: { topic: "Email Marketing 101: Everything You Need to Know", keywords: "email marketing guide", type: "How-To Guide" } },
+  ],
+  "keyword-generator": [
+    { label: "Digital marketing keywords", values: { topic: "digital marketing", audience: "small business owners", count: "20 Keywords" } },
+    { label: "Fitness keywords", values: { topic: "weight loss for women", audience: "women 30-45", count: "20 Keywords" } },
+    { label: "Tech startup keywords", values: { topic: "SaaS project management", audience: "startup founders", count: "20 Keywords" } },
+  ],
+  "meta-title-desc": [
+    { label: "Dropshipping guide page", values: { topic: "How to Start a Dropshipping Business in 2025 — Complete Guide", keyword: "start dropshipping business", count: "5 Variations" } },
+    { label: "Social media marketing page", values: { topic: "Social Media Marketing Services for Small Businesses", keyword: "social media marketing agency", count: "5 Variations" } },
+  ],
+  "instagram-caption": [
+    { label: "Morning coffee routine", values: { post: "morning coffee and journaling routine — sharing my productive morning ritual", brand: "wellness lifestyle creator", tone: "Inspiring" } },
+    { label: "Product launch", values: { post: "launching my new online course on email marketing after 6 months of work", brand: "digital marketing coach", tone: "Authentic" } },
+    { label: "Fitness transformation", values: { post: "3 month fitness transformation — down 18lbs and feeling incredible", brand: "fitness influencer", tone: "Storytelling" } },
+  ],
+  "instagram-hashtags": [
+    { label: "Fitness content", values: { topic: "home workout and fitness transformation", account: "fitness influencer, 10k followers", type: "Reel" } },
+    { label: "Food blogging", values: { topic: "healthy meal prep recipes for beginners", account: "food blogger, 5k followers", type: "Photo post" } },
+    { label: "Business coaching", values: { topic: "entrepreneurship and business mindset", account: "business coach, 25k followers", type: "Carousel" } },
+  ],
+  "facebook-post": [
+    { label: "Engagement post", values: { topic: "What's the one habit that changed your life? Mine was waking up at 5am", brand: "Mindset Mastery Community", goal: "Engagement & comments" } },
+    { label: "Product announcement", values: { topic: "launching our new AI writing tool — 50% off for the first 100 customers", brand: "WriteFast AI", goal: "Promote product" } },
+  ],
+  "linkedin-post": [
+    { label: "Career lesson story", values: { topic: "3 lessons I learned after failing my first startup that no one talks about", role: "Serial entrepreneur & startup advisor", style: "Personal story" } },
+    { label: "Industry insight", values: { topic: "AI is replacing 30% of marketing jobs — here's what to do instead", role: "Marketing Director at Fortune 500", style: "Contrarian take" } },
+    { label: "Practical tips", values: { topic: "5 LinkedIn profile tweaks that got me 300% more recruiter messages", role: "Career coach helping professionals get hired faster", style: "Practical tips" } },
+  ],
+  "twitter-post": [
+    { label: "Productivity thread", values: { topic: "10 productivity frameworks that made me 5x more effective (most people only know 2)", format: "Thread (10 tweets)", tone: "Informative" } },
+    { label: "Bold take", values: { topic: "The 4-hour workweek is mostly BS — here's what actually works", format: "Single tweet", tone: "Controversial" } },
+  ],
+  "hook-generator": [
+    { label: "YouTube hook", values: { topic: "How I made $50,000 in my first year on YouTube with only 1,000 subscribers", platform: "YouTube", style: "Story opener" } },
+    { label: "Email hook", values: { topic: "The simple email strategy that tripled my open rates in 30 days", platform: "Email", style: "Bold statement" } },
+  ],
+  "email-subject-lines": [
+    { label: "Black Friday sale", values: { email: "Black Friday Sale — 60% off all products for 24 hours only", brand: "ShopFast", style: "Urgency", count: "15 Lines" } },
+    { label: "Newsletter welcome", values: { email: "Welcome to the newsletter — here's what you get every week", brand: "The Growth Weekly", style: "Curiosity", count: "10 Lines" } },
+  ],
+  "cold-email": [
+    { label: "SaaS to agencies", values: { offer: "AI social media scheduling tool that saves agencies 10 hours per week on content management", prospect: "marketing agency owners with 3-20 employees", goal: "Book a demo", tone: "Professional" } },
+    { label: "Freelancer outreach", values: { offer: "freelance copywriting services specializing in email sequences for SaaS companies", prospect: "SaaS founders and marketing managers", goal: "Schedule a call", tone: "Casual & Direct" } },
+  ],
+  "facebook-ad-copy": [
+    { label: "Online course ad", values: { product: "12-week online digital marketing course for beginners", audience: "people looking to switch careers to digital marketing, 25-40 years old", offer: "Enroll now — first 50 students get 40% off + bonus coaching call" } },
+    { label: "SaaS tool ad", values: { product: "AI writing assistant for content marketers", audience: "content marketers, bloggers, copywriters who write 5+ hours daily", offer: "Start free 14-day trial — no credit card required" } },
+  ],
+  "google-ad-copy": [
+    { label: "Project management tool", values: { product: "cloud-based project management software", keyword: "project management tool for small teams", usp: "saves 5 hours/week, visual kanban boards, free forever plan" } },
+    { label: "Accounting software", values: { product: "small business accounting software", keyword: "accounting software small business", usp: "syncs with your bank, 30-second invoicing, 10k+ customers" } },
+  ],
+  "code-generator": [
+    { label: "API rate limiter", values: { description: "A Node.js Express middleware function that rate-limits API requests to 100 per minute per IP address, storing counts in Redis with auto-reset", language: "JavaScript", style: "Production-ready" } },
+    { label: "CSV to JSON parser", values: { description: "A Python function that reads a CSV file, converts it to a list of JSON objects with proper type inference (numbers, booleans, dates), and handles missing values", language: "Python", style: "Clean & commented" } },
+    { label: "Email validator", values: { description: "A TypeScript function that validates email addresses using regex and checks MX records, returning detailed validation result object", language: "TypeScript", style: "Clean & commented" } },
+  ],
+  "code-explainer": [
+    { label: "Explain async/await", values: { code: "async function fetchUserData(userId) {\n  try {\n    const response = await fetch(`/api/users/${userId}`);\n    if (!response.ok) throw new Error('User not found');\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('Failed:', error);\n    return null;\n  }\n}", level: "Beginner (simple language)" } },
+  ],
+  "essay-writer": [
+    { label: "Social media mental health", values: { topic: "The impact of social media on mental health in teenagers", type: "Argumentative", length: "Medium (600-900w)" } },
+    { label: "Climate change essay", values: { topic: "Why individuals have a moral responsibility to take action on climate change", type: "Persuasive", length: "Long (1000-1500w)" } },
+  ],
+  "text-improver": [
+    { label: "Improve a bio", values: { text: "I am a digital marketer with 5 years of experience. I help businesses grow their online presence. I have worked with many clients and I am good at SEO and social media.", focus: "All improvements" } },
+    { label: "Improve a product description", values: { text: "Our coffee is really good. It comes from Colombia. We roast it carefully. You will like the taste. Buy it now.", focus: "Stronger vocabulary" } },
+  ],
+  "product-description": [
+    { label: "Standing desk converter", values: { product: "ErgoFlex Pro Standing Desk Converter", features: "• Height adjustable (6 to 16 inches)\n• Fits desks up to 48 inches wide\n• Built-in cable management tray\n• 35lb weight capacity\n• Anti-slip mat included\n• Easy one-hand adjustment", audience: "remote workers, people with back pain, office professionals", platform: "Amazon listing" } },
+    { label: "Skincare serum", values: { product: "Glow24 Vitamin C Brightening Serum", features: "• 20% Vitamin C concentration\n• Hyaluronic acid for hydration\n• SPF free (use with sunscreen)\n• Cruelty-free, vegan formula\n• Reduces dark spots in 4 weeks\n• Fragrance-free", audience: "women 25-45 with dark spots, uneven skin tone, dull skin", platform: "Shopify/eCommerce" } },
+  ],
+  "resume-writer": [
+    { label: "Marketing manager resume", values: { role: "Digital Marketing Manager", experience: "5 years at TechStartup Inc. as Marketing Coordinator, then Senior Coordinator. Grew organic traffic from 10K to 150K monthly visitors, managed $200K ad budget, led team of 5, launched 3 successful product campaigns", skills: "SEO, Google Analytics, HubSpot, content strategy, PPC advertising, email marketing, team leadership" } },
+  ],
+  "job-description": [
+    { label: "Senior Product Manager", values: { role: "Senior Product Manager", company: "CloudSoft — B2B SaaS startup, Series A, 80 employees, building HR automation software", requirements: "5+ years product management experience in B2B SaaS, strong data analytics skills (SQL a plus), experience with Agile/Scrum, proven track record launching successful products, excellent stakeholder communication" } },
+  ],
+  "business-name-generator": [
+    { label: "Eco pet food", values: { industry: "organic sustainable pet food delivery service", keywords: "eco, fresh, paw, green, natural, pet", style: "Modern & Tech", count: "10 Names" } },
+    { label: "AI writing tool", values: { industry: "AI-powered writing and content creation tool", keywords: "write, ai, smart, create, fast, content", style: "Bold & Energetic", count: "10 Names" } },
+  ],
+  "landing-page-copy": [
+    { label: "Email marketing SaaS", values: { product: "Email marketing automation software for e-commerce stores", audience: "Shopify store owners doing $5K-$50K monthly revenue", offer: "Start free 30-day trial — no credit card, setup in 5 minutes" } },
+    { label: "Online course platform", values: { product: "Online course creation platform for coaches and educators", audience: "Coaches, consultants, and subject matter experts who want to monetize their knowledge", offer: "Create your first course free — upgrade when you're ready to sell" } },
+  ],
+  "explainer-video-script": [
+    { label: "Expense tracking app", values: { product: "AI-powered expense tracking app for freelancers and solopreneurs", audience: "freelancers who lose track of expenses and miss tax deductions", duration: "90 seconds" } },
+    { label: "Project management tool", values: { product: "visual project management tool that replaces spreadsheets for remote teams", audience: "remote team managers frustrated with email chains and missed deadlines", duration: "2 minutes" } },
+  ],
+  "travel-itinerary": [
+    { label: "7 days in Japan", values: { destination: "Tokyo and Kyoto, Japan for 7 days", preferences: "love Japanese food and culture, want to avoid tourist traps, mix of traditional and modern, moderate budget $100-150/day", style: "Cultural" } },
+    { label: "5 days Bali", values: { destination: "Bali, Indonesia for 5 days", preferences: "beach, temples, yoga, healthy food, Airbnb stays, adventurous but also relaxing", style: "Adventure" } },
+  ],
+  "quiz-generator": [
+    { label: "Marketing knowledge quiz", values: { topic: "Digital Marketing Fundamentals — SEO, Social Media, Email Marketing", type: "Multiple choice (MCQ)", difficulty: "Medium", count: "10 Questions" } },
+    { label: "Python quiz", values: { topic: "Python Programming Basics — variables, loops, functions, lists", type: "Mixed format", difficulty: "Easy", count: "10 Questions" } },
+  ],
+  "book-title-generator": [
+    { label: "Self-help memoir", values: { idea: "A memoir about overcoming addiction and rebuilding a successful career in tech", genre: "Non-fiction", count: "10 Titles" } },
+    { label: "Business book", values: { idea: "A guide to building a 7-figure online business while working only 4 hours a day", genre: "Business", count: "10 Titles" } },
+  ],
+  "tagline-generator": [
+    { label: "Eco water bottles", values: { brand: "EcoBottle — sustainable stainless steel water bottles replacing single-use plastic", values: "sustainability, durability, design, reduce plastic waste, hydration", style: "Short & punchy (2-4 words)" } },
+    { label: "AI writing tool", values: { brand: "WriteFast AI — AI writing assistant for marketers", values: "speed, quality, creativity, professional content, save time", style: "Benefit-focused" } },
+  ],
+  "thank-you-note": [
+    { label: "After job interview", values: { occasion: "job interview for Senior Product Manager role at Google — had great conversation about their AI roadmap", person: "Sarah Chen, VP of Product — interviewed me for 45 minutes, very engaged and shared company vision", tone: "Professional" } },
+    { label: "Client appreciation", values: { occasion: "client renewed their contract for the 3rd year and referred two new clients to us", person: "Michael Thompson, long-term client and advocate for our agency", tone: "Warm & personal" } },
+  ],
+  "shorts-reels-script": [
+    { label: "Productivity tip reel", values: { topic: "The 2-minute rule that eliminated my procrastination forever", platform: "Instagram Reels", style: "Educational tip" } },
+    { label: "Business advice short", values: { topic: "I make $30k/month online — here's the one skill that made it possible", platform: "YouTube Shorts", style: "Personal story" } },
+  ],
+};
 
 // ── Tool definitions ─────────────────────────────────────────
 const TOOLS: ToolDef[] = [
@@ -1572,12 +1707,20 @@ function FieldRenderer({ field, value, onChange }: { field:FieldDef; value:strin
 function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
   const [fields, setFields] = useState<Record<string,string>>({});
   const [output, setOutput] = useState(""); const [loading, setLoading] = useState(false); const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const outputRef = useRef<HTMLTextAreaElement>(null);
   const setField = useCallback((id:string,val:string)=>setFields(prev=>({...prev,[id]:val})),[]);
 
+  const toolTemplates = TEMPLATES[tool.id] || [];
+
+  const applyTemplate = (tmpl: TemplateExample) => {
+    setFields(tmpl.values);
+    setOutput("");
+  };
+
   const generate = async () => {
     if (!fields[tool.fields[0].id]?.trim()) return;
-    setLoading(true); setOutput("");
+    setLoading(true); setOutput(""); setSaved(false);
     try {
       await streamTool(tool.systemPrompt, tool.buildUserPrompt(fields), chunk=>{
         setOutput(prev=>{
@@ -1590,6 +1733,12 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
     finally { setLoading(false); }
   };
 
+  const saveToLib = () => {
+    if (!output) return;
+    saveToMediaLibrary(tool.name, tool.emoji, tool.category, output);
+    setSaved(true); setTimeout(() => setSaved(false), 2500);
+  };
+
   const canGenerate = !!fields[tool.fields[0].id]?.trim();
 
   return (
@@ -1598,6 +1747,7 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
       onClick={e=>{if(e.target===e.currentTarget) onClose();}}>
       <motion.div initial={{opacity:0,y:40}} animate={{opacity:1,y:0}} exit={{opacity:0,y:40}} transition={{type:"spring",damping:25,stiffness:300}}
         className="relative w-full max-w-5xl max-h-[92vh] bg-[#0d0d1f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        {/* Header */}
         <div className="flex items-center gap-4 px-6 py-4 border-b border-white/8 shrink-0" style={{background:tool.color+"15"}}>
           <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl" style={{background:tool.color+"25"}}>{tool.emoji}</div>
           <div className="flex-1 min-w-0">
@@ -1606,8 +1756,27 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors shrink-0"><X className="w-4 h-4"/></button>
         </div>
+
+        {/* Template examples bar */}
+        {toolTemplates.length > 0 && (
+          <div className="px-6 py-3 border-b border-white/8 bg-white/[0.02]">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs text-white/40 shrink-0">
+                <Zap className="w-3 h-3" style={{color:tool.color}}/> Quick examples:
+              </div>
+              {toolTemplates.map((tmpl, i) => (
+                <button key={i} onClick={() => applyTemplate(tmpl)}
+                  className="px-3 py-1.5 rounded-full text-xs border border-white/10 text-white/50 hover:text-white hover:border-white/25 hover:bg-white/5 transition-all">
+                  {tmpl.label} →
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-auto">
           <div className="grid md:grid-cols-2 gap-0 min-h-full">
+            {/* Form panel */}
             <div className="p-6 space-y-4 border-r border-white/8">
               <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Configure Your Tool</p>
               {tool.fields.map(field=><FieldRenderer key={field.id} field={field} value={fields[field.id]??""} onChange={v=>setField(field.id,v)}/>)}
@@ -1615,11 +1784,16 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
                 {loading?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Generating…</>:<><Sparkles className="w-4 h-4 mr-2"/>Generate</>}
               </Button>
             </div>
+
+            {/* Output panel */}
             <div className="p-6 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Generated Output</p>
-                {output&&<div className="flex gap-2">
-                  <button onClick={()=>{setOutput("");setFields({});}} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white border border-white/10 hover:border-white/25 px-2.5 py-1.5 rounded-lg transition-colors"><RefreshCw className="w-3 h-3"/>Reset</button>
+                {output&&<div className="flex gap-1.5 flex-wrap justify-end">
+                  <button onClick={()=>{setOutput("");setFields({});setSaved(false);}} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white border border-white/10 hover:border-white/25 px-2.5 py-1.5 rounded-lg transition-colors"><RefreshCw className="w-3 h-3"/>Reset</button>
+                  <button onClick={saveToLib} className={`flex items-center gap-1.5 text-xs border px-2.5 py-1.5 rounded-lg transition-colors ${saved?"border-emerald-500/40 text-emerald-400 bg-emerald-500/10":"border-white/10 text-white/50 hover:text-white hover:border-white/25"}`}>
+                    {saved?<><Check className="w-3 h-3"/>Saved!</>:<><BookmarkPlus className="w-3 h-3"/>Save</>}
+                  </button>
                   <button onClick={()=>{navigator.clipboard.writeText(output);setCopied(true);setTimeout(()=>setCopied(false),2000);}} className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white border border-white/10 hover:border-white/30 px-2.5 py-1.5 rounded-lg transition-colors">
                     {copied?<><Check className="w-3 h-3 text-green-400"/>Copied!</>:<><Copy className="w-3 h-3"/>Copy</>}
                   </button>
@@ -1629,11 +1803,15 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
                 <div className="flex-1 min-h-[280px] border border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-3 text-center px-6">
                   <span className="text-4xl opacity-30">{tool.emoji}</span>
                   <p className="text-white/25 text-sm">Fill in the form and click Generate<br/>to see your AI-created content here</p>
+                  {toolTemplates.length > 0 && <p className="text-white/15 text-xs">Or click a quick example above to prefill the form</p>}
                 </div>
               ):(
                 <textarea ref={outputRef} className="flex-1 min-h-[280px] w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm leading-relaxed resize-none focus:outline-none font-mono" value={output} onChange={e=>setOutput(e.target.value)} placeholder={loading?"Generating your content…":""}/>
               )}
               {loading&&<div className="flex items-center gap-2 text-xs text-white/35"><Loader2 className="w-3 h-3 animate-spin" style={{color:tool.color}}/><span>AI is writing…</span></div>}
+              {output && !loading && (
+                <p className="text-xs text-white/20 text-center">Click "Save" to store this in your Media Library</p>
+              )}
             </div>
           </div>
         </div>
