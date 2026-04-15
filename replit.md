@@ -7,8 +7,11 @@ Zero Replit credits — uses 5 user-provided OpenRouter API keys (OPENROUTER_KEY
 
 ## Navigation Structure (Navbar)
 
-Blog Writer | Website Builder | Writing Tools | Social Media | **AI Image ✨** | **AI Video 🎬** | AI Tools | Resources | Pricing
+Blog Writer | Website Builder | Writing Tools | Social Media | **Ad Campaigns 🎯** | **Email Marketing 📧** | **SMS Marketing 💬** | **AI Image ✨** | **AI Video 🎬** | AI Voice 🎙️ | AI Tools | Resources | Pricing
 
+- **Ad Campaigns** → `#ad-campaigns` → `AdCampaignSection.tsx` (3 platforms: Google Ads, Facebook Ads, Instagram Ads; with ad previews, char counts, sitelinks, audience tips)
+- **Email Marketing** → `#email-marketing` → `EmailMarketingSection.tsx` (8 email types: Newsletter, Promotional, Welcome, Abandoned Cart, Re-engagement, Cold Outreach, Drip, Announcement; HTML preview + download)
+- **SMS Marketing** → `#sms-marketing` → `SMSMarketingSection.tsx` (8 campaign types; 4 A/B variants with char counts, phone preview, follow-up SMS, TCPA compliance)
 - **AI Image** → `#ai-image` → `ImageGeneratorSection.tsx` (4 tabs: Text to Image, Social Media Images, Thumbnail Maker, Logo Studio)
 - **AI Video** → `#ai-video` → `VideoGeneratorSection.tsx` (6 platforms: YouTube, Shorts, Reels, TikTok, Facebook, Twitter)
 - **Resources** → `#resources` → `ResourcesSection.tsx` (tabs: Image Library, Content Library — merges ImageLibrary + MediaLibrary)

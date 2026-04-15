@@ -8,9 +8,12 @@ const NAV_LINKS = [
   { label: "Website Builder",  href: "#website-developer" },
   { label: "Writing Tools",    href: "#writing-tools" },
   { label: "Social Media",     href: "#social-media-section" },
-  { label: "AI Image",         href: "#ai-image",   badge: "✨" },
-  { label: "AI Video",         href: "#ai-video",   badge: "🎬" },
-  { label: "AI Voice",         href: "#ai-voice",   badge: "🎙️" },
+  { label: "Ad Campaigns",     href: "#ad-campaigns",    badge: "🎯" },
+  { label: "Email Marketing",  href: "#email-marketing", badge: "📧" },
+  { label: "SMS Marketing",    href: "#sms-marketing",   badge: "💬" },
+  { label: "AI Image",         href: "#ai-image",        badge: "✨" },
+  { label: "AI Video",         href: "#ai-video",        badge: "🎬" },
+  { label: "AI Voice",         href: "#ai-voice",        badge: "🎙️" },
   { label: "AI Tools",         href: "#ai-tools" },
   { label: "Resources",        href: "#resources" },
   { label: "Pricing",          href: "#pricing" },
@@ -54,6 +57,9 @@ export default function Navbar() {
                 className={`relative px-3 py-2 rounded-lg transition-colors text-xs whitespace-nowrap ${
                   link.badge === "✨" ? "text-teal-400 hover:text-teal-300 hover:bg-teal-500/10" :
                   link.badge === "🎬" ? "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" :
+                  link.badge === "🎯" ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10" :
+                  link.badge === "📧" ? "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10" :
+                  link.badge === "💬" ? "text-violet-400 hover:text-violet-300 hover:bg-violet-500/10" :
                   "text-white/60 hover:text-white hover:bg-white/5"
                 }`}>
                 {link.label}

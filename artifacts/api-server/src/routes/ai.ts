@@ -1308,7 +1308,7 @@ router.post("/ai/edit-website", async (req, res) => {
     : currentHtml;
 
   try {
-    const { resp } = await callAI([
+    const { resp } = await chatWithFallback([
       {
         role: "system",
         content: `You are a professional web developer. The user will give you a full HTML website and an edit instruction. Apply the edit precisely and return ONLY the complete updated HTML document — no explanation, no markdown fences, no commentary. Return the full <!DOCTYPE html>...</html> document.`,
@@ -1327,6 +1327,174 @@ router.post("/ai/edit-website", async (req, res) => {
     return res.json({ html });
   } catch (err: any) {
     return res.status(500).json({ error: err.message ?? "AI edit failed" });
+  }
+});
+
+// ── Ad Campaign Generator ─────────────────────────────────────────────────────
+router.post("/ai/ad-campaign", async (req, res) => {
+  const { platform, businessName, product, audience, goal, tone, budget, usp, competitors, landingUrl } = req.body as {
+    platform: string; businessName: string; product: string; audience?: string;
+    goal?: string; tone?: string; budget?: string; usp?: string;
+    competitors?: string; landingUrl?: string;
+  };
+  if (!platform || !businessName || !product) {
+    return res.status(400).json({ error: "platform, businessName and product are required" });
+  }
+
+  const platformPrompts: Record<string, string> = {
+    google: `Generate a complete Google Search Ads campaign for the business below.
+Return a valid JSON object with this exact shape:
+{
+  "google": {
+    "headline1": "string (max 30 chars)",
+    "headline2": "string (max 30 chars)",
+    "headline3": "string (max 30 chars)",
+    "description1": "string (max 90 chars)",
+    "description2": "string (max 90 chars)",
+    "displayPath": "string (e.g. shop/skincare)",
+    "finalUrl": "string",
+    "calloutExtensions": ["string", "string", "string", "string"],
+    "sitelinks": [
+      {"title": "string (max 25 chars)", "desc": "string (max 35 chars)"},
+      {"title": "string", "desc": "string"},
+      {"title": "string", "desc": "string"},
+      {"title": "string", "desc": "string"}
+    ]
+  }
+}`,
+    facebook: `Generate a complete Facebook/Meta Ads campaign for the business below.
+Return a valid JSON object with this exact shape:
+{
+  "facebook": {
+    "primaryText": "string (max 125 chars, the main ad copy shown above the image)",
+    "headline": "string (max 40 chars, bold text below the image)",
+    "description": "string (max 30 chars, subdued text below headline)",
+    "cta": "string (CTA button text like: Shop Now, Learn More, Sign Up, Get Offer)",
+    "imageCaption": "string (creative direction for the ad image, what to show)",
+    "audienceInsight": "string (paragraph on targeting: interests, demographics, behaviors)",
+    "placementTips": "string (paragraph on where to run this ad: Feed, Stories, Reels, etc)"
+  }
+}`,
+    instagram: `Generate a complete Instagram Ads campaign for the business below.
+Return a valid JSON object with this exact shape:
+{
+  "instagram": {
+    "caption": "string (full feed post caption with emojis, 150-220 words)",
+    "hashtags": ["tag1", "tag2", ... up to 20 tags without # prefix],
+    "storyCopy": ["string variant 1 (max 60 chars)", "string variant 2 (max 60 chars)", "string variant 3 (max 60 chars)"],
+    "reelHook": "string (first 3-second hook line for a Reel, punchy and attention-grabbing)",
+    "ctaSticker": "string (CTA sticker text, e.g. Swipe Up, Shop Now, Link in Bio)",
+    "audienceNote": "string (targeting recommendation for Instagram, 2-3 sentences)"
+  }
+}`,
+  };
+
+  const systemPrompt = platformPrompts[platform] ?? platformPrompts.google;
+
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are an expert digital advertising copywriter and media buyer. ${systemPrompt}\n\nReturn ONLY the JSON object, no markdown fences, no explanation.` },
+      { role: "user", content: `Business: ${businessName}\nProduct/Service: ${product}\nUSP: ${usp || "N/A"}\nTarget Audience: ${audience || "General"}\nCampaign Goal: ${goal || "sales"}\nTone: ${tone || "professional"}\nMonthly Budget: ${budget || "N/A"}\nLanding URL: ${landingUrl || ""}` },
+    ]);
+    const raw = resp.choices[0]?.message?.content?.trim() ?? "{}";
+    const data = extractJSON(raw) as Record<string, unknown>;
+    return res.json(data);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Ad generation failed" });
+  }
+});
+
+// ── Email Campaign Generator ──────────────────────────────────────────────────
+router.post("/ai/email-campaign", async (req, res) => {
+  const { emailType, brand, product, tone, goal, cta, recipientName, industry, offer } = req.body as {
+    emailType: string; brand: string; product: string; tone?: string;
+    goal?: string; cta?: string; recipientName?: string; industry?: string; offer?: string;
+  };
+  if (!brand || !product) return res.status(400).json({ error: "brand and product are required" });
+
+  const nameTag = recipientName ? recipientName : "{{first_name}}";
+
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are an expert email copywriter and conversion specialist. Generate a complete ${emailType} email campaign.
+Return a valid JSON object with this exact shape — no markdown fences, no explanation:
+{
+  "subject": "string (compelling subject line, 40-55 chars)",
+  "preheader": "string (preview text, 85-100 chars)",
+  "body": "string (plain-text email body, well-structured with greeting, main copy, CTA, sign-off)",
+  "htmlEmail": "string (complete styled HTML email template — professional, mobile-responsive, using inline CSS, suitable for all email clients)",
+  "subjectVariants": ["variant A", "variant B", "variant C"],
+  "tips": ["tip1", "tip2", "tip3", "tip4"]
+}
+The htmlEmail must be a complete <!DOCTYPE html>...</html> document with inline styles. Use a clean professional layout with the brand colors implied from the industry.`,
+      },
+      {
+        role: "user",
+        content: `Brand: ${brand}\nIndustry: ${industry || "E-commerce"}\nEmail Type: ${emailType}\nProduct/Topic: ${product}\nOffer/Key Message: ${offer || "N/A"}\nCTA: ${cta || "Learn More"}\nTone: ${tone || "professional"}\nRecipient Name Tag: ${nameTag}\nGoal: ${goal || "drive conversions"}`,
+      },
+    ]);
+    const raw = resp.choices[0]?.message?.content?.trim() ?? "{}";
+    const data = extractJSON(raw) as Record<string, unknown>;
+    return res.json(data);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Email generation failed" });
+  }
+});
+
+// ── SMS Campaign Generator ────────────────────────────────────────────────────
+router.post("/ai/sms-campaign", async (req, res) => {
+  const { smsType, business, offer, cta, landingUrl, industry, optOut } = req.body as {
+    smsType: string; business: string; offer: string; cta?: string;
+    landingUrl?: string; industry?: string; optOut?: string;
+  };
+  if (!business || !offer) return res.status(400).json({ error: "business and offer are required" });
+
+  const optOutLine = optOut || "Reply STOP to opt out";
+  const urlPart = landingUrl ? ` ${landingUrl}` : "";
+  const ctaText = cta || "Shop Now";
+
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are an expert SMS marketing specialist. Generate 4 high-converting SMS variants for the campaign below.
+Each variant must be under 160 characters when possible (including the opt-out line). Vary the tone and approach.
+Return a valid JSON object with this exact shape — no markdown fences, no explanation:
+{
+  "variants": [
+    {
+      "text": "string (complete SMS text including opt-out line)",
+      "charCount": number,
+      "segments": number (1 if ≤160 chars, 2 if ≤320, etc.),
+      "tone": "string (e.g. Urgent, Friendly, Curiosity, Social Proof)"
+    }
+  ],
+  "followUp": "string (a suggested follow-up SMS to send 24h later, also under 160 chars including opt-out)",
+  "complianceNote": "string (brief TCPA/GDPR compliance guidance for this campaign type)",
+  "bestPractices": ["tip1", "tip2", "tip3", "tip4"],
+  "estimatedOpenRate": "string (e.g. 'SMS open rates average 98% — typically read within 3 minutes')"
+}
+Opt-out line to include at end of each SMS: "${optOutLine}"`,
+      },
+      {
+        role: "user",
+        content: `Business: ${business}\nIndustry: ${industry || "Retail"}\nCampaign Type: ${smsType}\nOffer/Message: ${offer}\nCTA: ${ctaText}${urlPart ? `\nShort URL: ${urlPart}` : ""}`,
+      },
+    ]);
+    const raw = resp.choices[0]?.message?.content?.trim() ?? "{}";
+    const data = extractJSON(raw) as Record<string, unknown>;
+    // Recalculate char counts server-side to be accurate
+    if (data.variants && Array.isArray(data.variants)) {
+      (data.variants as Array<{ text: string; charCount: number; segments: number }>).forEach(v => {
+        v.charCount = v.text?.length ?? 0;
+        v.segments = Math.ceil(v.charCount / 160);
+      });
+    }
+    return res.json(data);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "SMS generation failed" });
   }
 });
 
