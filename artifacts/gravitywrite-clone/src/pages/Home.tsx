@@ -5,6 +5,7 @@ import BlogWriterSection from "@/components/BlogWriterSection";
 import WebsiteDeveloperSection from "@/components/WebsiteDeveloperSection";
 import SocialMediaSection from "@/components/SocialMediaSection";
 import AIToolsHub from "@/components/AIToolsHub";
+import WritingToolsSection from "@/components/WritingToolsSection";
 import ToolsSection from "@/components/ToolsSection";
 import WhyGravityWrite from "@/components/WhyGravityWrite";
 import PricingSection from "@/components/PricingSection";
@@ -24,6 +25,7 @@ export default function Home() {
         <section id="website-developer"><WebsiteDeveloperSection /></section>
         <section id="social-media-section"><SocialMediaSection /></section>
         <AIToolsHub />
+        <WritingToolsSection />
         <ToolsSection />
         <WhyGravityWrite />
         <PricingSection />

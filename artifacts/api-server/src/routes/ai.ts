@@ -985,6 +985,32 @@ Respond with ONLY this exact JSON structure (no other text):
   res.json({ ok: true, script: buildFallback(), _fallback: true });
 });
 
+// ── POST /api/ai/tool-generate ── Generic streaming tool endpoint ──
+router.post("/ai/tool-generate", async (req, res) => {
+  const { systemPrompt, userPrompt } = req.body as { systemPrompt: string; userPrompt: string };
+  if (!systemPrompt || !userPrompt) { res.status(400).json({ error: "systemPrompt and userPrompt required" }); return; }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    await streamWithFallback(messages, (chunk) => {
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+    }, res, 2500);
+    res.write("data: " + JSON.stringify({ done: true }) + "\n\n");
+  } catch {
+    res.write("data: " + JSON.stringify({ error: "Generation failed. Please try again." }) + "\n\n");
+  } finally {
+    res.end();
+  }
+});
+
 // ── POST /api/ai/generate-email ─────────────────────────────
 router.post("/ai/generate-email", async (req, res) => {
   const { purpose, brand = "", audience = "", tone = "professional", details = "" } = req.body as {

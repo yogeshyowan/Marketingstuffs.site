@@ -1,5 +1,9 @@
 import { Button } from "@/components/ui/button";
 
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
 export default function ToolsSection() {
   const tools = [
     "Blog Workflow", "Blog Tools", "Youtube Tools", "Rewriting Tools", 
@@ -45,8 +49,8 @@ export default function ToolsSection() {
             ))}
           </div>
           
-          <Button size="lg" className="bg-white text-black hover:bg-white/90 rounded-full px-8 h-12 text-base font-semibold">
-            Explore our AI Tools →
+          <Button size="lg" onClick={() => scrollTo("writing-tools")} className="bg-white text-black hover:bg-white/90 rounded-full px-8 h-12 text-base font-semibold">
+            Explore All Writing Tools →
           </Button>
         </div>
       </div>

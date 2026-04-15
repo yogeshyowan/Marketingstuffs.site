@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { label: "Website Builder", href: "#website-developer" },
   { label: "Social Media", href: "#social-media" },
   { label: "AI Tools", href: "#ai-tools" },
+  { label: "Writing Tools", href: "#writing-tools" },
   { label: "Pricing", href: "#pricing" },
 ];
 
