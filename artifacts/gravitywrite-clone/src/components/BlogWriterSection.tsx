@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   PenTool, Loader2, Copy, Check, Download, RefreshCw,
   Lightbulb, ChevronRight, ChevronLeft, Sparkles, Edit3, Wand2, X,
-  Share2, Image as ImageIcon, PenLine, FileText, RotateCcw, Zap,
+  Share2, Image as ImageIcon, PenLine, FileText, RotateCcw, Zap, Send, Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGenerationGate } from "@/components/GenerationGate";
@@ -314,6 +314,60 @@ export default function BlogWriterSection() {
   const [directEditOpen, setDirectEditOpen] = useState(false);
   const [directEditContent, setDirectEditContent] = useState("");
 
+  // Publish panel
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [siteUrl, setSiteUrl] = useState(() => localStorage.getItem("marketingstuffs_site_url") ?? "");
+  const [publishedTo, setPublishedTo] = useState<string[]>([]);
+
+  const connectedAccounts: { id: string; handle: string }[] = (() => {
+    try {
+      const raw = localStorage.getItem("marketingstuffs_accounts");
+      if (!raw) return [];
+      const all = JSON.parse(raw) as Array<{ id: string; connected: boolean; handle: string }>;
+      return all.filter(a => a.connected);
+    } catch { return []; }
+  })();
+
+  const platformEmoji: Record<string, string> = {
+    Instagram: "📸", Facebook: "👥", LinkedIn: "💼",
+    "X (Twitter)": "🐦", TikTok: "🎵", Pinterest: "📌",
+  };
+  const platformColor: Record<string, string> = {
+    Instagram: "#e1306c", Facebook: "#1877f2", LinkedIn: "#0077b5",
+    "X (Twitter)": "#1d9bf0", TikTok: "#69C9D0", Pinterest: "#e60023",
+  };
+
+  function makeExcerpt(platform: string, content: string, topicStr: string): string {
+    const plain = content.replace(/^#+\s/gm, "").replace(/!\[.*?\]\(.*?\)/g, "").replace(/\*\*/g, "").replace(/\*/g, "").replace(/\n+/g, " ").trim();
+    const hashtags = (topicStr ?? "").split(" ").slice(0, 3).map(w => "#" + w.replace(/\W/g, "")).filter(Boolean).join(" ");
+    if (platform === "X (Twitter)") {
+      return plain.slice(0, 240) + (plain.length > 240 ? "…" : "") + (siteUrl ? ` 🔗 ${siteUrl}` : "");
+    }
+    if (platform === "Instagram") {
+      return `✨ ${topicStr}\n\n${plain.slice(0, 300)}${plain.length > 300 ? "…" : ""}\n\n👉 Full post: ${siteUrl || "link in bio"}\n\n${hashtags} #blog #content`;
+    }
+    if (platform === "TikTok") {
+      return `${plain.slice(0, 100)}${plain.length > 100 ? "…" : ""} 🎯 ${siteUrl || ""}\n#blog #content ${hashtags}`;
+    }
+    if (platform === "LinkedIn") {
+      return `📌 New post: ${topicStr}\n\n${plain.slice(0, 500)}${plain.length > 500 ? "…" : ""}\n\n🔗 Read the full article: ${siteUrl || "[add your URL]"}\n\n${hashtags}`;
+    }
+    if (platform === "Pinterest") {
+      return `${topicStr} — ${plain.slice(0, 200)}${plain.length > 200 ? "…" : ""}\n\n${siteUrl || "[add your URL]"} | ${hashtags}`;
+    }
+    // Facebook
+    return `📢 ${topicStr}\n\n${plain.slice(0, 400)}${plain.length > 400 ? "…" : ""}\n\n👉 Read more: ${siteUrl || "[add your URL]"}\n\n${hashtags}`;
+  }
+
+  const handleSiteUrl = (url: string) => {
+    setSiteUrl(url);
+    localStorage.setItem("marketingstuffs_site_url", url);
+  };
+
+  const markPublished = (platform: string) => {
+    setPublishedTo(prev => prev.includes(platform) ? prev : [...prev, platform]);
+  };
+
   const selectedTemplate = TEMPLATES.find(t => t.id === template)!;
   const wordEstimate = generatedContent.split(/\s+/).filter(Boolean).length;
 
@@ -541,6 +595,10 @@ export default function BlogWriterSection() {
                     className="h-8 text-xs rounded-xl gap-1.5 bg-pink-500/15 text-pink-400 border border-pink-500/20 hover:bg-pink-500/25">
                     <Share2 className="w-3.5 h-3.5" /> Share
                   </Button>
+                  <Button size="sm" onClick={() => { setPublishOpen(o => !o); setShareOpen(false); setEditOpen(false); setDirectEditOpen(false); }}
+                    className={`h-8 text-xs rounded-xl gap-1.5 ${publishOpen ? "bg-emerald-500/30 text-emerald-300 border border-emerald-500/50" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25"}`}>
+                    <Send className="w-3.5 h-3.5" /> Approve & Publish
+                  </Button>
                   <Button size="sm" onClick={handleDownload}
                     className="h-8 text-xs rounded-xl gap-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25">
                     <Download className="w-3.5 h-3.5" /> Download HTML
@@ -649,6 +707,112 @@ export default function BlogWriterSection() {
                       <span className="text-xs font-medium">{btn.active ? "✓ Copied!" : btn.label}</span>
                     </button>
                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Approve & Publish panel */}
+          <AnimatePresence>
+            {publishOpen && !isGenerating && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-semibold text-emerald-300">Approve & Publish</span>
+                    <span className="text-xs text-white/30 bg-white/10 px-2 py-0.5 rounded-full">Review your post before publishing</span>
+                  </div>
+                  <button onClick={() => setPublishOpen(false)} className="text-white/30 hover:text-white/60"><X className="w-4 h-4" /></button>
+                </div>
+
+                <div className="p-5 space-y-5">
+                  {/* Site URL row */}
+                  <div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2 block flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5" /> Your Website / Blog URL
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-emerald-500/50"
+                        placeholder="https://yourblog.com/post-slug"
+                        value={siteUrl}
+                        onChange={e => handleSiteUrl(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleDownload}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-10 px-4 rounded-xl gap-1.5 shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download HTML
+                      </Button>
+                    </div>
+                    <p className="text-xs text-white/30 mt-1.5">Used in all platform posts as your article link. Download the HTML and upload it to your site.</p>
+                  </div>
+
+                  {/* Social platforms */}
+                  <div>
+                    <label className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3 block flex items-center gap-1.5">
+                      <Share2 className="w-3.5 h-3.5" /> Post to Social Media
+                    </label>
+
+                    {connectedAccounts.length === 0 ? (
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                        <p className="text-white/40 text-sm">No social accounts connected yet.</p>
+                        <p className="text-white/25 text-xs mt-1">Go to <strong className="text-white/40">Social Media → Connect Accounts</strong> to add your platforms.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {connectedAccounts.map(acc => {
+                          const excerpt = makeExcerpt(acc.id, generatedContent, topic);
+                          const done = publishedTo.includes(acc.id);
+                          const color = platformColor[acc.id] ?? "#888";
+                          const emoji = platformEmoji[acc.id] ?? "📲";
+                          return (
+                            <div key={acc.id} className="bg-black/30 border border-white/8 rounded-xl overflow-hidden">
+                              {/* Platform header */}
+                              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/8" style={{ borderLeftWidth: 3, borderLeftColor: color }}>
+                                <span>{emoji}</span>
+                                <span className="text-white font-semibold text-sm">{acc.id}</span>
+                                {acc.handle && <span className="text-white/30 text-xs">@{acc.handle}</span>}
+                                {done && <span className="ml-auto text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Copied & ready</span>}
+                              </div>
+                              {/* Editable excerpt */}
+                              <textarea
+                                className="w-full bg-transparent px-4 py-3 text-white/80 text-xs resize-none focus:outline-none font-mono leading-relaxed"
+                                rows={acc.id === "LinkedIn" ? 8 : acc.id === "X (Twitter)" ? 3 : 5}
+                                defaultValue={excerpt}
+                                id={`publish-excerpt-${acc.id}`}
+                              />
+                              {/* Action */}
+                              <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/8 bg-white/3">
+                                <span className="text-xs text-white/30">{acc.id === "X (Twitter)" ? "Max 280 chars" : acc.id === "Instagram" ? "25-30 hashtags recommended" : acc.id === "LinkedIn" ? "Professional tone — 1200+ chars" : ""}</span>
+                                <button
+                                  onClick={() => {
+                                    const el = document.getElementById(`publish-excerpt-${acc.id}`) as HTMLTextAreaElement;
+                                    navigator.clipboard.writeText(el?.value ?? excerpt);
+                                    markPublished(acc.id);
+                                  }}
+                                  className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold text-white transition-colors"
+                                  style={{ background: color }}
+                                >
+                                  {done ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy & Post to {acc.id}</>}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {publishedTo.length > 0 && (
+                    <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl px-4 py-3">
+                      <p className="text-emerald-300 text-sm font-semibold">✓ Ready to publish on {publishedTo.length} platform{publishedTo.length > 1 ? "s" : ""}</p>
+                      <p className="text-emerald-400/60 text-xs mt-0.5">Open each platform and paste the copied text. Your article link is embedded in each post.</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
