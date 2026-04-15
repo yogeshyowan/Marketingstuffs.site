@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Star, ArrowRight, Zap, Globe, Share2, PenTool } from "lucide-react";
+import { Star, ArrowRight, Zap, Globe, Share2, PenTool, Link2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const TOOLS = [
-  { icon: PenTool, label: "Blog Writer", color: "text-violet-400", bg: "bg-violet-400/10" },
-  { icon: Globe, label: "Website Builder", color: "text-cyan-400", bg: "bg-cyan-400/10" },
-  { icon: Share2, label: "Social Media", color: "text-pink-400", bg: "bg-pink-400/10" },
-  { icon: Zap, label: "100% Free AI", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+  { icon: PenTool, label: "Blog Writer",    color: "text-violet-400", bg: "bg-violet-400/10", href: "#blog-writer" },
+  { icon: Globe,   label: "Website Builder",color: "text-cyan-400",   bg: "bg-cyan-400/10",   href: "#website-developer" },
+  { icon: Share2,  label: "Social Media",   color: "text-pink-400",   bg: "bg-pink-400/10",   href: "#social-media-section" },
+  { icon: Link2,   label: "Social Page",    color: "text-fuchsia-400",bg: "bg-fuchsia-400/10",href: "#social-media-section" },
+  { icon: Zap,     label: "100% Free AI",   color: "text-emerald-400",bg: "bg-emerald-400/10",href: null },
 ];
 
 export default function HeroSection() {
@@ -53,12 +54,20 @@ export default function HeroSection() {
         {/* Tool chips */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }}
           className="flex flex-wrap items-center justify-center gap-3 mb-16">
-          {TOOLS.map(({ icon: Icon, label, color, bg }) => (
-            <div key={label} className={`flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 ${bg} backdrop-blur-sm`}>
-              <Icon className={`w-4 h-4 ${color}`} />
-              <span className={`text-sm font-medium ${color}`}>{label}</span>
-            </div>
-          ))}
+          {TOOLS.map(({ icon: Icon, label, color, bg, href }) =>
+            href ? (
+              <button key={label} onClick={() => scrollTo(href)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 ${bg} backdrop-blur-sm hover:border-white/30 hover:scale-105 transition-all cursor-pointer`}>
+                <Icon className={`w-4 h-4 ${color}`} />
+                <span className={`text-sm font-medium ${color}`}>{label}</span>
+              </button>
+            ) : (
+              <div key={label} className={`flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 ${bg} backdrop-blur-sm`}>
+                <Icon className={`w-4 h-4 ${color}`} />
+                <span className={`text-sm font-medium ${color}`}>{label}</span>
+              </div>
+            )
+          )}
         </motion.div>
 
         {/* Stats */}
