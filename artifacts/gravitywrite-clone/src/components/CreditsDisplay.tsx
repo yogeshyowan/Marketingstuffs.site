@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, ChevronDown, Check, X, Info, Crown } from "lucide-react";
 import { getPlan, setPlan, getCredits, getTotalCredits, PLAN_CONFIG, type Plan } from "@/lib/credits";
 
-const PLAN_ORDER: Plan[] = ["free", "plus", "pro", "bundle"];
+const PLAN_ORDER: Plan[] = ["free", "plus", "pro", "enterprise"];
 
 function ProgressRing({ pct, color }: { pct: number; color: string }) {
   const r = 14;
@@ -50,7 +50,7 @@ export default function CreditsDisplay() {
   const ringColor =
     plan === "plus" ? "#a78bfa" :
     plan === "pro" ? "#f59e0b" :
-    plan === "bundle" ? "#34d399" :
+    plan === "enterprise" ? "#34d399" :
     pct < 0.2 ? "#ef4444" :
     pct < 0.5 ? "#f59e0b" : "#6d28d9";
 
@@ -121,12 +121,21 @@ export default function CreditsDisplay() {
                     >
                       <div className="mt-3 rounded-xl bg-violet-500/10 border border-violet-500/20 p-3 text-xs text-white/60 space-y-1">
                         <p className="text-violet-300 font-semibold">How credits work</p>
-                        <p>• 62.5 credits per $1 you pay</p>
-                        <p>• Short blog (600w) = <span className="text-white">5 credits</span></p>
-                        <p>• Epic blog (3000w) = <span className="text-white">25 credits</span></p>
-                        <p>• Writing tool = <span className="text-white">2–4 credits</span></p>
-                        <p>• Website section = <span className="text-white">12 credits</span></p>
-                        <p className="text-white/30 pt-1">Credits reset monthly. Paid plans use Claude AI.</p>
+                        {plan === "free" ? (
+                          <>
+                            <p>• Text/Ads/Blog = <span className="text-white">1 credit</span></p>
+                            <p>• Image Studio = <span className="text-white">5 credits</span></p>
+                            <p>• Video Studio = <span className="text-white">10 credits</span></p>
+                          </>
+                        ) : (
+                          <>
+                            <p>• Text generations = <span className="text-white">1 credit</span></p>
+                            <p>• Image Studio = <span className="text-white">{plan === "enterprise" ? "1" : "2"} credit{plan === "enterprise" ? "" : "s"}</span></p>
+                            <p>• Video Studio = <span className="text-white">{plan === "enterprise" ? "3" : "5"} credits</span></p>
+                            <p>• $1 Claude billing = <span className="text-white">{plan === "plus" ? "186" : "182"} credits</span></p>
+                          </>
+                        )}
+                        <p className="text-white/30 pt-1">Credits reset monthly. Top up anytime.</p>
                       </div>
                     </motion.div>
                   )}
