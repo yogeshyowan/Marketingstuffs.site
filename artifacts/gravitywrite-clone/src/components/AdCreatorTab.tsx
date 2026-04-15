@@ -6,6 +6,7 @@ import {
   Upload, X, Volume2, Copy, Check, Zap, Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdobeExpressEditor } from "./AdobeExpressEditor";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1418,6 +1419,20 @@ export default function AdCreatorTab() {
                         <p className="text-pink-400/70 text-xs mt-2 line-clamp-2">{script.hashtags.join(" ")}</p>
                       </div>
                     )}
+
+                    {/* ── Adobe Express ──────────────────────────────────── */}
+                    <div className="pt-2">
+                      <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-2">Or edit in Adobe Express</p>
+                      <AdobeExpressEditor
+                        brandName={data.brandName}
+                        productName={data.productName}
+                        headline={script?.headline ?? ""}
+                        tagline={script?.tagline ?? ""}
+                        platform={data.platform}
+                        objective={data.objective}
+                        generatedImageBase64={data.format === "image" && outputUrl ? outputUrl : null}
+                      />
+                    </div>
                   </>
                 )}
 
