@@ -29,28 +29,8 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   const closeModal = () => { setModal(null); setPending(null); setLoginStep("idle"); };
 
   const requestGeneration = useCallback((onProceed: () => void) => {
-    const count = getCount();
-    const logged = isLoggedIn();
-    const bonusUsed = isBonusUsed();
-
-    if (count === 0) {
-      // ① First generation — free
-      incCount();
-      onProceed();
-    } else if (!logged) {
-      // ② Second generation — require login
-      setPending(() => onProceed);
-      setModal("login");
-    } else if (!bonusUsed) {
-      // ③ Post-login bonus generation — free
-      incCount();
-      setBonusUsed();
-      onProceed();
-    } else {
-      // ④ Limit reached — show paywall
-      setPending(() => onProceed);
-      setModal("upgrade");
-    }
+    // TODO: re-enable gate before launch
+    onProceed();
   }, []);
 
   const handleLoginSuccess = () => {
