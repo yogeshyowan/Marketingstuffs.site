@@ -1,4 +1,4 @@
-import { Menu, X, Zap, ChevronDown, User, RefreshCw, Map, LogOut } from "lucide-react";
+import { Menu, X, Zap, ChevronDown, User, RefreshCw, Map, LogOut, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
@@ -25,7 +25,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, setShowOnboarding, resetProfile } = useUser();
-  const { credits, googleSignedIn } = useGenerationGate();
+  const { credits, googleSignedIn, isAdminUser, userEmail } = useGenerationGate();
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Close profile dropdown on outside click
@@ -115,15 +115,21 @@ export default function Navbar() {
           {/* Right side */}
           <div className="flex items-center gap-2.5 shrink-0">
 
-            {/* Credit badge (shown after Google sign-in) */}
+            {/* Credit / Admin badge */}
             {googleSignedIn && (
-              <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-colors ${
-                credits > 15 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" :
-                credits > 0  ? "bg-amber-500/10 border-amber-500/25 text-amber-400" :
-                               "bg-red-500/10 border-red-500/25 text-red-400"
-              }`}>
-                ⚡ {credits} credits
-              </div>
+              isAdminUser ? (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-bold">
+                  <Crown className="w-3 h-3 fill-yellow-400" /> Admin · Unlimited
+                </div>
+              ) : (
+                <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-colors ${
+                  credits > 15 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" :
+                  credits > 0  ? "bg-amber-500/10 border-amber-500/25 text-amber-400" :
+                                 "bg-red-500/10 border-red-500/25 text-red-400"
+                }`}>
+                  ⚡ {credits} credits
+                </div>
+              )
             )}
 
             {/* Profile / Get Started */}
