@@ -1297,4 +1297,37 @@ router.post("/blog/publish-hashnode", async (req, res) => {
   }
 });
 
+// ── Edit Website with AI ──────────────────────────────────────────────────────
+router.post("/ai/edit-website", async (req, res) => {
+  const { currentHtml, instruction } = req.body as { currentHtml: string; instruction: string };
+  if (!currentHtml || !instruction) return res.status(400).json({ error: "currentHtml and instruction are required" });
+
+  // Truncate very large HTML to avoid token limit issues (keep ~40k chars)
+  const htmlSnippet = currentHtml.length > 40000
+    ? currentHtml.slice(0, 40000) + "\n<!-- ...truncated for brevity -->"
+    : currentHtml;
+
+  try {
+    const { resp } = await callAI([
+      {
+        role: "system",
+        content: `You are a professional web developer. The user will give you a full HTML website and an edit instruction. Apply the edit precisely and return ONLY the complete updated HTML document — no explanation, no markdown fences, no commentary. Return the full <!DOCTYPE html>...</html> document.`,
+      },
+      {
+        role: "user",
+        content: `EDIT INSTRUCTION: ${instruction}\n\nCURRENT HTML:\n${htmlSnippet}`,
+      },
+    ]);
+    let html = resp.choices[0]?.message?.content?.trim() ?? "";
+    // Strip markdown fences if model wrapped it
+    html = html.replace(/^```html?\s*/i, "").replace(/```\s*$/, "").trim();
+    if (!html.toLowerCase().startsWith("<!doctype") && !html.toLowerCase().startsWith("<html")) {
+      return res.status(500).json({ error: "AI returned unexpected format. Please try again." });
+    }
+    return res.json({ html });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "AI edit failed" });
+  }
+});
+
 export default router;

@@ -185,6 +185,10 @@ export default function WebsiteDeveloperSection() {
   const [editPrompt, setEditPrompt] = useState("");
   const [editingWith, setEditingWith] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false);
+  const [showDirectHtml, setShowDirectHtml] = useState(false);
+  const [directHtmlContent, setDirectHtmlContent] = useState("");
+  const [directHtmlApplied, setDirectHtmlApplied] = useState(false);
+  const [aiEditError, setAiEditError] = useState("");
 
   const colorScheme = COLOR_SCHEMES.find(c => c.id === colorId) ?? COLOR_SCHEMES[0];
   const fontPairing = FONT_PAIRINGS.find(f => f.id === fontId) ?? FONT_PAIRINGS[0];
@@ -801,10 +805,16 @@ export default function WebsiteDeveloperSection() {
           {/* Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowEditPanel(!showEditPanel)}
-              className="flex items-center gap-1.5 text-slate-300 hover:text-white text-sm px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+              onClick={() => { setShowEditPanel(v => !v); setShowDirectHtml(false); setAiEditError(""); }}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${showEditPanel ? "bg-violet-600/20 text-violet-300 border-violet-500/40" : "text-slate-300 hover:text-white border-slate-700 hover:border-slate-500"}`}
             >
               <Sparkles size={14} /> Edit with AI
+            </button>
+            <button
+              onClick={() => { setShowDirectHtml(v => !v); if (!showDirectHtml) setDirectHtmlContent(finalHtml); setShowEditPanel(false); }}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${showDirectHtml ? "bg-sky-600/20 text-sky-300 border-sky-500/40" : "text-slate-300 hover:text-white border-slate-700 hover:border-slate-500"}`}
+            >
+              <Upload size={14} /> Edit HTML
             </button>
             <button
               onClick={copyHtml}
@@ -866,12 +876,30 @@ export default function WebsiteDeveloperSection() {
                       value={editPrompt}
                       onChange={e => setEditPrompt(e.target.value)}
                     />
+                    {aiEditError && <p className="text-red-400 text-xs mt-1">{aiEditError}</p>}
                     <Button
-                      onClick={() => {
+                      onClick={async () => {
                         if (!editPrompt.trim()) return;
                         setEditingWith(true);
+                        setAiEditError("");
+                        const instruction = editPrompt;
                         setEditPrompt("");
-                        setTimeout(() => setEditingWith(false), 2000);
+                        try {
+                          const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/__api";
+                          const res = await fetch(`${API}/api/ai/edit-website`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ currentHtml: finalHtml, instruction }),
+                          });
+                          if (!res.ok) throw new Error(await res.text());
+                          const data = await res.json();
+                          if (data.html) setFinalHtml(data.html);
+                          else throw new Error("No HTML returned");
+                        } catch (err: unknown) {
+                          setAiEditError(err instanceof Error ? err.message : "Edit failed. Please try again.");
+                        } finally {
+                          setEditingWith(false);
+                        }
                       }}
                       disabled={!editPrompt.trim() || editingWith}
                       className="w-full mt-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50"
@@ -889,6 +917,53 @@ export default function WebsiteDeveloperSection() {
                       <div className="flex justify-between"><span>Template</span><span className="text-white">{TEMPLATES.find(t => t.id === templateId)?.label}</span></div>
                       <div className="flex justify-between"><span>Color scheme</span><span className="text-white">{COLOR_SCHEMES.find(c => c.id === colorId)?.name}</span></div>
                       <div className="flex justify-between"><span>Font</span><span className="text-white">{FONT_PAIRINGS.find(f => f.id === fontId)?.label.split("—")[0].trim()}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Direct HTML Editor */}
+          <AnimatePresence>
+            {showDirectHtml && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }} animate={{ width: 380, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+                className="bg-slate-950 border-r border-slate-800 flex flex-col overflow-hidden shrink-0"
+              >
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                      <Upload size={14} className="text-sky-400" /> Edit HTML Directly
+                    </h3>
+                    <p className="text-slate-500 text-xs mt-0.5">Edit the raw HTML — preview updates on Apply</p>
+                  </div>
+                  <button onClick={() => setShowDirectHtml(false)} className="text-slate-500 hover:text-white"><X size={16} /></button>
+                </div>
+                <div className="flex-1 overflow-hidden flex flex-col p-3 gap-3">
+                  <textarea
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-3 text-slate-300 text-xs font-mono focus:outline-none focus:border-sky-500 resize-none leading-relaxed"
+                    value={directHtmlContent}
+                    onChange={e => { setDirectHtmlContent(e.target.value); setDirectHtmlApplied(false); }}
+                    spellCheck={false}
+                    placeholder="Full HTML of the website…"
+                    style={{ minHeight: 300 }}
+                  />
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => { setFinalHtml(directHtmlContent); setDirectHtmlApplied(true); }}
+                      className="w-full bg-sky-600 hover:bg-sky-500 text-white text-sm"
+                    >
+                      {directHtmlApplied ? <><Check size={14} className="mr-1.5 text-green-300" />Applied!</> : <><RefreshCw size={14} className="mr-1.5" />Apply to Preview</>}
+                    </Button>
+                    <button
+                      onClick={() => setDirectHtmlContent(finalHtml)}
+                      className="w-full text-slate-400 hover:text-white text-xs py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+                    >
+                      Reset to Current
+                    </button>
+                    <div className="text-[10px] text-slate-600 text-center">
+                      {directHtmlContent.length.toLocaleString()} characters
                     </div>
                   </div>
                 </div>

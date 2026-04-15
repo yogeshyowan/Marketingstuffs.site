@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PenTool, Loader2, Copy, Check, Download, RefreshCw,
   Lightbulb, ChevronRight, ChevronLeft, Sparkles, Edit3, Wand2, X,
   Share2, Image as ImageIcon, PenLine, FileText, RotateCcw, Zap, Send, Globe,
-  Upload, ExternalLink, ChevronDown, Eye, BookOpen,
+  Upload, ExternalLink, ChevronDown, Eye, BookOpen, MousePointer2, Bold, Italic, Heading2, Link, Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGenerationGate } from "@/components/GenerationGate";
@@ -199,6 +199,29 @@ function buildHtmlExport(content: string, topic: string, templateId: string): st
 </html>`;
 }
 
+function buildHtmlExportFromHtml(bodyHtml: string, topic: string, templateId: string): string {
+  const tmpl = TEMPLATES.find(t => t.id === templateId) ?? TEMPLATES[0];
+  const { bg, accent, text, font } = tmpl.preview;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${topic}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:${bg};color:${text};font-family:${font};line-height:1.7;padding:2rem 1rem}
+  .wrap{max-width:780px;margin:0 auto}
+  img{max-width:100%;border-radius:12px;margin:1.5rem 0}
+  h1,h2,h3{color:${accent}}
+  li{margin-left:1.5rem}
+  @media(max-width:600px){body{padding:1rem 0.75rem}}
+</style>
+</head>
+<body><div class="wrap">${bodyHtml}</div></body>
+</html>`;
+}
+
 function buildEmbedSnippet(content: string, topic: string, templateId: string): string {
   const tmpl = TEMPLATES.find(t => t.id === templateId) ?? TEMPLATES[0];
   const { accent, text, font } = tmpl.preview;
@@ -356,6 +379,11 @@ export default function BlogWriterSection() {
   // Direct text edit mode
   const [directEditOpen, setDirectEditOpen] = useState(false);
   const [directEditContent, setDirectEditContent] = useState("");
+
+  // Visual inline editor
+  const [visualEditOpen, setVisualEditOpen] = useState(false);
+  const [visualEditedHtml, setVisualEditedHtml] = useState<string | null>(null);
+  const visualEditRef = useRef<HTMLDivElement>(null);
 
   // Publish panel (social)
   const [publishOpen, setPublishOpen] = useState(false);
@@ -607,7 +635,9 @@ export default function BlogWriterSection() {
   }
 
   function handleDownload() {
-    const html = buildHtmlExport(contentWithImages, topic, template);
+    const html = visualEditedHtml
+      ? buildHtmlExportFromHtml(visualEditedHtml, topic, template)
+      : buildHtmlExport(contentWithImages, topic, template);
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -699,13 +729,17 @@ export default function BlogWriterSection() {
             <div className="flex items-center flex-wrap gap-2">
               {!isGenerating && !isEditing && generatedContent && (
                 <>
-                  <Button size="sm" onClick={() => { setEditOpen(o => !o); setDirectEditOpen(false); }}
+                  <Button size="sm" onClick={() => { setEditOpen(o => !o); setDirectEditOpen(false); setVisualEditOpen(false); }}
                     className={`h-8 text-xs rounded-xl gap-1.5 ${editOpen ? "bg-violet-500/30 text-violet-300 border border-violet-500/50" : "bg-violet-500/15 text-violet-400 border border-violet-500/20 hover:bg-violet-500/25"}`}>
                     <Wand2 className="w-3.5 h-3.5" /> AI Edit
                   </Button>
-                  <Button size="sm" onClick={() => { setDirectEditOpen(o => !o); setDirectEditContent(generatedContent); setEditOpen(false); }}
+                  <Button size="sm" onClick={() => { setDirectEditOpen(o => !o); setDirectEditContent(generatedContent); setEditOpen(false); setVisualEditOpen(false); }}
                     className={`h-8 text-xs rounded-xl gap-1.5 ${directEditOpen ? "bg-sky-500/30 text-sky-300 border border-sky-500/50" : "bg-sky-500/15 text-sky-400 border border-sky-500/20 hover:bg-sky-500/25"}`}>
-                    <PenLine className="w-3.5 h-3.5" /> Direct Edit
+                    <PenLine className="w-3.5 h-3.5" /> Markdown Edit
+                  </Button>
+                  <Button size="sm" onClick={() => { setVisualEditOpen(o => !o); setEditOpen(false); setDirectEditOpen(false); }}
+                    className={`h-8 text-xs rounded-xl gap-1.5 ${visualEditOpen ? "bg-amber-500/30 text-amber-300 border border-amber-500/50" : "bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25"}`}>
+                    <MousePointer2 className="w-3.5 h-3.5" /> Edit Inline
                   </Button>
                   <Button size="sm" onClick={() => setShareOpen(o => !o)}
                     className="h-8 text-xs rounded-xl gap-1.5 bg-pink-500/15 text-pink-400 border border-pink-500/20 hover:bg-pink-500/25">
@@ -775,7 +809,7 @@ export default function BlogWriterSection() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <PenLine className="w-4 h-4 text-sky-400" />
-                    <span className="text-sm font-semibold text-sky-300">Direct Edit — write in markdown</span>
+                    <span className="text-sm font-semibold text-sky-300">Markdown Edit — raw text editor</span>
                   </div>
                   <button onClick={() => setDirectEditOpen(false)} className="text-white/30 hover:text-white/60"><X className="w-4 h-4" /></button>
                 </div>
@@ -797,6 +831,95 @@ export default function BlogWriterSection() {
                     Cancel
                   </Button>
                   <p className="text-xs text-white/25 self-center ml-auto hidden sm:block">Uses standard markdown — # h1, ## h2, **bold**, *italic*</p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Visual Inline Editor ── */}
+            {visualEditOpen && !isGenerating && !isEditing && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/8 overflow-hidden">
+                {/* Toolbar */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20 bg-black/30">
+                  <div className="flex items-center gap-2">
+                    <MousePointer2 className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm font-semibold text-amber-300">Edit Inline — click any text to edit</span>
+                    <span className="text-xs text-amber-400/50 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">WYSIWYG</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      title="Bold"
+                      onMouseDown={e => { e.preventDefault(); document.execCommand("bold"); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/10 transition-colors">
+                      <Bold className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      title="Italic"
+                      onMouseDown={e => { e.preventDefault(); document.execCommand("italic"); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/10 transition-colors">
+                      <Italic className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      title="Wrap in H2"
+                      onMouseDown={e => { e.preventDefault(); document.execCommand("formatBlock", false, "h2"); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/10 transition-colors text-xs font-bold">
+                      H2
+                    </button>
+                    <button
+                      title="Wrap in H3"
+                      onMouseDown={e => { e.preventDefault(); document.execCommand("formatBlock", false, "h3"); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/10 transition-colors text-xs font-bold">
+                      H3
+                    </button>
+                    <button
+                      title="Undo"
+                      onMouseDown={e => { e.preventDefault(); document.execCommand("undo"); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 border border-white/10 transition-colors">
+                      <Undo2 className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="w-px h-4 bg-white/10 mx-1" />
+                    <Button size="sm"
+                      onClick={() => {
+                        if (visualEditRef.current) {
+                          const html = visualEditRef.current.innerHTML;
+                          setVisualEditedHtml(html);
+                          setVisualEditOpen(false);
+                        }
+                      }}
+                      className="h-7 text-xs rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 gap-1">
+                      <Check className="w-3 h-3" /> Save
+                    </Button>
+                    <button onClick={() => { setVisualEditOpen(false); setVisualEditedHtml(null); }} className="text-white/30 hover:text-white/60 ml-1"><X className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                <div className="p-1 bg-white/[0.02]">
+                  <div
+                    ref={visualEditRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck
+                    dangerouslySetInnerHTML={{ __html: visualEditedHtml ?? renderMarkdownToHtml(contentWithImages) }}
+                    className="blog-content w-full min-h-[400px] px-8 py-6 text-white/90 focus:outline-none cursor-text"
+                    style={{ wordBreak: "break-word" }}
+                  />
+                </div>
+                <div className="flex items-center gap-2 px-4 py-3 border-t border-amber-500/15 bg-black/20">
+                  <p className="text-xs text-amber-400/50 flex-1">Click any heading, paragraph, or text to edit it directly. Use the toolbar above for formatting.</p>
+                  <Button size="sm"
+                    onClick={() => {
+                      if (visualEditRef.current) {
+                        const html = visualEditRef.current.innerHTML;
+                        setVisualEditedHtml(html);
+                        setVisualEditOpen(false);
+                      }
+                    }}
+                    className="h-8 text-xs rounded-xl bg-amber-600 hover:bg-amber-500 text-white border-0 gap-1.5">
+                    <Check className="w-3.5 h-3.5" /> Save Changes
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setVisualEditOpen(false); }}
+                    className="h-8 text-xs rounded-xl border-white/10 text-white/40 hover:bg-white/5">
+                    Cancel
+                  </Button>
                 </div>
               </motion.div>
             )}
@@ -1331,8 +1454,14 @@ export default function BlogWriterSection() {
             {/* Rendered blog content */}
             <div className="overflow-y-auto max-h-[700px]"
               style={{ background: bg, fontFamily: font, color: textColor }}>
-              <div className="max-w-3xl mx-auto px-8 py-10"
-                dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(contentWithImages, template) }} />
+              {visualEditedHtml && (
+                <div className="flex items-center gap-2 px-4 pt-3 pb-0">
+                  <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">Visually Edited</span>
+                  <button onClick={() => setVisualEditedHtml(null)} className="text-[10px] text-white/30 hover:text-white/60 underline">Reset to original</button>
+                </div>
+              )}
+              <div className="max-w-3xl mx-auto px-8 py-10 blog-content"
+                dangerouslySetInnerHTML={{ __html: visualEditedHtml ?? renderMarkdownToHtml(contentWithImages, template) }} />
             </div>
 
             {/* Bottom action row */}
