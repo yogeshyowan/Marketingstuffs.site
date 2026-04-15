@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { label: "AI Video",         href: "#ai-video",        badge: "🎬" },
   { label: "AI Voice",         href: "#ai-voice",        badge: "🎙️" },
   { label: "AI Tools",         href: "#ai-tools" },
+  { label: "Blog",             href: "#blogs",    badge: "📝" },
   { label: "Resources",        href: "#resources" },
   { label: "Pricing",          href: "#pricing" },
 ];

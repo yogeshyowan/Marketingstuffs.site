@@ -1,11 +1,163 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
+  <!-- ── Homepage ── -->
   <url>
     <loc>https://marketingstuffs.site/</loc>
-    <lastmod>2025-04-11</lastmod>
+    <lastmod>2025-04-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://marketingstuffs.site/" />
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://marketingstuffs.site/" />
+  </url>
+
+  <!-- ── Core Tools ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#blog-writer</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#website-developer</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#social-media-section</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- ── Special Feature: YT Growstuffs ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#yt-growstuffs</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- ── Marketing Tools ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#ad-campaigns</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#email-marketing</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#sms-marketing</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ── AI Studios ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#ai-image</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#ai-video</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#ai-voice</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- ── Writing Tools ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#writing-tools</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/#ai-tools</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- ── Blog ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#blogs</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- ── Blog Posts ── -->
+  <url>
+    <loc>https://marketingstuffs.site/blog/ai-content-marketing-2025</loc>
+    <lastmod>2025-04-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/blog/seo-blog-writing-guide</loc>
+    <lastmod>2025-04-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/blog/youtube-growth-1000-subscribers</loc>
+    <lastmod>2025-04-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/blog/email-vs-sms-marketing-india</loc>
+    <lastmod>2025-04-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/blog/ai-website-builder-guide</loc>
+    <lastmod>2025-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <url>
+    <loc>https://marketingstuffs.site/blog/social-media-strategy-india-2025</loc>
+    <lastmod>2025-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- ── Pricing ── -->
+  <url>
+    <loc>https://marketingstuffs.site/#pricing</loc>
+    <lastmod>2025-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 
 </urlset>

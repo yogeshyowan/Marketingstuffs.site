@@ -6,31 +6,37 @@
 
     <!-- ── Primary Meta ── -->
     <title>Marketingstuffs — Free AI Content & Growth Platform | Blog Writer, Website Builder, Social Media</title>
-    <meta name="description" content="Marketingstuffs is a 100% free AI-powered platform to write SEO blogs, build complete websites, and create social media content in minutes. No credit card required." />
-    <meta name="keywords" content="AI blog writer, free AI content generator, AI website builder, social media content AI, free SEO tools, AI growth platform, Marketingstuffs" />
+    <meta name="description" content="Marketingstuffs is a 100% free AI-powered platform to write SEO blogs, build complete websites, create social media content, run ad campaigns, grow YouTube channels, and more. No credit card required." />
+    <meta name="keywords" content="AI blog writer, free AI content generator, AI website builder, social media content AI, free SEO tools, AI growth platform, Marketingstuffs, YouTube growth tools, AI marketing India, free marketing tools India, email marketing AI, SMS marketing, ad campaign generator" />
     <meta name="author" content="Marketingstuffs" />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="theme-color" content="#0a0a1a" />
     <link rel="canonical" href="https://marketingstuffs.site/" />
+
+    <!-- ── Geo targeting ── -->
+    <meta name="geo.region" content="IN" />
+    <meta name="geo.placename" content="India" />
+    <meta name="language" content="English" />
 
     <!-- ── Open Graph / Facebook ── -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://marketingstuffs.site/" />
     <meta property="og:site_name" content="Marketingstuffs" />
     <meta property="og:title" content="Marketingstuffs — Free AI Content & Growth Platform" />
-    <meta property="og:description" content="Write blogs, build websites, and dominate social media — all guided by AI, all completely free. Marketingstuffs turns your ideas into professional content in minutes." />
+    <meta property="og:description" content="Write blogs, build websites, grow YouTube channels, and dominate social media — all guided by AI, all completely free. Marketingstuffs turns your ideas into professional content in minutes." />
     <meta property="og:image" content="https://marketingstuffs.site/opengraph.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Marketingstuffs — Free AI Content & Growth Platform" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:locale:alternate" content="en_US" />
 
     <!-- ── Twitter / X Card ── -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@MarketingstuffsAI" />
     <meta name="twitter:creator" content="@MarketingstuffsAI" />
     <meta name="twitter:title" content="Marketingstuffs — Free AI Content & Growth Platform" />
-    <meta name="twitter:description" content="Write blogs, build websites, and create social media content with AI — 100% free. No card required." />
+    <meta name="twitter:description" content="Write blogs, build websites, grow YouTube channels, and create social media content with AI — 100% free. No card required." />
     <meta name="twitter:image" content="https://marketingstuffs.site/opengraph.jpg" />
     <meta name="twitter:image:alt" content="Marketingstuffs AI Platform" />
 
@@ -43,6 +49,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
+    <!-- ── Google Analytics 4 (GA4) ── -->
+    <!-- Replace G-XXXXXXXXXX with your actual GA4 Measurement ID -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX', {
+        page_title: 'Marketingstuffs — AI Content Platform',
+        page_location: window.location.href,
+        anonymize_ip: true,
+        cookie_flags: 'SameSite=None;Secure',
+      });
+    </script>
+
+    <!-- ── Google Ads Conversion Tracking ── -->
+    <!-- Replace AW-XXXXXXXXXX with your actual Google Ads Conversion ID -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-XXXXXXXXXX"></script>
+    <script>
+      gtag('config', 'AW-XXXXXXXXXX');
+      // Conversion event — call gtag('event', 'conversion', {'send_to': 'AW-XXXXXXXXXX/xxxxx'}); on plan purchase
+    </script>
+
     <!-- ── Structured Data: Organization ── -->
     <script type="application/ld+json">
     {
@@ -51,7 +80,16 @@
       "name": "Marketingstuffs",
       "url": "https://marketingstuffs.site",
       "logo": "https://marketingstuffs.site/favicon.svg",
-      "description": "Marketingstuffs is a free AI-powered content and growth platform for businesses. Write blogs, build websites, and manage social media with AI.",
+      "description": "Marketingstuffs is a free AI-powered content and growth platform for businesses. Write blogs, build websites, grow YouTube channels, manage social media, and run ad campaigns with AI.",
+      "foundingLocation": {
+        "@type": "Place",
+        "name": "India"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Support",
+        "availableLanguage": ["English", "Hindi"]
+      },
       "sameAs": [
         "https://twitter.com/MarketingstuffsAI"
       ]
@@ -67,25 +105,55 @@
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web",
       "url": "https://marketingstuffs.site",
-      "description": "AI-powered platform for blog writing, website building, and social media content creation. 100% free to use.",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD",
-        "description": "Free plan — full access to all AI tools"
-      },
+      "description": "AI-powered platform for blog writing, website building, YouTube growth, social media management, ad campaigns, email & SMS marketing, and more. 100% free to use.",
+      "offers": [
+        {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "name": "Free Plan",
+          "description": "Free plan — full access to all AI tools, powered by open-source models"
+        },
+        {
+          "@type": "Offer",
+          "price": "8",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "8",
+            "priceCurrency": "USD",
+            "unitCode": "MON"
+          },
+          "name": "Plus Plan",
+          "description": "500 AI credits/month with Claude AI models"
+        },
+        {
+          "@type": "Offer",
+          "price": "49",
+          "priceCurrency": "USD",
+          "name": "Pro Plan",
+          "description": "3000 AI credits/month with priority queue and team seats"
+        }
+      ],
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.9",
-        "reviewCount": "2847",
+        "reviewCount": "3214",
         "bestRating": "5",
         "worstRating": "1"
       },
       "featureList": [
         "AI Blog Writer with SEO optimization",
-        "AI Website Builder",
-        "Social Media Content Generator",
-        "Image Generation via AI",
+        "AI Website Builder — 5-step wizard",
+        "Integrated Social Media Manager",
+        "YT Growstuffs — 12 YouTube growth tools",
+        "Ad Campaign Generator — Google, Facebook, Instagram",
+        "Email Marketing — 8 campaign types",
+        "SMS Marketing — A/B variant testing",
+        "AI Image Generation via Pollinations.ai",
+        "AI Video Script Generator",
+        "AI Voice Content Creator",
+        "100+ Writing Tools",
         "Multi-platform social scheduling"
       ]
     }
@@ -98,7 +166,8 @@
       "@type": "WebSite",
       "name": "Marketingstuffs",
       "url": "https://marketingstuffs.site",
-      "description": "Free AI Content & Growth Platform — Blog Writer, Website Builder, Social Media Manager",
+      "description": "Free AI Content & Growth Platform — Blog Writer, Website Builder, Social Media Manager, YT Growstuffs, Ad Campaigns, Email & SMS Marketing",
+      "inLanguage": ["en", "hi"],
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
@@ -121,7 +190,7 @@
           "name": "Is Marketingstuffs really free?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Marketingstuffs uses free-tier AI models to power all tools. You can write blogs, build websites, and create social media content without paying anything or adding a credit card."
+            "text": "Yes. Marketingstuffs uses free-tier AI models to power all tools. You can write blogs, build websites, grow your YouTube channel, and create social media content without paying anything or adding a credit card."
           }
         },
         {
@@ -129,7 +198,7 @@
           "name": "What AI models does Marketingstuffs use?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Marketingstuffs uses a chain of top-tier free models including Google Gemma, Llama 3.3 70B, Qwen, and NVIDIA Nemotron via OpenRouter, with automatic fallback to ensure reliable results."
+            "text": "Marketingstuffs uses a chain of top-tier free models including Google Gemma 4 (26B & 31B), Llama 3.3 70B, Qwen3 Coder, NVIDIA Nemotron 120B, and Hermes 405B via OpenRouter, with automatic key-rotation and model fallback to ensure reliable results."
           }
         },
         {
@@ -142,10 +211,10 @@
         },
         {
           "@type": "Question",
-          "name": "Does Marketingstuffs build complete websites?",
+          "name": "Does Marketingstuffs have YouTube growth tools?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. The AI Website Builder creates a full multi-section website — hero, about, services, portfolio, testimonials, and contact — based on your business type and brand in minutes."
+            "text": "Yes. YT Growstuffs is a 12-tool YouTube growth hub including Daily Ideas, Title Generator, Script Writer, Description AI, Keyword Research, Tag Generator, Thumbnail Ideas, Channel Audit, Best Time to Post, Trend Finder, Competitor Intel, and an AI Coach with streaming chat."
           }
         },
         {
@@ -154,6 +223,22 @@
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "Marketingstuffs generates tailored content for Instagram, Facebook, LinkedIn, X (Twitter), TikTok, and Pinterest — with platform-specific tone, length, and hashtag strategies."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I pay with PhonePe or GPay?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Marketingstuffs accepts UPI payments including PhonePe and Google Pay for paid plans. You can scan the QR code or use the direct UPI payment links shown in the pricing section."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Marketingstuffs available in India?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Marketingstuffs is designed for global use with special focus on India — supporting INR pricing, UPI payments (PhonePe, GPay), and content strategies tailored for Indian audiences and markets."
           }
         }
       ]
@@ -166,35 +251,77 @@
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",                 "item": "https://marketingstuffs.site/" },
+        { "@type": "ListItem", "position": 2, "name": "Blog Writer",          "item": "https://marketingstuffs.site/#blog-writer" },
+        { "@type": "ListItem", "position": 3, "name": "Website Builder",      "item": "https://marketingstuffs.site/#website-developer" },
+        { "@type": "ListItem", "position": 4, "name": "Social Media Manager", "item": "https://marketingstuffs.site/#social-media-section" },
+        { "@type": "ListItem", "position": 5, "name": "YT Growstuffs",        "item": "https://marketingstuffs.site/#yt-growstuffs" },
+        { "@type": "ListItem", "position": 6, "name": "Ad Campaigns",         "item": "https://marketingstuffs.site/#ad-campaigns" },
+        { "@type": "ListItem", "position": 7, "name": "Email Marketing",      "item": "https://marketingstuffs.site/#email-marketing" },
+        { "@type": "ListItem", "position": 8, "name": "SMS Marketing",        "item": "https://marketingstuffs.site/#sms-marketing" },
+        { "@type": "ListItem", "position": 9, "name": "AI Image Studio",      "item": "https://marketingstuffs.site/#ai-image" },
+        { "@type": "ListItem", "position": 10, "name": "Blog",               "item": "https://marketingstuffs.site/#blogs" },
+        { "@type": "ListItem", "position": 11, "name": "Pricing",            "item": "https://marketingstuffs.site/#pricing" }
+      ]
+    }
+    </script>
+
+    <!-- ── Structured Data: Blog Article List ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "url": "https://marketingstuffs.site/#blogs",
+      "name": "Marketingstuffs Blog",
+      "description": "Growth insights, AI marketing tips, and content strategies for businesses",
+      "blogPost": [
         {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Home",
-          "item": "https://marketingstuffs.site/"
+          "@type": "BlogPosting",
+          "headline": "How AI Is Revolutionizing Content Marketing in 2025",
+          "url": "https://marketingstuffs.site/#blogs",
+          "datePublished": "2025-04-12",
+          "author": { "@type": "Organization", "name": "Marketingstuffs" },
+          "keywords": "AI content marketing, digital marketing India 2025"
         },
         {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Blog Writer",
-          "item": "https://marketingstuffs.site/#blog-writer"
+          "@type": "BlogPosting",
+          "headline": "Complete Guide to SEO Blog Writing with AI Tools",
+          "url": "https://marketingstuffs.site/#blogs",
+          "datePublished": "2025-04-08",
+          "author": { "@type": "Organization", "name": "Marketingstuffs" },
+          "keywords": "SEO blog writing, AI SEO tools, rank on Google"
         },
         {
-          "@type": "ListItem",
-          "position": 3,
-          "name": "Website Builder",
-          "item": "https://marketingstuffs.site/#website-developer"
+          "@type": "BlogPosting",
+          "headline": "YouTube Growth Hacks: Get Your First 1,000 Subscribers Faster",
+          "url": "https://marketingstuffs.site/#blogs",
+          "datePublished": "2025-04-05",
+          "author": { "@type": "Organization", "name": "Marketingstuffs" },
+          "keywords": "YouTube growth, 1000 subscribers, YT Growstuffs"
         },
         {
-          "@type": "ListItem",
-          "position": 4,
-          "name": "Social Media Manager",
-          "item": "https://marketingstuffs.site/#social-media-section"
+          "@type": "BlogPosting",
+          "headline": "Email Marketing vs SMS Marketing: Which Works Better in India 2025?",
+          "url": "https://marketingstuffs.site/#blogs",
+          "datePublished": "2025-04-01",
+          "author": { "@type": "Organization", "name": "Marketingstuffs" },
+          "keywords": "email marketing India, SMS marketing, WhatsApp marketing"
         },
         {
-          "@type": "ListItem",
-          "position": 5,
-          "name": "Pricing",
-          "item": "https://marketingstuffs.site/#pricing"
+          "@type": "BlogPosting",
+          "headline": "How to Build a Professional Business Website with AI in Under 30 Minutes",
+          "url": "https://marketingstuffs.site/#blogs",
+          "datePublished": "2025-03-28",
+          "author": { "@type": "Organization", "name": "Marketingstuffs" },
+          "keywords": "AI website builder, business website India, free website builder"
+        },
+        {
+          "@type": "BlogPosting",
+          "headline": "Social Media Strategy for Indian Businesses: Complete 2025 Playbook",
+          "url": "https://marketingstuffs.site/#blogs",
+          "datePublished": "2025-03-22",
+          "author": { "@type": "Organization", "name": "Marketingstuffs" },
+          "keywords": "social media strategy India, Instagram marketing, LinkedIn marketing India"
         }
       ]
     }

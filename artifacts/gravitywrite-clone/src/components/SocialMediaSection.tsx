@@ -171,7 +171,7 @@ export default function SocialMediaSection() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Share2 size={18} className="text-pink-400" />
-            <span className="text-white font-bold">Gravity Social</span>
+            <span className="text-white font-bold">Integrated Social Media</span>
             <span className="text-slate-500 text-sm">— Social Media Management</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-400">
@@ -332,7 +332,7 @@ function ConnectAccounts({
       {/* Header */}
       <div>
         <h2 className="text-white font-bold text-xl mb-1">Phase 1 — Connect Your Accounts</h2>
-        <p className="text-slate-400 text-sm">Log in to each platform below, authorize GravitySocial, then confirm here. Connected accounts are auto-selected when you create posts.</p>
+        <p className="text-slate-400 text-sm">Log in to each platform below, authorize Marketingstuffs, then confirm here. Connected accounts are auto-selected when you create posts.</p>
       </div>
 
       {/* How OAuth works banner */}
@@ -350,7 +350,7 @@ function ConnectAccounts({
         {showHowItWorks && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 space-y-2 text-slate-400 text-xs">
             <p><span className="text-white font-medium">Step 1:</span> Click <em>"Log in to [Platform]"</em> — a login window opens on that platform's official site.</p>
-            <p><span className="text-white font-medium">Step 2:</span> Sign in with your account and, if prompted, authorize GravitySocial to manage your posts.</p>
+            <p><span className="text-white font-medium">Step 2:</span> Sign in with your account and, if prompted, authorize Marketingstuffs to manage your posts.</p>
             <p><span className="text-white font-medium">Step 3:</span> Return here, enter your handle, and click <em>"Confirm Connection"</em>.</p>
             <div className="mt-3 p-3 bg-amber-950/40 border border-amber-800/30 rounded-lg">
               <p className="text-amber-300 font-medium text-xs mb-1">⚠️ For Direct Publishing (API access)</p>

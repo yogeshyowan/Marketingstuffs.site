@@ -18,6 +18,7 @@ import ToolsSection from "@/components/ToolsSection";
 import WhyGravityWrite from "@/components/WhyGravityWrite";
 import PricingSection from "@/components/PricingSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import BlogsSection from "@/components/BlogsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import { GenerationGateProvider } from "@/components/GenerationGate";
@@ -43,6 +44,7 @@ export default function Home() {
         <VoiceGeneratorSection />
         <ResourcesSection />
         <ToolsSection />
+        <BlogsSection />
         <WhyGravityWrite />
         <PricingSection />
         <TestimonialsSection />
