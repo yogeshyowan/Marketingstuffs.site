@@ -67,6 +67,154 @@ const OBJECTIVES = [
   { id: "testimonial",emoji: "⭐", label: "Testimonial" },
 ];
 
+// ── Pre-written prompt templates ───────────────────────────────────────────────
+const AD_PROMPT_TEMPLATES = [
+  {
+    id: "product-launch",
+    emoji: "🚀",
+    label: "Product Launch",
+    tag: "New arrival",
+    objective: "product",
+    colorScheme: "purple",
+    platform: "Instagram",
+    keyMessage: "Introducing our brand new [product name] — designed to [key benefit]. Be the first to experience it. Available now, exclusively at [brand name].",
+    cta: "Shop Now",
+    productHint: "e.g. Wireless Earbuds Pro",
+  },
+  {
+    id: "flash-sale",
+    emoji: "⚡",
+    label: "Flash Sale",
+    tag: "Limited time",
+    objective: "sale",
+    colorScheme: "fire",
+    platform: "Instagram",
+    keyMessage: "FLASH SALE — [X]% OFF everything for the next 24 hours only! Don't miss out. Huge savings on [product/category]. Limited stock available.",
+    cta: "Grab the Deal",
+    productHint: "e.g. Summer Collection",
+  },
+  {
+    id: "subscribe",
+    emoji: "🔔",
+    label: "Subscribe / Follow",
+    tag: "Community growth",
+    objective: "awareness",
+    colorScheme: "pink",
+    platform: "YouTube",
+    keyMessage: "Hit subscribe and join [number] people who get weekly [content type]. New videos every [day]. Don't miss the next one — subscribe and turn on notifications.",
+    cta: "Subscribe Now",
+    productHint: "e.g. Marketing Tips",
+  },
+  {
+    id: "brand-intro",
+    emoji: "🎬",
+    label: "Brand Intro",
+    tag: "Meet us",
+    objective: "awareness",
+    colorScheme: "blue",
+    platform: "TikTok",
+    keyMessage: "Meet [brand name]. We're on a mission to [brand mission]. Here's what makes us different: [unique value proposition]. This is just the beginning.",
+    cta: "Learn More",
+    productHint: "e.g. Your Mission",
+  },
+  {
+    id: "event-promo",
+    emoji: "🎉",
+    label: "Event / Launch Party",
+    tag: "Save the date",
+    objective: "event",
+    colorScheme: "gold",
+    platform: "Instagram",
+    keyMessage: "You're invited! Join us on [date] at [location/online] for [event name]. Exclusive [offers/speakers/experiences] await. Register free before spots fill up.",
+    cta: "Register Free",
+    productHint: "e.g. Annual Summit 2025",
+  },
+  {
+    id: "testimonial",
+    emoji: "⭐",
+    label: "Customer Review",
+    tag: "Social proof",
+    objective: "testimonial",
+    colorScheme: "gold",
+    platform: "Facebook",
+    keyMessage: '"[Customer quote about their experience with your product/service]" — [Customer Name], [Location]. Join thousands of happy customers at [brand name].',
+    cta: "Read More Reviews",
+    productHint: "e.g. SkinGlow Serum",
+  },
+  {
+    id: "service-ad",
+    emoji: "💼",
+    label: "Service Promotion",
+    tag: "Professional",
+    objective: "service",
+    colorScheme: "dark",
+    platform: "LinkedIn",
+    keyMessage: "Struggling with [problem]? [Brand name] helps [target audience] achieve [outcome] in [timeframe]. Trusted by [number]+ clients. Book a free discovery call today.",
+    cta: "Book Free Call",
+    productHint: "e.g. Social Media Management",
+  },
+  {
+    id: "before-after",
+    emoji: "✨",
+    label: "Before & After",
+    tag: "Transformation",
+    objective: "product",
+    colorScheme: "pink",
+    platform: "TikTok",
+    keyMessage: "Before [brand name]: [pain point / struggle]. After [brand name]: [transformation / result]. Real results, real people. See what [product] can do for you.",
+    cta: "See Results",
+    productHint: "e.g. FitPro Workout Plan",
+  },
+  {
+    id: "countdown",
+    emoji: "⏳",
+    label: "Countdown / Urgency",
+    tag: "Limited offer",
+    objective: "sale",
+    colorScheme: "fire",
+    platform: "Instagram",
+    keyMessage: "Only [X] hours left! Our [offer] ends tonight at midnight. Once it's gone, it's gone. [Brand name] — [key benefit]. Don't wait.",
+    cta: "Claim Before It Ends",
+    productHint: "e.g. 50% Off Membership",
+  },
+  {
+    id: "tips-value",
+    emoji: "💡",
+    label: "Tips / Value Add",
+    tag: "Educational",
+    objective: "awareness",
+    colorScheme: "blue",
+    platform: "TikTok",
+    keyMessage: "[Number] things you didn't know about [topic]. Brought to you by [brand name]. Save this for later and share with someone who needs to see it!",
+    cta: "Follow for More Tips",
+    productHint: "e.g. 5 Social Media Hacks",
+  },
+  {
+    id: "seasonal",
+    emoji: "🌟",
+    label: "Seasonal / Holiday",
+    tag: "Festive",
+    objective: "sale",
+    colorScheme: "gold",
+    platform: "Facebook",
+    keyMessage: "Celebrate [season/holiday] with [brand name]! Special [season] deals on [products/services]. The perfect gift for [audience]. Shop our [season] collection now.",
+    cta: "Shop the Collection",
+    productHint: "e.g. Christmas Gift Bundle",
+  },
+  {
+    id: "challenge",
+    emoji: "🏆",
+    label: "Challenge / Trend",
+    tag: "Viral",
+    objective: "awareness",
+    colorScheme: "purple",
+    platform: "TikTok",
+    keyMessage: "We're starting the [challenge name] challenge! [Brief description of what to do]. Tag us @[brand] and use #[hashtag]. Join the movement — [brand name].",
+    cta: "Join the Challenge",
+    productHint: "e.g. #GlowUpChallenge",
+  },
+];
+
 const TEMPLATES = [
   { id: "bold",     label: "Bold Impact",    desc: "Large text, strong contrast" },
   { id: "gradient", label: "Gradient Glass", desc: "Frosted glass over gradient" },
@@ -825,6 +973,7 @@ export default function AdCreatorTab() {
   const [copied, setCopied] = useState<string>("");
 
   const set = (k: keyof AdData, v: unknown) => setData(d => ({ ...d, [k]: v }));
+  const setMulti = (fields: Partial<AdData>) => setData(d => ({ ...d, ...fields }));
 
   const loadBg = useCallback(async () => {
     if (data.uploadedImage) {
@@ -943,7 +1092,7 @@ export default function AdCreatorTab() {
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     recorder.onstop = () => {
       window.speechSynthesis.cancel();
-      audioCtx.close();
+      if (audioCtx.state !== "closed") audioCtx.close();
       const blob = new Blob(chunks, { type: mime });
       const url = URL.createObjectURL(blob);
       setOutputUrl(url);
@@ -1004,7 +1153,7 @@ export default function AdCreatorTab() {
   useEffect(() => () => {
     window.speechSynthesis.cancel();
     cancelAnimationFrame(rafRef.current);
-    audioCtxRef.current?.close();
+    if (audioCtxRef.current?.state !== "closed") audioCtxRef.current?.close();
   }, []);
 
   const copyText = (text: string, key: string) => {
@@ -1147,6 +1296,47 @@ export default function AdCreatorTab() {
         {/* ── STEP 2: Content ───────────────────────────────────────────────── */}
         {step === 2 && (
           <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
+
+            {/* ── Prompt template picker ─────────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-semibold">Start from a Prompt Template</h3>
+                <span className="text-xs text-slate-500">Optional — click any to pre-fill</span>
+              </div>
+              <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700">
+                {AD_PROMPT_TEMPLATES.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => setMulti({
+                      objective: tpl.objective as AdData["objective"],
+                      colorScheme: tpl.colorScheme,
+                      platform: tpl.platform,
+                      keyMessage: tpl.keyMessage,
+                      cta: tpl.cta,
+                    })}
+                    className={`flex-shrink-0 flex flex-col items-start gap-1.5 px-3.5 py-3 rounded-xl border transition-all text-left w-[148px] ${
+                      data.keyMessage === tpl.keyMessage
+                        ? "border-pink-500 bg-pink-500/10"
+                        : "border-slate-700 bg-slate-900 hover:border-pink-500/50 hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className="text-2xl">{tpl.emoji}</span>
+                    <span className="text-white text-xs font-semibold leading-tight">{tpl.label}</span>
+                    <span className="text-[10px] text-slate-500 leading-tight">{tpl.tag}</span>
+                  </button>
+                ))}
+              </div>
+              {/* Show the selected template's key message as a preview */}
+              {data.keyMessage && AD_PROMPT_TEMPLATES.some(t => t.keyMessage === data.keyMessage) && (
+                <div className="mt-3 rounded-xl bg-slate-900 border border-pink-500/20 px-4 py-3">
+                  <p className="text-[11px] text-pink-400 font-semibold uppercase tracking-widest mb-1.5">Template pre-filled — replace the [ ] placeholders below</p>
+                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">{data.keyMessage}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-800 pt-4" />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-slate-300 text-sm font-medium block mb-1.5">Brand / Business Name *</label>
