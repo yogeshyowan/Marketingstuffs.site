@@ -1330,6 +1330,213 @@ router.post("/ai/edit-website", async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// YT GROWSTUFFS — YouTube Growth Tools
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── YT: Daily Ideas ───────────────────────────────────────────────────────────
+router.post("/ai/yt-ideas", async (req, res) => {
+  const { niche, channel } = req.body as { niche: string; channel?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube growth expert. Generate 8 high-potential video ideas for the given niche. Return ONLY valid JSON (no markdown fences):
+{"ideas":[{"title":"string","viewPrediction":"Very High|High|Medium","why":"string (1-2 sentences on why this will perform well)","hook":"string (a punchy 15-word opening hook for the video)"}]}` },
+      { role: "user", content: `Niche: ${niche}${channel ? `\nChannel: ${channel}` : ""}\n\nGenerate 8 trending, high-potential video ideas for today.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Title Generator ───────────────────────────────────────────────────────
+router.post("/ai/yt-titles", async (req, res) => {
+  const { topic, keywords, style } = req.body as { topic: string; keywords?: string; style?: string };
+  if (!topic) return res.status(400).json({ error: "topic is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube title optimization expert. Generate 8 high-CTR title variations. Return ONLY valid JSON (no markdown fences):
+{"titles":[{"title":"string","style":"Listicle|How-to|Shocking|Question|Story|Mixed","ctrReason":"string (why this title gets clicks)","hook":"string"}]}` },
+      { role: "user", content: `Topic: ${topic}\nKeywords: ${keywords || "N/A"}\nPreferred style: ${style || "mixed"}\n\nGenerate 8 compelling, click-worthy YouTube titles. Mix different emotional triggers and formats.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Script Writer ─────────────────────────────────────────────────────────
+router.post("/ai/yt-script", async (req, res) => {
+  const { title, duration, style, keyPoints } = req.body as { title: string; duration?: string; style?: string; keyPoints?: string };
+  if (!title) return res.status(400).json({ error: "title is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are an expert YouTube scriptwriter. Write a complete, engaging video script. Return ONLY valid JSON (no markdown fences):
+{"script":{"hook":"string (attention-grabbing first 30 seconds — pattern interrupt or bold claim)","intro":"string (introduce yourself/topic, preview what viewer will learn)","sections":[{"heading":"string","content":"string (2-4 paragraphs of script content for this section)"}],"outro":"string (wrap up, thank viewers, tease next video)","cta":"string (call to action — subscribe, like, comment prompt)"}}` },
+      { role: "user", content: `Video Title: ${title}\nDuration: ${duration || "10"} minutes\nStyle: ${style || "educational"}\nKey points to cover: ${keyPoints || "N/A"}\n\nWrite a complete, engaging script. The hook must make viewers stay. Include natural transitions and conversational language.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Description AI ────────────────────────────────────────────────────────
+router.post("/ai/yt-description", async (req, res) => {
+  const { videoTitle, channelName, keywords, socials } = req.body as { videoTitle: string; channelName?: string; keywords?: string; socials?: string };
+  if (!videoTitle) return res.status(400).json({ error: "videoTitle is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube SEO expert. Write a complete, SEO-optimized video description and generate hashtags. Return ONLY valid JSON (no markdown fences):
+{"description":"string (full description: opening with keyword in first 2 lines, summary, timestamps template like '0:00 Intro\\n1:30 Section 1', social links, outro with subscribe CTA)","hashtags":["tag1","tag2",...up to 15 tags without # prefix]}` },
+      { role: "user", content: `Video Title: ${videoTitle}\nChannel: ${channelName || "N/A"}\nKeywords: ${keywords || "N/A"}\nSocial Links: ${socials || "N/A"}\n\nWrite an SEO-optimized description. Include the main keyword in the first line. Add a timestamps section, relevant links, and a subscribe CTA.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Keyword Research ──────────────────────────────────────────────────────
+router.post("/ai/yt-keywords", async (req, res) => {
+  const { topic, niche } = req.body as { topic: string; niche?: string };
+  if (!topic) return res.status(400).json({ error: "topic is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube keyword research specialist. Analyze keywords and return a realistic competitive assessment. Return ONLY valid JSON (no markdown fences):
+{"keywords":[{"keyword":"string","volume":"High|Medium|Low","competition":number(1-10 where 10=hardest),"score":number(0-100 opportunity score),"trend":"Rising|Stable|Falling","type":"Seed|Long-tail|Question|Branded"}]}
+Generate exactly 12 keywords including the seed, related terms, long-tail variations, and question-based keywords.` },
+      { role: "user", content: `Seed keyword: ${topic}\nNiche: ${niche || "General"}\n\nResearch 12 keywords with realistic volume/competition estimates for YouTube. Include a mix of short-tail and long-tail.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Tag Generator ─────────────────────────────────────────────────────────
+router.post("/ai/yt-tags", async (req, res) => {
+  const { videoTitle, niche } = req.body as { videoTitle: string; niche?: string };
+  if (!videoTitle) return res.status(400).json({ error: "videoTitle is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube SEO expert. Generate an optimized tag set. Return ONLY valid JSON (no markdown fences):
+{"tags":{"primary":["tag1",...8 tags],"secondary":["tag1",...10 tags],"longtail":["tag1",...12 tags]}}
+Primary: exact match & close variants. Secondary: related topics. Long-tail: full phrases 3-5 words.` },
+      { role: "user", content: `Video Title: ${videoTitle}\nNiche: ${niche || "General"}\n\nGenerate 30 optimized YouTube tags covering primary, secondary, and long-tail variations.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Thumbnail Ideas ───────────────────────────────────────────────────────
+router.post("/ai/yt-thumbnail", async (req, res) => {
+  const { videoTitle, style, mood } = req.body as { videoTitle: string; style?: string; mood?: string };
+  if (!videoTitle) return res.status(400).json({ error: "videoTitle is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube thumbnail design expert who understands click-through psychology. Return ONLY valid JSON (no markdown fences):
+{"concepts":[{"concept":"string (detailed layout and visual description)","colors":["#hex1","#hex2","#hex3"],"textOverlay":"string (short punchy text to overlay, max 5 words)","mainElement":"string (main visual subject/element)","whyItWorks":"string (psychology/reason why this gets clicks)","emotion":"string (primary emotion triggered)"}]}
+Generate exactly 3 distinct thumbnail concepts.` },
+      { role: "user", content: `Video Title: ${videoTitle}\nStyle: ${style || "dramatic"}\nMood: ${mood || "exciting"}\n\nCreate 3 distinct, high-CTR thumbnail concepts. Each must be visually different and use proven click psychology.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Channel Audit ─────────────────────────────────────────────────────────
+router.post("/ai/yt-audit", async (req, res) => {
+  const { channelName, niche, subscribers, avgViews, frequency, age } = req.body as Record<string, string>;
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube channel growth consultant. Perform a SWOT analysis and create an action plan. Return ONLY valid JSON (no markdown fences):
+{"audit":{"strengths":["string",...3-4 items],"weaknesses":["string",...3-4 items],"opportunities":["string",...3-4 items],"threats":["string",...2-3 items],"actionPlan":[{"step":number,"action":"string","impact":"string (expected outcome)"},...5 steps]}}` },
+      { role: "user", content: `Channel: ${channelName || "Unknown"}\nNiche: ${niche}\nSubscribers: ${subscribers || "Unknown"}\nAvg Views: ${avgViews || "Unknown"}\nUpload Frequency: ${frequency || "weekly"}\nChannel Age: ${age || "Unknown"}\n\nConduct a thorough SWOT analysis and give a 5-step action plan to accelerate growth.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Best Time to Post ─────────────────────────────────────────────────────
+router.post("/ai/yt-besttime", async (req, res) => {
+  const { niche, audience, timezone } = req.body as { niche: string; audience?: string; timezone?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube analytics expert. Recommend optimal publishing times based on niche and audience data. Return ONLY valid JSON (no markdown fences):
+{"bestTimes":[{"day":"string","time":"string (e.g. 3:00 PM)","timezone":"string","reason":"string","score":number(0-100)},...5 time slots ranked best first],"generalTips":["string",...4 tips]}` },
+      { role: "user", content: `Niche: ${niche}\nTarget Audience: ${audience || "General"}\nTimezone: ${timezone || "EST"}\n\nRecommend the 5 best times to publish YouTube videos for maximum initial views and algorithm boost.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Trend Finder ─────────────────────────────────────────────────────────
+router.post("/ai/yt-trends", async (req, res) => {
+  const { niche, keywords } = req.body as { niche: string; keywords?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube trend analyst. Identify 6 trending topics that creators should make videos about right now. Return ONLY valid JSON (no markdown fences):
+{"trends":[{"topic":"string (specific trend, not vague)","momentum":"Exploding|Rising|Building","why":"string (why this is trending)","videoAngle":"string (specific angle/hook to take on this topic)","urgency":"string (e.g. 'Act this week', 'Next 30 days', 'Evergreen')"}]}` },
+      { role: "user", content: `Niche: ${niche}\nFocus keywords: ${keywords || "N/A"}\n\nIdentify 6 currently trending topics in this niche that creators should make videos about now. Be specific, not generic.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: Competitor Intel ──────────────────────────────────────────────────────
+router.post("/ai/yt-competitor", async (req, res) => {
+  const { channelDesc, niche, myChannel } = req.body as { channelDesc: string; niche: string; myChannel?: string };
+  if (!channelDesc || !niche) return res.status(400).json({ error: "channelDesc and niche are required" });
+  try {
+    const { resp } = await chatWithFallback([
+      { role: "system", content: `You are a YouTube competitive intelligence analyst. Analyze the competitor and find opportunities. Return ONLY valid JSON (no markdown fences):
+{"intel":{"whatTheyDoWell":["string",...4 items],"contentGaps":["string",...4 items],"howToDifferentiate":["string",...4 items],"topicsToCover":[{"topic":"string","reason":"string"},...5 topics],"growthAngle":"string (single paragraph: the positioning strategy to beat this competitor)"}}` },
+      { role: "user", content: `Competitor description: ${channelDesc}\nNiche: ${niche}\nMy channel: ${myChannel || "Not specified"}\n\nAnalyze this competitor and give me a complete intelligence report with actionable gaps and differentiation strategies.` },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── YT: AI Coach (streaming) ──────────────────────────────────────────────────
+router.post("/ai/yt-coach", async (req, res) => {
+  const { messages } = req.body as { messages: ChatMessage[] };
+  if (!messages?.length) return res.status(400).json({ error: "messages are required" });
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const heartbeat = () => res.write(": heartbeat\n\n");
+  heartbeat();
+
+  const systemMessage: ChatMessage = {
+    role: "system",
+    content: `You are YT Growstuffs AI Coach — an expert YouTube growth strategist with deep knowledge of the YouTube algorithm, content strategy, SEO, monetization, audience psychology, and creator business. You have helped thousands of channels grow from 0 to 100k+ subscribers.
+
+Be conversational, direct, and actionable. Give specific tactics, not generic advice. Use bullet points for lists. Keep responses focused and under 400 words unless a detailed explanation is genuinely needed. Always end with a follow-up question or next step to keep the conversation going.`,
+  };
+
+  try {
+    await streamWithFallback(
+      [systemMessage, ...messages],
+      (chunk) => res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`),
+      heartbeat,
+      4096
+    );
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } catch (err: any) {
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+    res.end();
+  }
+});
+
 // ── Ad Campaign Generator ─────────────────────────────────────────────────────
 router.post("/ai/ad-campaign", async (req, res) => {
   const { platform, businessName, product, audience, goal, tone, budget, usp, competitors, landingUrl } = req.body as {

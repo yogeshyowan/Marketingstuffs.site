@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { label: "Website Builder",  href: "#website-developer" },
   { label: "Writing Tools",    href: "#writing-tools" },
   { label: "Social Media",     href: "#social-media-section" },
+  { label: "YT Growstuffs",    href: "#yt-growstuffs",   badge: "▶️" },
   { label: "Ad Campaigns",     href: "#ad-campaigns",    badge: "🎯" },
   { label: "Email Marketing",  href: "#email-marketing", badge: "📧" },
   { label: "SMS Marketing",    href: "#sms-marketing",   badge: "💬" },

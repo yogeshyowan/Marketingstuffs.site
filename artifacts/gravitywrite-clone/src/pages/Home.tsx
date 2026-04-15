@@ -4,6 +4,7 @@ import BrandsMarquee from "@/components/BrandsMarquee";
 import BlogWriterSection from "@/components/BlogWriterSection";
 import WebsiteDeveloperSection from "@/components/WebsiteDeveloperSection";
 import SocialMediaSection from "@/components/SocialMediaSection";
+import YTGrowstuffsSection from "@/components/YTGrowstuffsSection";
 import AdCampaignSection from "@/components/AdCampaignSection";
 import EmailMarketingSection from "@/components/EmailMarketingSection";
 import SMSMarketingSection from "@/components/SMSMarketingSection";
@@ -31,6 +32,7 @@ export default function Home() {
         <BlogWriterSection />
         <section id="website-developer"><WebsiteDeveloperSection /></section>
         <section id="social-media-section"><SocialMediaSection /></section>
+        <YTGrowstuffsSection />
         <AdCampaignSection />
         <EmailMarketingSection />
         <SMSMarketingSection />
