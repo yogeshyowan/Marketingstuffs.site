@@ -919,41 +919,63 @@ router.post("/ai/pinterest-post", async (req, res) => {
 // POST /api/ai/generate-ad-script  (JSON, not SSE)
 // ───────────────────────────────────────────────
 router.post("/ai/generate-ad-script", async (req, res) => {
-  const { brandName = "", productName = "", keyMessage = "", cta = "", platform = "Instagram", objective = "product", format = "image" } = req.body as Record<string, string>;
-  if (!brandName || !keyMessage) { res.status(400).json({ error: "brandName and keyMessage are required" }); return; }
-  try {
-    let fullText = "";
-    await streamWithFallback([
-      { role: "system", content: `You are an elite advertising copywriter specialising in short-form social media ads. Always respond with ONLY valid JSON. No markdown, no code fences, no explanation.` },
-      { role: "user", content: `Create a complete ad script for:
+  const {
+    brandName = "", productName = "", keyMessage = "",
+    cta = "", platform = "Instagram", objective = "product", format = "image",
+  } = req.body as Record<string, string>;
+  if (!brandName || !keyMessage) {
+    res.status(400).json({ error: "brandName and keyMessage are required" }); return;
+  }
+
+  const buildFallback = () => ({
+    headline: `${brandName} — ${keyMessage.slice(0, 30)}`,
+    tagline: `Discover the best of ${productName || brandName} today`,
+    caption: `✨ Introducing ${productName || brandName}! ${keyMessage} Perfect for anyone looking to level up. Don't miss out — ${cta || "learn more"} now. 🚀`,
+    voiceover: `Introducing ${productName || brandName}. ${keyMessage}. ${cta || "Learn more"} today and see the difference for yourself.`,
+    hashtags: [`#${brandName.replace(/\s+/g, "")}`, `#${platform}`, "#ad", "#marketing", "#business", "#growth", "#content", "#brand"],
+    features: [`✅ ${keyMessage}`, `🎯 Built for ${platform}`, `🚀 ${cta || "Start today"}`],
+    stats: [{ label: "Platform", value: platform }, { label: "Objective", value: objective }],
+  });
+
+  const messages = [
+    {
+      role: "system" as const,
+      content: "You are an expert advertising copywriter. Respond with ONLY a valid JSON object. No markdown, no code fences, no explanation, no preamble — just the raw JSON.",
+    },
+    {
+      role: "user" as const,
+      content: `Write a complete ${platform} ad script for:
 Brand: ${brandName}
-Product/Service: ${productName || brandName}
+Product: ${productName || brandName}
 Key Message: ${keyMessage}
-Call to Action: ${cta || "Learn More"}
-Platform: ${platform}
+CTA: ${cta || "Learn More"}
 Objective: ${objective}
 Format: ${format}
 
-Return ONLY this JSON object:
-{
-  "headline": "Bold punchy 5-8 word headline",
-  "tagline": "Supporting 10-15 word tagline",
-  "caption": "Complete platform-native caption with emojis, 80-120 words",
-  "voiceover": "Natural engaging voiceover script 20-40 seconds when read aloud",
-  "hashtags": ["#tag1","#tag2","#tag3","#tag4","#tag5","#tag6","#tag7","#tag8"]
-}` },
-    ], (c) => { fullText += c; }, () => {}, 1200);
+Respond with ONLY this exact JSON structure (no other text):
+{"headline":"5-8 word punchy headline","tagline":"10-15 word supporting tagline","caption":"Platform-native caption with emojis 60-100 words","voiceover":"30-second voiceover script natural speech","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5","#tag6"],"features":["✅ Key benefit 1","🎯 Key benefit 2","🚀 Key benefit 3"],"stats":[{"label":"Reach","value":"10M+"},{"label":"Engagement","value":"4.2%"}]}`,
+    },
+  ];
+
+  let lastError = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let fullText = "";
     try {
-      const clean = fullText.replace(/```json|```/g, "").trim();
-      const start = clean.indexOf("{"); const end = clean.lastIndexOf("}");
-      const parsed = JSON.parse(clean.slice(start, end + 1));
+      await streamWithFallback(messages, (c) => { fullText += c; }, undefined, 2000);
+      const parsed = extractJSON(fullText) as Record<string, unknown>;
+      // Validate essential fields exist
+      if (!parsed.headline || !parsed.caption) throw new Error("Missing required fields");
       res.json({ ok: true, script: parsed });
-    } catch {
-      res.status(500).json({ error: "AI returned malformed JSON. Please retry." });
+      return;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      // Short delay before retry
+      if (attempt < 2) await new Promise(r => setTimeout(r, 600));
     }
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
   }
+
+  // All retries failed — return a safe fallback so the UI doesn't block
+  res.json({ ok: true, script: buildFallback(), _fallback: true });
 });
 
 export default router;
