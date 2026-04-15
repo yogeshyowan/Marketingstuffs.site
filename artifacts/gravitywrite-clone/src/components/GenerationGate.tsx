@@ -106,13 +106,18 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   const pendingRef  = useRef<(() => void) | null>(null);
   const pendingType = useRef<GenerationType>("text");
 
-  // Sync credits from localStorage periodically (catches plan upgrades)
+  // Sync credits from localStorage periodically (catches plan upgrades + top-ups)
   useEffect(() => {
     const id = setInterval(() => {
       const plan = getPlan();
       setUserPlan(plan);
-      if (plan !== "free") setCredits(getPaidCredits());
-    }, 3000);
+      if (plan === "free") {
+        const c = getFreeCredits();
+        setCredits(c === -1 ? FREE_CREDITS : c);
+      } else {
+        setCredits(getPaidCredits());
+      }
+    }, 2000);
     return () => clearInterval(id);
   }, []);
 
@@ -570,7 +575,7 @@ function TopUpModal({ pack, onClose, onSuccess }: {
             </div>
 
             <button
-              onClick={() => { addCredits(pack.credits); onSuccess(pack.credits); onClose(); }}
+              onClick={() => { onSuccess(pack.credits); onClose(); }}
               className="w-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-xl py-2.5 text-xs font-bold transition-colors"
             >
               ✓ Already paid — Add {pack.credits} credits (Demo)
@@ -620,7 +625,7 @@ function UpgradeModal({ onClose, currentPlan }: { onClose: () => void; currentPl
                 ) : (
                   <>
                     <h3 className="text-white font-extrabold text-xl leading-tight">You've Used All 50 Free Credits</h3>
-                    <p className="text-white/45 text-sm mt-0.5">Upgrade for more AI credits — Blog, Social, Ads, Email, SMS, Growth Hub and more.</p>
+                    <p className="text-white/45 text-sm mt-0.5">Top up credits instantly <span className="text-amber-400">without upgrading</span>, or choose a paid plan for monthly allowances.</p>
                   </>
                 )}
               </div>
@@ -636,14 +641,12 @@ function UpgradeModal({ onClose, currentPlan }: { onClose: () => void; currentPl
             </div>
           </div>
 
-          {/* Pay-as-you-go top-up (shown first for paid users, secondary for free) */}
-          <div className={`px-6 pt-5 ${isPaid ? "" : "pb-2"}`}>
+          {/* Pay-as-you-go top-up — shown prominently for all plans */}
+          <div className="px-6 pt-5">
             <div className="flex items-center gap-2 mb-3">
               <Plus className="w-4 h-4 text-amber-400" />
-              <span className="text-white font-bold text-sm">
-                {isPaid ? "Top Up Credits — Instant Refill" : "Need credits now? Top up instantly"}
-              </span>
-              {isPaid && <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">Pay-as-you-go</span>}
+              <span className="text-white font-bold text-sm">Top Up Credits — Instant Refill</span>
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">Pay-as-you-go</span>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {TOPUP_PACKS.map(pack => (
@@ -668,7 +671,7 @@ function UpgradeModal({ onClose, currentPlan }: { onClose: () => void; currentPl
           {/* Divider */}
           <div className="flex items-center gap-3 px-6 py-4">
             <div className="flex-1 h-px bg-white/8" />
-            <span className="text-white/25 text-xs">{isPaid ? "or upgrade your plan" : "or choose a subscription"}</span>
+            <span className="text-white/25 text-xs">or choose a plan for monthly credits</span>
             <div className="flex-1 h-px bg-white/8" />
           </div>
 
@@ -749,7 +752,17 @@ function UpgradeModal({ onClose, currentPlan }: { onClose: () => void; currentPl
             key="topup"
             pack={topUpPack}
             onClose={() => setTopUpPack(null)}
-            onSuccess={(n) => { setCreditsAdded(n); setTopUpPack(null); }}
+            onSuccess={(n) => {
+              // Write to the correct credit store based on current plan
+              if (currentPlan === "free") {
+                const cur = parseInt(localStorage.getItem(LS_CREDITS) || "0", 10);
+                localStorage.setItem(LS_CREDITS, String(Math.max(0, cur) + n));
+              } else {
+                addCredits(n);
+              }
+              setCreditsAdded(n);
+              setTopUpPack(null);
+            }}
           />
         )}
       </AnimatePresence>
