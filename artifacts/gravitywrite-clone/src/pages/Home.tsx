@@ -8,6 +8,7 @@ import AIToolsHub from "@/components/AIToolsHub";
 import WritingToolsSection from "@/components/WritingToolsSection";
 import ImageGeneratorSection from "@/components/ImageGeneratorSection";
 import VideoGeneratorSection from "@/components/VideoGeneratorSection";
+import VoiceGeneratorSection from "@/components/VoiceGeneratorSection";
 import ResourcesSection from "@/components/ResourcesSection";
 import ToolsSection from "@/components/ToolsSection";
 import WhyGravityWrite from "@/components/WhyGravityWrite";
@@ -31,6 +32,7 @@ export default function Home() {
         <WritingToolsSection />
         <ImageGeneratorSection />
         <VideoGeneratorSection />
+        <VoiceGeneratorSection />
         <ResourcesSection />
         <ToolsSection />
         <WhyGravityWrite />

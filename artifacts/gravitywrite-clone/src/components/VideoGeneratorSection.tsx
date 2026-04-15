@@ -113,8 +113,16 @@ function ScriptDisplay({ script }: { script: string }) {
   );
 }
 
+// ── Top-level modes ───────────────────────────────────────────
+const VIDEO_MODES = [
+  { id: "storyboard",  label: "Video Storyboard",  emoji: "🎬" },
+  { id: "img2video",   label: "Image to Video",     emoji: "🖼️" },
+  { id: "avatar",      label: "AI Avatar Video",    emoji: "🤖" },
+];
+
 // ── Main component ────────────────────────────────────────────
 export default function VideoGeneratorSection() {
+  const [videoMode, setVideoMode] = useState("storyboard");
   const [platform, setPlatform] = useState(PLATFORMS[0]);
   const [topic, setTopic] = useState("");
   const [style, setStyle] = useState(VIDEO_STYLES[0]);
@@ -122,6 +130,15 @@ export default function VideoGeneratorSection() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [frames, setFrames] = useState<{ url: string; scene: string }[]>([]);
   const [script, setScript] = useState("");
+
+  // Image to Video state
+  const [imgConcept, setImgConcept] = useState("");
+  const [imgMotion, setImgMotion] = useState("Zoom In");
+  const [imgFrames, setImgFrames] = useState<string[]>([]);
+  const [isImgGen, setIsImgGen] = useState(false);
+
+  // Avatar state
+  const [avatarScript, setAvatarScript] = useState("");
   const [isScriptLoading, setIsScriptLoading] = useState(false);
   const [activeFrame, setActiveFrame] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -232,6 +249,28 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
     setActiveFrame(0);
   }
 
+  // ── Image to Video generate ────────────────────────────────
+  async function generateImgToVideo() {
+    if (!imgConcept.trim()) return;
+    setIsImgGen(true);
+    setImgFrames([]);
+    const motionMap: Record<string, string[]> = {
+      "Zoom In":    ["wide establishing shot", "medium zoom", "close-up detail", "extreme close-up", "reveal pull-back", "final composition"],
+      "Zoom Out":   ["extreme close-up macro", "close detail shot", "medium shot", "wider angle", "full scene reveal", "grand wide landscape"],
+      "Pan Left":   ["right-side composition", "center frame", "slight left tilt", "wide pan", "left-focus detail", "full left reveal"],
+      "Pan Right":  ["left-side composition", "center frame", "slight right tilt", "wide pan", "right-focus detail", "full right reveal"],
+      "Orbit 360":  ["front view", "three-quarter angle", "side profile", "back three-quarter", "back view", "top-down aerial"],
+      "Time Lapse": ["dawn lighting", "morning light", "afternoon sunlight", "golden hour glow", "blue hour dusk", "night illumination"],
+    };
+    const shots = motionMap[imgMotion] || motionMap["Zoom In"];
+    const urls = shots.slice(0, 6).map((shot, i) =>
+      pollinationsUrl(`${imgConcept}, ${shot}, cinematic photography, ultra high quality, professional composition`, 1280, 720, Math.floor(Math.random() * 99999) + i * 111)
+    );
+    setImgFrames(urls);
+    deductCredits(CREDIT_COSTS.tool_medium.cost);
+    setTimeout(() => setIsImgGen(false), 1500);
+  }
+
   const activeFrameData = frames[activeFrame];
 
   return (
@@ -253,6 +292,123 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
             Turn your topic or script into platform-ready video storyboards with AI-generated scenes, voiceover scripts, and frame-by-frame previews — for YouTube, Shorts, Reels, TikTok, and more.
           </p>
         </div>
+
+        {/* Mode selector tabs */}
+        <div className="flex gap-2 mb-6 p-1 bg-black/40 rounded-2xl border border-white/8 max-w-lg mx-auto">
+          {VIDEO_MODES.map(m => (
+            <button key={m.id} onClick={() => setVideoMode(m.id)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                videoMode === m.id ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30" : "text-white/50 hover:text-white hover:bg-white/5"
+              }`}>
+              <span>{m.emoji}</span> {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Image to Video Panel ── */}
+        {videoMode === "img2video" && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="max-w-5xl mx-auto glass-card rounded-2xl border border-white/10 p-6">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-white/80 mb-2">Describe your scene or subject</label>
+                  <textarea
+                    className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/25 h-28 focus:outline-none focus:border-indigo-500/40 resize-none text-sm"
+                    placeholder="e.g. A luxury watch on a marble surface with sunlight casting shadows, product photography style..."
+                    value={imgConcept} onChange={e => setImgConcept(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Camera Motion Style</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["Zoom In", "Zoom Out", "Pan Left", "Pan Right", "Orbit 360", "Time Lapse"].map(m => (
+                      <button key={m} onClick={() => setImgMotion(m)}
+                        className={`py-2 px-2 rounded-xl text-xs font-medium border transition-all ${imgMotion === m ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-400" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white"}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-xs text-indigo-300/70 leading-relaxed">
+                  Generates <strong className="text-indigo-300">6 cinematic frames</strong> simulating the {imgMotion} camera motion from your scene description using AI imagery.
+                </div>
+                <Button onClick={generateImgToVideo} disabled={isImgGen || !imgConcept.trim()}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold h-11 rounded-xl">
+                  {isImgGen ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating frames...</> : <><Wand2 className="w-4 h-4 mr-2" />Generate Video Frames</>}
+                </Button>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Generated Frames — {imgMotion}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {imgFrames.length === 0 ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="aspect-video rounded-xl border border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center">
+                        <Video className="w-6 h-6 text-white/10" />
+                      </div>
+                    ))
+                  ) : (
+                    imgFrames.map((url, i) => (
+                      <StoryboardFrame key={i} url={url} index={i} label={`${imgMotion} — Frame ${i+1}`} isActive={false} />
+                    ))
+                  )}
+                </div>
+                {imgFrames.length > 0 && (
+                  <button onClick={() => imgFrames.forEach((url, i) => { const a = document.createElement("a"); a.href = url; a.download = `frame-${i+1}.jpg`; a.target = "_blank"; a.click(); })}
+                    className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium transition-colors">
+                    <Download className="w-4 h-4" /> Download All 6 Frames
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── AI Avatar Video Panel ── */}
+        {videoMode === "avatar" && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="max-w-5xl mx-auto glass-card rounded-2xl border border-white/10 p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-400 text-sm font-medium mb-4">
+                <Sparkles className="w-4 h-4" /> Coming Soon
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3">AI Avatar Video Creator</h3>
+              <p className="text-white/50 max-w-lg mx-auto">Create professional talking-head videos with realistic AI avatars. Write your script and choose your presenter — no camera, no recording needed.</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-4 mb-8">
+              {[
+                { emoji: "🧑‍💼", title: "Business Avatar", desc: "Professional presenter, suit & tie, corporate setting" },
+                { emoji: "👩‍🏫", title: "Educator Avatar", desc: "Friendly teacher style, whiteboard background" },
+                { emoji: "🎙️", title: "Podcast Host", desc: "Casual studio setup, microphone, relaxed vibe" },
+                { emoji: "📱", title: "Social Media", desc: "Trendy influencer style, ring light, modern" },
+                { emoji: "🌍", title: "News Anchor", desc: "Authoritative broadcast style, news desk" },
+                { emoji: "🎮", title: "Gaming Host", desc: "Dynamic gaming setup, neon accents, energy" },
+              ].map(a => (
+                <div key={a.title} className="p-4 rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer group">
+                  <div className="text-3xl mb-3">{a.emoji}</div>
+                  <div className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">{a.title}</div>
+                  <div className="text-xs text-white/35 mt-1 leading-relaxed">{a.desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-4 max-w-2xl mx-auto">
+              <div>
+                <label className="block text-sm font-semibold text-white/80 mb-2">Your Script</label>
+                <textarea
+                  className="w-full bg-black/40 border border-white/8 rounded-xl p-4 text-white placeholder:text-white/20 h-28 focus:outline-none focus:border-violet-500/30 resize-none text-sm"
+                  placeholder="Write your video script here... the AI avatar will speak it naturally."
+                  value={avatarScript} onChange={e => setAvatarScript(e.target.value)} />
+              </div>
+              <Button disabled className="w-full bg-violet-600/50 text-white/50 font-semibold h-11 rounded-xl cursor-not-allowed">
+                <Sparkles className="w-4 h-4 mr-2" /> Generate Avatar Video — Coming Soon
+              </Button>
+              <p className="text-center text-xs text-white/30">Join the waitlist to be notified when AI Avatar Video launches</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Storyboard panel (only show for storyboard mode) ── */}
+        {videoMode === "storyboard" && <div className="contents">
 
         {/* Platform tabs */}
         <div className="flex overflow-x-auto gap-2 mb-8 pb-2 scrollbar-hide justify-center">
@@ -428,6 +584,7 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
             )}
           </div>
         </div>
+        </div>}
       </div>
     </section>
   );

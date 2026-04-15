@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: "Social Media",     href: "#social-media-section" },
   { label: "AI Image",         href: "#ai-image",   badge: "✨" },
   { label: "AI Video",         href: "#ai-video",   badge: "🎬" },
+  { label: "AI Voice",         href: "#ai-voice",   badge: "🎙️" },
   { label: "AI Tools",         href: "#ai-tools" },
   { label: "Resources",        href: "#resources" },
   { label: "Pricing",          href: "#pricing" },

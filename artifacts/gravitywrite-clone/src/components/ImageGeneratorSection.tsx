@@ -118,9 +118,23 @@ const PRODUCT_TYPES = [
   { id: "closeup",     label: "Detail Close-up",    emoji: "🔍", prompt: "macro product photography, extreme close-up detail shot, texture and material showcase, high detail" },
 ];
 
+// ── Template Categories (matching screenshot) ──────────────────
+const TEMPLATE_CATS = [
+  { id: "all",      label: "All Templates",           emoji: "🗂️",  prompts: ["design template gallery", "creative template layout", "professional document template", "modern visual template"] },
+  { id: "social",   label: "Social Media",            emoji: "📱",  prompts: ["Instagram post template", "Facebook cover template", "Twitter banner template", "LinkedIn post template"] },
+  { id: "cards",    label: "Cards & Invitations",     emoji: "🎉",  prompts: ["birthday party invitation card design", "wedding invitation elegant template", "baby shower invitation pink floral", "event invitation card design"] },
+  { id: "print",    label: "Print Marketing",         emoji: "🖨️",  prompts: ["promotional flyer template design", "business brochure tri-fold", "leaflet marketing design", "catalogue print design"] },
+  { id: "docs",     label: "Professional Documents",  emoji: "📄",  prompts: ["professional resume template design", "business letterhead template", "invoice professional design", "company report cover page"] },
+  { id: "edu",      label: "Educational Materials",   emoji: "🎓",  prompts: ["educational worksheet template", "school certificate design", "infographic educational template", "classroom poster design"] },
+  { id: "digital",  label: "Digital Marketing",       emoji: "💻",  prompts: ["email newsletter template design", "web banner advertising design", "digital ad template", "landing page mockup design"] },
+  { id: "products", label: "Print Products",          emoji: "🏷️",  prompts: ["product label sticker design", "packaging box design template", "tag label design", "merchandise print design"] },
+  { id: "visual",   label: "Visual Design Elements",  emoji: "🎨",  prompts: ["decorative pattern background design", "abstract geometric design element", "icon set flat design", "illustration design element"] },
+];
+
 // ── Tabs ──────────────────────────────────────────────────────
 const TABS = [
   { id: "text2img",   label: "Text to Image",       emoji: "✨" },
+  { id: "templates",  label: "Templates",            emoji: "📋" },
   { id: "arts",       label: "Arts & Drawing",      emoji: "🖼️" },
   { id: "social",     label: "Social Media",        emoji: "📱" },
   { id: "thumbnail",  label: "Thumbnails",          emoji: "🎬" },
@@ -226,6 +240,12 @@ export default function ImageGeneratorSection() {
   const [logoImages, setLogoImages] = useState<string[]>([]);
   const [isLogoGen, setIsLogoGen] = useState(false);
 
+  // Templates state
+  const [templateCat, setTemplateCat] = useState(TEMPLATE_CATS[0]);
+  const [templateImages, setTemplateImages] = useState<string[]>([]);
+  const [isTemplateGen, setIsTemplateGen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
+
   // Arts & Drawing state
   const [artPrompt, setArtPrompt] = useState("");
   const [artStyle, setArtStyle] = useState(ART_STYLES[0]);
@@ -327,6 +347,21 @@ export default function ImageGeneratorSection() {
     setLogoImages(urls);
     deductCredits(CREDIT_COSTS.tool_medium.cost);
     setTimeout(() => setIsLogoGen(false), 1500);
+  }
+
+  // ── Templates generate ─────────────────────────────────────
+  async function generateTemplate(cat: typeof TEMPLATE_CATS[0]) {
+    setIsTemplateGen(true);
+    setTemplateImages([]);
+    const prompts = cat.id === "all"
+      ? [...TEMPLATE_CATS.slice(1).flatMap(c => c.prompts.slice(0, 1)).slice(0, 8)]
+      : [...cat.prompts, ...cat.prompts];
+    const urls = prompts.slice(0, 8).map((p, i) =>
+      pollinationsUrl(`${p}, clean professional design, white background, high quality graphic design, modern layout`, 800, 1000, Math.floor(Math.random() * 99999) + i * 77)
+    );
+    setTemplateImages(urls);
+    deductCredits(CREDIT_COSTS.tool_short.cost);
+    setTimeout(() => setIsTemplateGen(false), 1200);
   }
 
   // ── Arts & Drawing generate ────────────────────────────────
@@ -705,6 +740,61 @@ export default function ImageGeneratorSection() {
               </div>
             </motion.div>
           )}
+          {/* ─── Templates Tab ─── */}
+          {activeTab === "templates" && (
+            <motion.div key="templates" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+              className="max-w-6xl mx-auto glass-card rounded-2xl border border-white/10 overflow-hidden">
+              <div className="grid md:grid-cols-[220px_1fr]">
+                {/* Sidebar */}
+                <div className="border-r border-white/8 p-3 space-y-1">
+                  <div className="px-3 py-2 mb-2">
+                    <input type="text" placeholder="Search templates..."
+                      className="w-full bg-black/40 border border-white/8 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-teal-500/30"
+                      value={templateSearch} onChange={e => setTemplateSearch(e.target.value)} />
+                  </div>
+                  {TEMPLATE_CATS.map(cat => (
+                    <button key={cat.id}
+                      onClick={() => { setTemplateCat(cat); generateTemplate(cat); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${templateCat.id === cat.id ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-white/50 hover:text-white hover:bg-white/5"}`}>
+                      <span>{cat.emoji}</span>
+                      <span className="truncate">{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Template grid */}
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-white font-semibold">{templateCat.label}</h3>
+                      <p className="text-xs text-white/40 mt-0.5">Complete collection — click to generate</p>
+                    </div>
+                    <Button onClick={() => generateTemplate(templateCat)} disabled={isTemplateGen} size="sm"
+                      className="bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs">
+                      {isTemplateGen ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Loading...</> : <><RefreshCw className="w-3 h-3 mr-1" />Refresh</>}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {templateImages.length === 0 ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="aspect-[4/5] rounded-xl border border-dashed border-white/8 bg-white/[0.02] flex items-center justify-center cursor-pointer hover:bg-white/[0.04] transition-colors"
+                          onClick={() => generateTemplate(templateCat)}>
+                          {isTemplateGen ? <Loader2 className="w-5 h-5 text-white/20 animate-spin" /> : <Layers className="w-5 h-5 text-white/10" />}
+                        </div>
+                      ))
+                    ) : (
+                      templateImages.map((url, i) => (
+                        <ImageResult key={i} url={url} label={`${templateCat.label} ${i + 1}`}
+                          w={800} h={1000}
+                          onRegenerate={() => generateTemplate(templateCat)} />
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* ─── Tab 5: Arts & Drawing ─── */}
           {activeTab === "arts" && (
             <motion.div key="arts" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}

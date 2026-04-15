@@ -12,7 +12,7 @@ interface TextareaField { type: "textarea"; id: string; label: string; placehold
 interface SelectField   { type: "select";   id: string; label: string; options: string[]; }
 type FieldDef = ChipField | InputField | TextareaField | SelectField;
 
-type Cat = "blog"|"youtube"|"social"|"email"|"advertising"|"code"|"writing"|"business"|"marketing"|"ecommerce"|"book"|"education"|"hr"|"website"|"video"|"personal"|"rewriting";
+type Cat = "blog"|"youtube"|"social"|"email"|"advertising"|"code"|"writing"|"business"|"marketing"|"ecommerce"|"book"|"education"|"hr"|"website"|"video"|"personal"|"rewriting"|"ai-tools";
 
 interface ToolDef {
   id: string; name: string; description: string; emoji: string; color: string; category: Cat;
@@ -1641,6 +1641,122 @@ For each:
 \`\`\`
 *Why this works: [technique used]*`
   },
+
+  // ── AI TOOLS ─────────────────────────────────────────────────
+  {
+    id:"ai-humanizer", name:"AI Text Humanizer", description:"Make AI-generated text sound 100% human — bypasses AI detectors and adds your natural voice", emoji:"🧑", color:"#f97316", category:"ai-tools",
+    fields:[
+      {type:"textarea",id:"text",label:"Paste AI-generated text *",placeholder:"Paste your ChatGPT, Claude, or any AI-generated content here to humanize it...", rows:8},
+      {type:"chips",id:"level",label:"Humanization Level",options:["Light Touch","Moderate","Deep Rewrite","Stealth Mode"]},
+      {type:"chips",id:"style",label:"Writing Style",options:["Conversational","Professional","Academic","Casual Blog","LinkedIn"]},
+      {type:"chips",id:"persona",label:"Author Persona",options:["Marketing Pro","Startup Founder","Teacher","Journalist","Everyday Person"]},
+    ],
+    systemPrompt:"You are a master human writer. Your job is to transform AI-generated text into genuinely human-sounding content that passes all AI detection tools. Never mention you're rewriting. Just deliver the rewritten version.",
+    buildUserPrompt:f=>`Humanize the following AI-generated text completely.
+Mode: ${f.level||"Moderate"} | Style: ${f.style||"Conversational"} | Persona: ${f.persona||"Marketing Pro"}
+
+Instructions:
+- Vary sentence lengths dramatically (mix short punchy sentences with longer ones)
+- Add personal observations, rhetorical questions, occasional imperfections
+- Remove redundant transitions like "In conclusion", "Furthermore", "It's important to note"
+- Use contractions naturally (it's, you'll, don't, we've)
+- Add specific, concrete details and examples
+- Break up long paragraphs into 2-3 sentences max
+- Include natural discourse markers ("Here's the thing...", "Look,", "And honestly,")
+- Make it sound like a real human who knows their stuff, not a robot summarizing information
+
+Text to humanize:
+${f.text}`
+  },
+  {
+    id:"youtube-summarizer", name:"YouTube Video Summarizer", description:"Paste a YouTube transcript and get a concise summary, key points, and action items", emoji:"📺", color:"#ef4444", category:"ai-tools",
+    fields:[
+      {type:"textarea",id:"transcript",label:"Paste video transcript or captions *",placeholder:"Paste the YouTube video transcript here. (Tip: open YouTube → click '...' → Show transcript, then copy the text)", rows:8},
+      {type:"input",id:"title",label:"Video Title (optional)",placeholder:"e.g. How I Made $100K with AI in 2024"},
+      {type:"chips",id:"format",label:"Summary Format",options:["Quick Summary","Bullet Points","Detailed Notes","Action Items","Study Notes"]},
+      {type:"chips",id:"length",label:"Summary Length",options:["Short (150w)","Medium (300w)","Detailed (600w)"]},
+    ],
+    systemPrompt:"You are an expert content analyst who creates clear, actionable summaries from video transcripts.",
+    buildUserPrompt:f=>`Summarize this YouTube video transcript.
+Title: ${f.title||"Unknown"} | Format: ${f.format||"Bullet Points"} | Length: ${f.length||"Medium (300w)"}
+
+Output structure:
+🎬 **VIDEO SUMMARY** — ${f.title||"Unknown"}
+
+📌 **TL;DR (1 sentence):**
+[One-sentence essence]
+
+🔑 **Key Points:**
+[Main insights from the video]
+
+💡 **Key Takeaways:**
+[What to remember / apply]
+
+⚡ **Action Items:**
+[Specific steps viewers should take]
+
+🎯 **Quotable Moments:**
+[2-3 best quotes from the video]
+
+---
+TRANSCRIPT:
+${f.transcript}`
+  },
+  {
+    id:"meeting-summarizer", name:"Meeting Summarizer", description:"Transform meeting recordings or transcripts into clear summaries, decisions, and action items", emoji:"📋", color:"#8b5cf6", category:"ai-tools",
+    fields:[
+      {type:"textarea",id:"transcript",label:"Paste meeting transcript / notes *",placeholder:"Paste the meeting transcript, recording text, or your rough notes here...", rows:8},
+      {type:"input",id:"meeting",label:"Meeting Name / Type (optional)",placeholder:"e.g. Q4 Marketing Strategy, Product Roadmap Sync, Client Call"},
+      {type:"chips",id:"format",label:"Output Format",options:["Executive Summary","Action Items Only","Full Meeting Notes","Slack Update","Email Summary"]},
+      {type:"input",id:"attendees",label:"Attendees (optional)",placeholder:"e.g. Sarah (PM), John (Dev), Maria (Design)"},
+    ],
+    systemPrompt:"You are an expert meeting facilitator and executive assistant. You create crystal-clear meeting summaries that capture every important detail.",
+    buildUserPrompt:f=>`Summarize this meeting.
+Meeting: ${f.meeting||"Team Meeting"} | Attendees: ${f.attendees||"Not specified"} | Format: ${f.format||"Full Meeting Notes"}
+
+Output structure:
+📋 **MEETING SUMMARY**
+Meeting: ${f.meeting||"Team Meeting"} | Date: [infer from transcript or use "Recent"]
+Attendees: ${f.attendees||"Team"}
+
+🎯 **Meeting Purpose:**
+[One sentence on what this meeting was about]
+
+✅ **Decisions Made:**
+[Key decisions reached in bullet points]
+
+📌 **Action Items:**
+[Format: • [Task] — Owner: [Name] — Due: [Date if mentioned]]
+
+💬 **Key Discussion Points:**
+[Main topics discussed]
+
+❓ **Open Questions / Next Steps:**
+[Things still to be resolved]
+
+📝 **Follow-Up Required:**
+[What needs to happen before next meeting]
+
+---
+TRANSCRIPT:
+${f.transcript}`
+  },
+  {
+    id:"content-repurposer", name:"Content Repurposer", description:"Turn one piece of content into 10+ different formats instantly", emoji:"♻️", color:"#f97316", category:"ai-tools",
+    fields:[
+      {type:"textarea",id:"content",label:"Original Content *",placeholder:"Paste your blog post, video script, podcast notes, or any content...", rows:6},
+      {type:"chips",id:"source",label:"Content Type",options:["Blog Post","YouTube Video","Podcast","Twitter Thread","Newsletter","LinkedIn Post","Course Module"]},
+      {type:"chips",id:"outputs",label:"Convert To",options:["Social Media Pack","Email Newsletter","YouTube Script","LinkedIn Post","Twitter Thread","Instagram Captions","TikTok Script"]},
+    ],
+    systemPrompt:"You are a content repurposing expert who transforms content into multiple optimized formats.",
+    buildUserPrompt:f=>`Repurpose this ${f.source||"Blog Post"} content into: ${f.outputs||"Social Media Pack"}
+
+For each output format, optimize for that platform's style, audience behavior, and algorithm.
+Include all necessary elements (hooks, CTAs, hashtags, character limits) for each format.
+
+ORIGINAL CONTENT:
+${f.content}`
+  },
 ];
 
 // ── Category config ───────────────────────────────────────────
@@ -1663,6 +1779,7 @@ const CATS: { id: Cat|"all"; label: string; emoji: string }[] = [
   {id:"video",     label:"Video & Script",emoji:"🎬"},
   {id:"personal",  label:"Personal",      emoji:"🌟"},
   {id:"rewriting", label:"Rewriting",     emoji:"🔄"},
+  {id:"ai-tools",  label:"AI Tools",      emoji:"🤖"},
 ];
 
 // ── Field renderer ────────────────────────────────────────────
