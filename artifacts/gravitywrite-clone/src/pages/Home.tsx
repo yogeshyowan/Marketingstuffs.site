@@ -22,11 +22,15 @@ import BlogsSection from "@/components/BlogsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import { GenerationGateProvider } from "@/components/GenerationGate";
+import { UserProvider, useUser } from "@/context/UserContext";
+import OnboardingWizard from "@/components/OnboardingWizard";
 
-export default function Home() {
+function AppContent() {
+  const { showOnboarding } = useUser();
   return (
     <GenerationGateProvider>
       <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
+        {showOnboarding && <OnboardingWizard />}
         <Navbar />
         <HeroSection />
         <BrandsMarquee />
@@ -52,5 +56,13 @@ export default function Home() {
         <Footer />
       </main>
     </GenerationGateProvider>
+  );
+}
+
+export default function Home() {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   );
 }
