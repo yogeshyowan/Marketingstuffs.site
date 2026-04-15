@@ -1705,4 +1705,298 @@ Opt-out line to include at end of each SMS: "${optOutLine}"`,
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// YT GROWSTUFFS — Phase-Based Growth Playbook Endpoints
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Phase 1: Shorts Planner ───────────────────────────────────────────────────
+router.post("/ai/yt-shorts-plan", async (req, res) => {
+  const { niche, product, goal } = req.body as { niche: string; product?: string; goal?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a YouTube Shorts growth coach trained on Think Media and VidIQ methodology. 
+Generate a strategic 30-day Shorts content plan that starts with the most basic relevant concept and scales complexity.
+Return ONLY valid JSON (no markdown fences):
+{
+  "strategy": "string (2-sentence Shorts strategy overview for this niche)",
+  "week1": [
+    {"day": number, "concept": "string (very basic, foundational concept)", "angle": "string (unique take)", "hook": "string (first 3-second line)", "duration": "string (e.g. '30-45 sec')", "cta": "string (end screen CTA)"}
+  ],
+  "week2": [ same 7 items, slightly more advanced ],
+  "week3": [ same 7 items, introduce social proof or tutorials ],
+  "week4": [ same 7 items, product/service tease or authority content ],
+  "posting": "string (best posting time recommendation)",
+  "tips": ["string", "string", "string"] (3 Shorts-specific growth tips)
+}`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service (if any): ${product || "N/A"}\nGoal: ${goal || "grow to 1000 subscribers"}\n\nGenerate a 30-day Shorts content calendar. Start with the simplest, most relatable concept and scale up. Each Short builds on the previous one.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 2: Video Ladder ─────────────────────────────────────────────────────
+router.post("/ai/yt-video-ladder", async (req, res) => {
+  const { niche, product, currentStage } = req.body as { niche: string; product?: string; currentStage?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a YouTube content strategist who helps creators scale from Shorts to long-form content. 
+Return ONLY valid JSON (no markdown fences):
+{
+  "ladder": [
+    {
+      "stage": number (1-5),
+      "name": "string (stage name, e.g. 'Awareness Shorts')",
+      "format": "string (e.g. 'YouTube Shorts 30-60s')",
+      "frequency": "string (e.g. '1x daily')",
+      "contentType": "string (what type of content to create)",
+      "examples": ["string", "string", "string"] (3 specific video title examples for this niche),
+      "trigger": "string (milestone to hit before moving to next stage, e.g. '100 subscribers')",
+      "goal": "string (what this stage achieves)",
+      "icon": "string (single emoji)"
+    }
+  ],
+  "productIntegration": "string (when and how to naturally introduce the product/service in the content ladder)",
+  "timelineEstimate": "string (realistic timeline to go through all 5 stages)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service: ${product || "N/A"}\nCurrent Stage: ${currentStage || "just starting"}\n\nCreate a 5-stage content ladder from Shorts → Long-form → Product integration. Be specific to this niche.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 3: Social Blast (Cross-platform distribution) ───────────────────────
+router.post("/ai/yt-social-blast", async (req, res) => {
+  const { videoTitle, niche, platforms } = req.body as { videoTitle: string; niche?: string; platforms?: string[] };
+  if (!videoTitle) return res.status(400).json({ error: "videoTitle is required" });
+  try {
+    const platformList = platforms?.length ? platforms : ["instagram", "linkedin", "twitter", "facebook", "whatsapp"];
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a multi-platform social media strategist. Given a YouTube video, create optimized cross-platform distribution content.
+Return ONLY valid JSON (no markdown fences):
+{
+  "instagram": { "reelHook": "string (first 3s)", "caption": "string (150-200 words with emojis)", "hashtags": ["tag",...15 tags], "storySlides": ["string (slide 1 text)", "string (slide 2 text)", "string (slide 3 text)"] },
+  "linkedin": { "hook": "string (first line stops the scroll)", "post": "string (200-250 words professional tone)", "cta": "string" },
+  "twitter": { "thread": ["string tweet 1 (hook)", "string tweet 2", "string tweet 3", "string tweet 4 (CTA)"] },
+  "facebook": { "post": "string (conversational, 100-150 words)", "groupStrategy": "string (which FB groups to share in)" },
+  "whatsapp": { "broadcastMessage": "string (short, casual, under 100 words)", "statusText": "string (very short, WhatsApp status copy)" },
+  "schedule": "string (recommended sequence: post on X first, then Y, etc.)"
+}`,
+      },
+      {
+        role: "user",
+        content: `YouTube Video Title: ${videoTitle}\nNiche: ${niche || "General"}\nPlatforms: ${platformList.join(", ")}\n\nCreate a complete cross-platform distribution strategy for this video. Each platform should have unique, platform-native content — not just copied captions.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 4: Product Launch ───────────────────────────────────────────────────
+router.post("/ai/yt-product-launch", async (req, res) => {
+  const { productName, problem, solution, audience, niche } = req.body as {
+    productName: string; problem: string; solution?: string; audience?: string; niche?: string;
+  };
+  if (!productName || !problem) return res.status(400).json({ error: "productName and problem are required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a product launch strategist who has launched 100+ products on YouTube using story-driven marketing.
+Return ONLY valid JSON (no markdown fences):
+{
+  "launchSeries": [
+    {
+      "videoNumber": number (1-5),
+      "title": "string (clickable YouTube title)",
+      "angle": "string (narrative angle — problem story, solution reveal, case study, etc.)",
+      "script_hook": "string (first 30 seconds that hooks viewers and sets up the problem)",
+      "keyPoints": ["string",...4 points to cover in this video],
+      "cta": "string (specific call-to-action for this video in the launch sequence)",
+      "thumbnail": "string (thumbnail concept description)"
+    }
+  ],
+  "problemStatement": "string (refined 2-sentence problem statement based on input — use this in all videos)",
+  "launchTimeline": "string (5-week launch countdown strategy)",
+  "pricingAngle": "string (how to talk about price without it feeling salesy)"
+}`,
+      },
+      {
+        role: "user",
+        content: `Product Name: ${productName}\nProblem it Solves: ${problem}\nSolution/How it Works: ${solution || "N/A"}\nTarget Audience: ${audience || "General"}\nNiche: ${niche || "General"}\n\nCreate a 5-video YouTube product launch series. Each video should build trust before selling. Use the problem→story→solution framework.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 5: Stories Calendar ─────────────────────────────────────────────────
+router.post("/ai/yt-stories", async (req, res) => {
+  const { niche, product, platform } = req.body as { niche: string; product?: string; platform?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a stories marketing expert who builds deep audience connection through daily Instagram/YouTube Stories.
+Return ONLY valid JSON (no markdown fences):
+{
+  "strategy": "string (3-sentence stories strategy for building community and selling without hard selling)",
+  "days": [
+    {
+      "day": number (1-7),
+      "theme": "string (e.g. 'Behind the Scenes', 'Quick Tip', 'Poll Day')",
+      "slides": [
+        { "type": "string (text|image|poll|quiz|countdown|swipe)", "content": "string (exact story text or description)", "interactivity": "string (poll options, quiz answer, etc. if applicable)" }
+      ],
+      "goal": "string (what this story day achieves — curiosity, trust, engagement, etc.)"
+    }
+  ],
+  "selling_story": "string (how to weave product mentions naturally into stories without being salesy)",
+  "engagement_hacks": ["string", "string", "string"] (3 story engagement tricks)
+}`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service: ${product || "N/A"}\nPlatform: ${platform || "Instagram + YouTube Community"}\n\nCreate a 7-day stories content calendar. Mix personal, educational, and community-building stories. Include polls, quizzes, and swipe-up moments.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 6: Quiz & Poll Videos ──────────────────────────────────────────────
+router.post("/ai/yt-quiz", async (req, res) => {
+  const { niche, topic } = req.body as { niche: string; topic?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are an engagement specialist who creates interactive quiz and poll videos that boost YouTube watch time and comments.
+Return ONLY valid JSON (no markdown fences):
+{
+  "quizVideos": [
+    {
+      "title": "string (clickable quiz video title)",
+      "format": "string (e.g. 'True/False rapid fire', 'Guess the answer', 'This or That')",
+      "questions": [
+        { "question": "string", "options": ["A: string", "B: string", "C: string", "D: string"], "answer": "string", "explanation": "string (brief)", "reveal_hook": "string (how to reveal the answer dramatically)" }
+      ],
+      "thumbnail": "string (thumbnail concept — always show a big number like '9/10 people got this wrong')",
+      "engagement_prompt": "string (comment prompt — e.g. 'Comment your score below!')"
+    }
+  ],
+  "pollIdeas": ["string",...5 poll ideas for community posts],
+  "engagement_tip": "string (pro tip on turning quiz viewers into subscribers)"
+}
+Generate 3 quiz video concepts with 5 questions each.`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nTopic focus: ${topic || "general niche knowledge"}\n\nCreate 3 engaging quiz video concepts. Each quiz should have a curiosity-gap title, make people want to prove they know the answers, and drive comment engagement.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 7: Freebie Funnel ───────────────────────────────────────────────────
+router.post("/ai/yt-freebie", async (req, res) => {
+  const { niche, product, audience } = req.body as { niche: string; product?: string; audience?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a lead magnet and funnel strategist who builds email lists through YouTube and social media.
+Return ONLY valid JSON (no markdown fences):
+{
+  "freebies": [
+    {
+      "name": "string (freebie name — catchy, specific, value-clear)",
+      "type": "string (Checklist|PDF Guide|Template|Email Course|Swipe File|Video Series|Toolkit)",
+      "description": "string (what's inside — be specific, not vague)",
+      "ytVideoTitle": "string (YouTube video title that naturally promotes this freebie)",
+      "cta_line": "string (exact CTA to say in the video to get people to claim it)",
+      "email_sequence": [
+        { "email": number, "subject": "string", "content": "string (2-3 sentence summary of email content)" }
+      ]
+    }
+  ],
+  "landingPageHook": "string (headline for the freebie landing page)",
+  "deliveryMechanism": "string (how to deliver the freebie — ConvertKit, Gumroad, etc.)",
+  "conversionTip": "string (one powerful tip to maximize freebie to paid conversion)"
+}
+Generate 3 freebie concepts with a 3-email welcome sequence for each.`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service to upsell: ${product || "N/A"}\nTarget Audience: ${audience || "General"}\n\nCreate 3 high-value freebie concepts that would make viewers immediately want to sign up. Each freebie should solve one specific, urgent problem and naturally lead into the product purchase.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── Phase 8: Perks & Scale ────────────────────────────────────────────────────
+router.post("/ai/yt-perks", async (req, res) => {
+  const { niche, product, subscribers } = req.body as { niche: string; product?: string; subscribers?: string };
+  if (!niche) return res.status(400).json({ error: "niche is required" });
+  try {
+    const { resp } = await chatWithFallback([
+      {
+        role: "system",
+        content: `You are a YouTube monetization and community-building expert who helps creators build loyal superfan communities.
+Return ONLY valid JSON (no markdown fences):
+{
+  "membershipTiers": [
+    {
+      "name": "string (tier name — creative, niche-specific)",
+      "price": "string (e.g. '$2.99/month')",
+      "perks": ["string",...5 specific perks],
+      "exclusive_content": "string (what exclusive content/access they get)"
+    }
+  ],
+  "insightSeries": [
+    { "title": "string (exclusive insight video/post title)", "format": "string", "value": "string (why superfans would pay for this)" }
+  ],
+  "communityPlatform": "string (best platform recommendation — Discord, WhatsApp, Telegram, Patreon, etc. with reason)",
+  "referralProgram": { "mechanism": "string (how the referral works)", "reward": "string (what referrers get)", "cta": "string (how to announce it in videos)" },
+  "scaleRoadmap": "string (3-4 sentence roadmap from 1k to 100k subscribers using these perks and community building)"
+}
+Create 3 membership tiers and 5 insider insight series ideas.`,
+      },
+      {
+        role: "user",
+        content: `Niche: ${niche}\nProduct/Service: ${product || "N/A"}\nCurrent Subscribers: ${subscribers || "just starting"}\n\nCreate a complete perks, membership, and community-building strategy. Focus on creating a loyal superfan base that buys anything you recommend.`,
+      },
+    ]);
+    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
+    return res.json(data);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
 export default router;

@@ -2,36 +2,35 @@ import { useState, useRef, useEffect } from "react";
 import { useGenerationGate } from "@/components/GenerationGate";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Youtube, Lightbulb, Type, FileText, AlignLeft, Search, Tag,
-  Image, BarChart2, Clock, TrendingUp, Users, Bot, Loader2, Copy,
-  Check, RefreshCw, Sparkles, AlertCircle, Send, ChevronRight,
-  Star, Zap, Eye, Target, Award, Flame, Hash, Palette, Calendar,
-  MessageCircle, ArrowUp, ArrowRight, BookOpen,
+  Youtube, Bot, Loader2, Copy, Check, RefreshCw, Sparkles,
+  AlertCircle, Send, ArrowRight, Zap, Star, ChevronRight,
+  Smartphone, TrendingUp, Share2, ShoppingBag, BookOpen,
+  HelpCircle, Gift, Crown, Map, Calendar, Users,
+  Play, Video, Instagram, Layers, Heart, Trophy,
+  Target, MessageSquare, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/__api/";
 
-// ── Tab definitions ──────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "ideas",       icon: Lightbulb,    label: "Daily Ideas",      color: "text-yellow-400",  badge: "🔥" },
-  { id: "titles",      icon: Type,         label: "Title Generator",  color: "text-blue-400",    badge: "✨" },
-  { id: "script",      icon: FileText,     label: "Script Writer",    color: "text-green-400",   badge: "" },
-  { id: "description", icon: AlignLeft,    label: "Description AI",   color: "text-purple-400",  badge: "" },
-  { id: "keywords",    icon: Search,       label: "Keyword Research", color: "text-cyan-400",    badge: "📊" },
-  { id: "tags",        icon: Tag,          label: "Tag Generator",    color: "text-orange-400",  badge: "" },
-  { id: "thumbnail",   icon: Image,        label: "Thumbnail Ideas",  color: "text-pink-400",    badge: "🎨" },
-  { id: "audit",       icon: BarChart2,    label: "Channel Audit",    color: "text-emerald-400", badge: "" },
-  { id: "besttime",    icon: Clock,        label: "Best Time to Post",color: "text-teal-400",    badge: "" },
-  { id: "trends",      icon: TrendingUp,   label: "Trend Finder",     color: "text-red-400",     badge: "🌋" },
-  { id: "competitor",  icon: Users,        label: "Competitor Intel", color: "text-violet-400",  badge: "" },
-  { id: "coach",       icon: Bot,          label: "AI Coach",         color: "text-rose-400",    badge: "AI" },
+  { id: "roadmap", icon: Map,          label: "Growth Roadmap",   color: "text-red-400",     badge: "🗺️"  },
+  { id: "shorts",  icon: Smartphone,   label: "Shorts Planner",   color: "text-pink-400",    badge: "📱"  },
+  { id: "ladder",  icon: TrendingUp,   label: "Video Ladder",     color: "text-orange-400",  badge: "📈"  },
+  { id: "social",  icon: Share2,       label: "Social Blast",     color: "text-blue-400",    badge: "📢"  },
+  { id: "launch",  icon: ShoppingBag,  label: "Product Launch",   color: "text-emerald-400", badge: "🛍️"  },
+  { id: "stories", icon: Instagram,    label: "Stories Calendar", color: "text-purple-400",  badge: "📖"  },
+  { id: "quiz",    icon: HelpCircle,   label: "Quiz Builder",     color: "text-yellow-400",  badge: "🎯"  },
+  { id: "freebie", icon: Gift,         label: "Freebie Funnel",   color: "text-teal-400",    badge: "🎁"  },
+  { id: "perks",   icon: Crown,        label: "Perks & Scale",    color: "text-amber-400",   badge: "💎"  },
+  { id: "coach",   icon: Bot,          label: "Growth Coach",     color: "text-rose-400",    badge: "AI"  },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
 
-// ── Shared helpers ─────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -77,15 +76,6 @@ function EmptyBox({ icon: Icon, title, desc }: { icon: React.FC<any>; title: str
   );
 }
 
-function ViewBadge({ level }: { level: string }) {
-  const color = level === "Very High" ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-    : level === "High" ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
-    : "bg-amber-500/20 text-amber-300 border-amber-500/30";
-  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${color}`}>{level}</span>;
-}
-
-// ── Generic fetch helper ──────────────────────────────────────────────────
-
 async function callAPI(endpoint: string, body: object, signal: AbortSignal) {
   const res = await fetch(`${BASE_URL}ai/${endpoint}`, {
     method: "POST",
@@ -101,916 +91,268 @@ async function callAPI(endpoint: string, body: object, signal: AbortSignal) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: Daily Ideas
+// TAB 0: Growth Roadmap (Static visual guide)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function IdeasTab() {
+const PHASES = [
+  {
+    num: 1,
+    emoji: "📱",
+    name: "Shorts First",
+    timing: "Weeks 1–4",
+    color: "from-pink-600/20 to-pink-500/10 border-pink-500/30",
+    badge: "bg-pink-500",
+    tabId: "shorts" as TabId,
+    desc: "Start with simple, focused 30–60s YouTube Shorts on one basic concept per day. No complicated edits — just clear value and a punchy hook. The algorithm rewards consistency more than perfection at this stage.",
+    actions: ["Post 1 Short/day on the same basic concept", "Use the same background, style, and format", "End every Short with: 'Follow for more [topic] tips'"],
+    metric: "Goal: 100 Shorts posted = first 1,000 subscribers",
+  },
+  {
+    num: 2,
+    emoji: "🎬",
+    name: "Video Ladder",
+    timing: "Month 2",
+    color: "from-orange-600/20 to-orange-500/10 border-orange-500/30",
+    badge: "bg-orange-500",
+    tabId: "ladder" as TabId,
+    desc: "Scale from Shorts to longer videos. Your first Shorts built an audience expecting basics — now teach them the next level. Go from 60s → 5 min → 10 min → 20 min as your channel grows. Each video should be harder to find elsewhere.",
+    actions: ["Map 5 levels of depth in your topic", "Each video starts where the last one ended", "Repurpose long videos back into Shorts clips"],
+    metric: "Goal: 5 evergreen videos ranking on YouTube search",
+  },
+  {
+    num: 3,
+    emoji: "📢",
+    name: "Social Blast",
+    timing: "Month 2–3",
+    color: "from-blue-600/20 to-blue-500/10 border-blue-500/30",
+    badge: "bg-blue-500",
+    tabId: "social" as TabId,
+    desc: "Every video you post should be turned into 5 pieces of content across platforms. Instagram Reels, LinkedIn articles, Twitter threads, Facebook groups, WhatsApp broadcasts — each platform has a native format that amplifies your reach back to YouTube.",
+    actions: ["Convert each video into a Reel (cut to 30s)", "Post the script as a LinkedIn article", "Share in 3 niche Facebook/WhatsApp groups"],
+    metric: "Goal: 5x content reach from 1 YouTube video",
+  },
+  {
+    num: 4,
+    emoji: "🛍️",
+    name: "Product Launch",
+    timing: "Month 3",
+    color: "from-emerald-600/20 to-emerald-500/10 border-emerald-500/30",
+    badge: "bg-emerald-500",
+    tabId: "launch" as TabId,
+    desc: "Now you have trust — use it. Launch your product or service with a 5-video series that tells the story of the problem, your journey finding the solution, and the transformation. Never lead with 'buy this.' Lead with 'here's the problem I solved — and how.'",
+    actions: ["Video 1: Tell your problem story (no product mention)", "Video 3: Reveal your solution + how it works", "Video 5: Show real results from beta users"],
+    metric: "Goal: Pre-launch waitlist of 500+ people",
+  },
+  {
+    num: 5,
+    emoji: "📖",
+    name: "Story Selling",
+    timing: "Month 3–4",
+    color: "from-purple-600/20 to-purple-500/10 border-purple-500/30",
+    badge: "bg-purple-500",
+    tabId: "stories" as TabId,
+    desc: "Stories are the most intimate format — your audience sees your face, your workspace, your day. 5-7 stories per day on Instagram + YouTube Community posts builds a relationship that videos alone can't. Mix education, behind-the-scenes, and product moments.",
+    actions: ["Behind-the-scenes 3x/week (show your process)", "Educational quick tip 2x/week", "1 product story per week (subtle, value-first)"],
+    metric: "Goal: 10k story views/week consistently",
+  },
+  {
+    num: 6,
+    emoji: "🎯",
+    name: "Quiz & Polls",
+    timing: "Month 4",
+    color: "from-yellow-600/20 to-yellow-500/10 border-yellow-500/30",
+    badge: "bg-yellow-500",
+    tabId: "quiz" as TabId,
+    desc: "Quiz videos are the secret algorithm hack — they generate 5–8x more comments than regular videos because everyone wants to prove they're smart. 'I bet you can't get 10/10' in the title triggers action. Comments tell YouTube your content is must-watch.",
+    actions: ["Post 1 quiz video per week ('Did you know?' or 'Test yourself')", "End with: 'Comment your score — I'll reply to everyone'", "Create Community polls 3x/week to boost algorithm signals"],
+    metric: "Goal: 100+ comments on every quiz video",
+  },
+  {
+    num: 7,
+    emoji: "🎁",
+    name: "Freebie Funnel",
+    timing: "Month 4–5",
+    color: "from-teal-600/20 to-teal-500/10 border-teal-500/30",
+    badge: "bg-teal-500",
+    tabId: "freebie" as TabId,
+    desc: "Give away something so valuable that people feel guilty not buying from you. A free checklist, template, mini-course, or tool related to your niche — promoted in your video description and pinned comment — builds your email list while YouTube grows your audience. Email is the platform you own.",
+    actions: ["Create 1 freebie worth ₹999/$15+ in value (give it free)", "Promote in video description + pinned comment + end screen", "Nurture email list with 3-email welcome sequence"],
+    metric: "Goal: 2,000+ email subscribers before product launch",
+  },
+  {
+    num: 8,
+    emoji: "💎",
+    name: "Perks & Scale",
+    timing: "Month 5+",
+    color: "from-amber-600/20 to-amber-500/10 border-amber-500/30",
+    badge: "bg-amber-500",
+    tabId: "perks" as TabId,
+    desc: "Once you have an audience that trusts you, create exclusive layers. Channel memberships, private communities, early access content, monthly live Q&As — these turn casual viewers into paying superfans. Your top 100 superfans will do more for your channel than any algorithm.",
+    actions: ["Launch YouTube membership with 2-3 tiers", "Create a private Discord/WhatsApp group for paying members", "Host monthly live streams for community + product updates"],
+    metric: "Goal: 100 paying members = ₹30,000–₹1L/month recurring",
+  },
+];
+
+function RoadmapTab({ onJumpTo }: { onJumpTo: (tab: TabId) => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-red-500/8 border border-red-500/20 rounded-2xl px-5 py-4">
+        <p className="text-white font-semibold text-sm mb-1">🧠 The YT Growstuffs Growth Philosophy</p>
+        <p className="text-slate-300 text-xs leading-relaxed">
+          Based on VidIQ, Think Media, and top digital marketing coaches: <strong className="text-white">start with Shorts, scale complexity, blast across social, launch your product through storytelling, then build a community that buys anything you recommend.</strong> Use each AI tool below to execute every phase step-by-step.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {PHASES.map((phase, i) => (
+          <div key={phase.num} className={`bg-gradient-to-r ${phase.color} border rounded-2xl p-5`}>
+            <div className="flex items-start gap-4">
+              <div className="shrink-0">
+                <div className={`w-10 h-10 rounded-xl ${phase.badge} flex items-center justify-center text-xl`}>
+                  {phase.emoji}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-white font-bold text-sm">Phase {phase.num}: {phase.name}</span>
+                  <span className="text-xs bg-white/10 text-white/60 px-2 py-0.5 rounded-full">{phase.timing}</span>
+                </div>
+                <p className="text-slate-300 text-xs leading-relaxed mb-3">{phase.desc}</p>
+                <div className="space-y-1 mb-3">
+                  {phase.actions.map((a, j) => (
+                    <p key={j} className="text-slate-400 text-xs flex items-start gap-1.5">
+                      <span className="text-slate-500 shrink-0 mt-0.5">→</span>{a}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs text-slate-500 italic">{phase.metric}</span>
+                  <button
+                    onClick={() => onJumpTo(phase.tabId)}
+                    className="flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border border-white/15 px-3 py-1.5 rounded-full transition-all"
+                  >
+                    Open AI Tool <ArrowRight size={10} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-4 text-center">
+        <p className="text-slate-400 text-xs">
+          📊 <strong className="text-white">VidIQ-style insight:</strong> Channels that follow a structured phase-based growth system grow 4.3x faster than those posting randomly. Consistency + strategy beats raw talent every time.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 1: Shorts Planner
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ShortsTab() {
   const { requestGeneration } = useGenerationGate();
   const [niche, setNiche] = useState("");
-  const [channel, setChannel] = useState("");
+  const [product, setProduct] = useState("");
+  const [goal, setGoal] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [ideas, setIdeas] = useState<Array<{ title: string; viewPrediction: string; why: string; hook: string }>>([]);
+  const [result, setResult] = useState<any>(null);
+  const [week, setWeek] = useState<"week1"|"week2"|"week3"|"week4">("week1");
   const abortRef = useRef<AbortController | null>(null);
 
   async function generate() {
     if (!niche.trim()) return;
     abortRef.current?.abort();
     const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setIdeas([]);
+    setLoading(true); setError(""); setResult(null);
     try {
-      const data = await callAPI("yt-ideas", { niche, channel }, ctrl.signal);
-      setIdeas(data.ideas || []);
+      const data = await callAPI("yt-shorts-plan", { niche, product, goal }, ctrl.signal);
+      setResult(data); setWeek("week1");
     } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
     finally { setLoading(false); }
   }
 
-  return (
-    <div className="grid lg:grid-cols-[320px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche / Topic *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. Personal Finance, Travel Vlogging, Gaming" value={niche} onChange={e => setNiche(e.target.value)} onKeyDown={e => e.key === "Enter" && requestGeneration(generate)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Channel Name (optional)</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. MoneyMindset" value={channel} onChange={e => setChannel(e.target.value)} />
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Generating...</> : <><Sparkles size={15} className="mr-2" />Get Today's Ideas</>}
-        </Button>
-      </div>
-      <div>
-        {!ideas.length && !loading && !error && <EmptyBox icon={Lightbulb} title="8 Fresh Video Ideas Await" desc="Enter your niche to get AI-curated ideas with view potential predictions" />}
-        {loading && <LoadingBox label="Researching trending topics for your niche…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {ideas.length > 0 && (
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-white font-semibold text-sm">{ideas.length} Ideas Ready</p>
-              <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> New batch</button>
-            </div>
-            {ideas.map((idea, i) => (
-              <div key={i} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 flex items-start gap-3 group hover:border-slate-600 transition-colors">
-                <span className="w-6 h-6 rounded-full bg-red-500/20 text-red-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-white text-sm font-semibold leading-snug">{idea.title}</p>
-                    <div className="flex items-center gap-1.5 shrink-0"><ViewBadge level={idea.viewPrediction} /><CopyBtn text={idea.title} /></div>
-                  </div>
-                  {idea.hook && <p className="text-red-300 text-xs mb-1 italic">Hook: "{idea.hook}"</p>}
-                  <p className="text-slate-400 text-xs leading-relaxed">{idea.why}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Title Generator
-// ═══════════════════════════════════════════════════════════════════════════
-
-function TitlesTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [topic, setTopic] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [style, setStyle] = useState("mixed");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [titles, setTitles] = useState<Array<{ title: string; style: string; ctrReason: string; hook: string }>>([]);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const STYLES = [
-    { id: "mixed", label: "Mixed" }, { id: "listicle", label: "Listicle" },
-    { id: "howto", label: "How-to" }, { id: "shocking", label: "Shocking" },
-    { id: "question", label: "Question" }, { id: "story", label: "Story" },
+  const weekData = result?.[week] || [];
+  const WEEKS: { id: "week1"|"week2"|"week3"|"week4"; label: string }[] = [
+    { id: "week1", label: "Week 1 — Basics" },
+    { id: "week2", label: "Week 2 — Build" },
+    { id: "week3", label: "Week 3 — Social Proof" },
+    { id: "week4", label: "Week 4 — Product Tease" },
   ];
-
-  async function generate() {
-    if (!topic.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setTitles([]);
-    try {
-      const data = await callAPI("yt-titles", { topic, keywords, style }, ctrl.signal);
-      setTitles(data.titles || []);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  return (
-    <div className="grid lg:grid-cols-[320px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Video Topic *</label>
-          <textarea rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none transition-colors"
-            placeholder="e.g. How I saved $10,000 in one year on a minimum wage" value={topic} onChange={e => setTopic(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Target Keywords</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. saving money, budgeting tips" value={keywords} onChange={e => setKeywords(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Title Style</label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {STYLES.map(s => (
-              <button key={s.id} onClick={() => setStyle(s.id)}
-                className={`p-1.5 rounded-lg border text-xs transition-all ${style === s.id ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-500"}`}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!topic.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Generating...</> : <><Type size={15} className="mr-2" />Generate Titles</>}
-        </Button>
-      </div>
-      <div>
-        {!titles.length && !loading && !error && <EmptyBox icon={Type} title="High-CTR Titles On Demand" desc="Get 8 title variations optimized for clicks, search, and algorithm performance" />}
-        {loading && <LoadingBox label="Crafting click-worthy titles…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {titles.length > 0 && (
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-white font-semibold text-sm">{titles.length} Title Variations</p>
-              <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> Regenerate</button>
-            </div>
-            {titles.map((t, i) => (
-              <div key={i} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3.5 hover:border-slate-600 transition-colors">
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <p className="text-white text-sm font-semibold leading-snug flex-1">{t.title}</p>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{t.style}</span>
-                    <CopyBtn text={t.title} />
-                  </div>
-                </div>
-                <p className="text-slate-400 text-xs">{t.ctrReason}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Script Writer
-// ═══════════════════════════════════════════════════════════════════════════
-
-function ScriptTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [title, setTitle] = useState("");
-  const [duration, setDuration] = useState("10");
-  const [style, setStyle] = useState("educational");
-  const [keyPoints, setKeyPoints] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [script, setScript] = useState<{ hook: string; intro: string; sections: Array<{ heading: string; content: string }>; outro: string; cta: string } | null>(null);
-  const [activeSection, setActiveSection] = useState<string | null>("hook");
-  const abortRef = useRef<AbortController | null>(null);
-
-  const DURATIONS = ["5", "10", "15", "20"];
-  const STYLES = [
-    { id: "educational", label: "Educational" }, { id: "entertainment", label: "Entertainment" },
-    { id: "tutorial", label: "Tutorial" }, { id: "vlog", label: "Vlog / Story" },
-  ];
-
-  async function generate() {
-    if (!title.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setScript(null);
-    try {
-      const data = await callAPI("yt-script", { title, duration, style, keyPoints }, ctrl.signal);
-      setScript(data.script || null);
-      setActiveSection("hook");
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  const allText = script ? [script.hook, script.intro, ...(script.sections || []).map(s => `${s.heading}\n\n${s.content}`), script.outro, script.cta].join("\n\n") : "";
 
   return (
     <div className="grid lg:grid-cols-[300px,1fr] gap-6">
       <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Video Title *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="Paste your video title here" value={title} onChange={e => setTitle(e.target.value)} />
+        <div className="bg-pink-500/8 border border-pink-500/20 rounded-xl p-3">
+          <p className="text-pink-300 text-xs font-semibold mb-1">📱 Phase 1 Strategy</p>
+          <p className="text-slate-400 text-xs">Start with the most basic concept in your niche. Post daily. Scale complexity each week. One concept = one Short. Never try to teach 3 things at once.</p>
         </div>
         <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Video Length</label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {DURATIONS.map(d => (
-              <button key={d} onClick={() => setDuration(d)}
-                className={`p-2 rounded-lg border text-xs transition-all ${duration === d ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400"}`}>
-                {d} min
-              </button>
-            ))}
-          </div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Personal Finance India, AI Tools, Fitness" value={niche} onChange={e => setNiche(e.target.value)} />
         </div>
         <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Video Style</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {STYLES.map(s => (
-              <button key={s.id} onClick={() => setStyle(s.id)}
-                className={`p-2 rounded-lg border text-xs transition-all ${style === s.id ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400"}`}>
-                {s.label}
-              </button>
-            ))}
-          </div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Product/Service (optional)</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. SaaS tool, Online course, Consulting" value={product} onChange={e => setProduct(e.target.value)} />
         </div>
         <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Key Points to Cover</label>
-          <textarea rows={3} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none transition-colors"
-            placeholder="List main points, e.g: compound interest, index funds, emergency fund" value={keyPoints} onChange={e => setKeyPoints(e.target.value)} />
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">30-Day Goal</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. 1000 subscribers, product launch, brand awareness" value={goal} onChange={e => setGoal(e.target.value)} />
         </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!title.trim() || loading}
+        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
           className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Writing Script...</> : <><FileText size={15} className="mr-2" />Generate Script</>}
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Building Calendar…</> : <><Smartphone size={15} className="mr-2" />Generate 30-Day Plan</>}
         </Button>
       </div>
       <div>
-        {!script && !loading && !error && <EmptyBox icon={FileText} title="Full Video Script Ready in Seconds" desc="Hook → Intro → Main sections → Outro → Call to Action, all written for you" />}
-        {loading && <LoadingBox label={`Writing a ${duration}-min ${style} script…`} />}
+        {!result && !loading && !error && <EmptyBox icon={Smartphone} title="30-Day Shorts Calendar" desc="Get a complete daily posting plan that starts simple and scales up — based on proven YouTube Shorts strategy" />}
+        {loading && <LoadingBox label="Building your 30-day Shorts growth plan…" />}
         {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {script && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="bg-green-500/15 text-green-400 border border-green-500/30 text-xs px-2.5 py-1 rounded-full">✓ Script Ready</span>
-              <div className="flex gap-2">
-                <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> Rewrite</button>
-                <button onClick={() => navigator.clipboard.writeText(allText)} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 border border-blue-500/30 px-2.5 py-1 rounded-lg"><Copy size={11} /> Copy All</button>
-              </div>
+        {result && (
+          <div className="space-y-4">
+            <div className="bg-pink-500/8 border border-pink-500/20 rounded-xl p-3.5">
+              <p className="text-pink-300 text-xs font-semibold mb-1">Strategy Overview</p>
+              <p className="text-slate-300 text-xs">{result.strategy}</p>
+              {result.posting && <p className="text-slate-400 text-xs mt-2">⏰ {result.posting}</p>}
             </div>
-            {[
-              { key: "hook", label: "🪝 Hook (First 30s)", content: script.hook },
-              { key: "intro", label: "👋 Intro", content: script.intro },
-              ...(script.sections || []).map((s, i) => ({ key: `s${i}`, label: `📌 ${s.heading}`, content: s.content })),
-              { key: "outro", label: "🎬 Outro", content: script.outro },
-              { key: "cta", label: "📢 Call to Action", content: script.cta },
-            ].map(sec => (
-              <div key={sec.key} className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
-                <button onClick={() => setActiveSection(activeSection === sec.key ? null : sec.key)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-white hover:bg-slate-700/30 transition-colors">
-                  <span>{sec.label}</span>
-                  <div className="flex items-center gap-2">
-                    <CopyBtn text={sec.content} />
-                    <ChevronRight size={14} className={`text-slate-400 transition-transform ${activeSection === sec.key ? "rotate-90" : ""}`} />
-                  </div>
+            <div className="flex gap-2 flex-wrap">
+              {WEEKS.map(w => (
+                <button key={w.id} onClick={() => setWeek(w.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${week === w.id ? "bg-red-500 border-red-400 text-white" : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500"}`}>
+                  {w.label}
                 </button>
-                <AnimatePresence>
-                  {activeSection === sec.key && (
-                    <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-                      <div className="px-4 pb-4 pt-0">
-                        <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap border-t border-slate-700 pt-3">{sec.content}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Description AI
-// ═══════════════════════════════════════════════════════════════════════════
-
-function DescriptionTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [videoTitle, setVideoTitle] = useState("");
-  const [channelName, setChannelName] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [socials, setSocials] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [result, setResult] = useState<{ description: string; hashtags: string[] } | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  async function generate() {
-    if (!videoTitle.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setResult(null);
-    try {
-      const data = await callAPI("yt-description", { videoTitle, channelName, keywords, socials }, ctrl.signal);
-      setResult(data);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  return (
-    <div className="grid lg:grid-cols-[300px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Video Title *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="Your video title" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Channel Name</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. MoneyMindset" value={channelName} onChange={e => setChannelName(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Target Keywords</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. saving money, budgeting" value={keywords} onChange={e => setKeywords(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Social / Links to Include</label>
-          <textarea rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none transition-colors"
-            placeholder="Instagram: @handle&#10;Website: https://..." value={socials} onChange={e => setSocials(e.target.value)} />
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!videoTitle.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Writing...</> : <><AlignLeft size={15} className="mr-2" />Generate Description</>}
-        </Button>
-      </div>
-      <div>
-        {!result && !loading && !error && <EmptyBox icon={AlignLeft} title="SEO-Optimized Description" desc="Full description with keywords, timestamps template, hashtags, and social links" />}
-        {loading && <LoadingBox label="Writing SEO-optimized description…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {result && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="bg-purple-500/15 text-purple-400 border border-purple-500/30 text-xs px-2.5 py-1 rounded-full">✓ Description Ready</span>
-              <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> Regenerate</button>
+              ))}
             </div>
-            <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Description</span>
-                <CopyBtn text={result.description} />
-              </div>
-              <pre className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap font-sans">{result.description}</pre>
-            </div>
-            {result.hashtags?.length > 0 && (
-              <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Hashtags</span>
-                  <CopyBtn text={result.hashtags.map(h => `#${h.replace(/^#/, "")}`).join(" ")} />
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {result.hashtags.map((h, i) => (
-                    <span key={i} className="bg-red-500/10 text-red-300 border border-red-500/20 px-2.5 py-0.5 rounded-full text-xs">#{h.replace(/^#/, "")}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Keyword Research
-// ═══════════════════════════════════════════════════════════════════════════
-
-function KeywordsTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [topic, setTopic] = useState("");
-  const [niche, setNiche] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [keywords, setKeywords] = useState<Array<{ keyword: string; volume: string; competition: number; score: number; trend: string; type: string }>>([]);
-  const abortRef = useRef<AbortController | null>(null);
-
-  async function generate() {
-    if (!topic.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setKeywords([]);
-    try {
-      const data = await callAPI("yt-keywords", { topic, niche }, ctrl.signal);
-      setKeywords(data.keywords || []);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  function scoreColor(s: number) {
-    if (s >= 75) return "text-emerald-400";
-    if (s >= 50) return "text-blue-400";
-    if (s >= 25) return "text-amber-400";
-    return "text-red-400";
-  }
-
-  function compBar(c: number) {
-    const pct = (c / 10) * 100;
-    const color = c <= 3 ? "bg-emerald-500" : c <= 6 ? "bg-amber-500" : "bg-red-500";
-    return (
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-          <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
-        </div>
-        <span className="text-xs text-slate-400 w-4">{c}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Main Topic / Seed Keyword *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. budgeting tips, gaming chair review" value={topic} onChange={e => setTopic(e.target.value)} onKeyDown={e => e.key === "Enter" && requestGeneration(generate)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. Personal Finance" value={niche} onChange={e => setNiche(e.target.value)} />
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!topic.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Researching...</> : <><Search size={15} className="mr-2" />Research Keywords</>}
-        </Button>
-        <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
-          <p className="text-slate-400 text-xs font-semibold mb-2">Score Guide</p>
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" /><span className="text-slate-400">Score 75-100: High opportunity</span></div>
-            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" /><span className="text-slate-400">Score 50-74: Good opportunity</span></div>
-            <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" /><span className="text-slate-400">Score 25-49: Moderate</span></div>
-          </div>
-        </div>
-      </div>
-      <div>
-        {!keywords.length && !loading && !error && <EmptyBox icon={Search} title="Keyword Research Engine" desc="Discover high-opportunity keywords with volume, competition score, and trend data" />}
-        {loading && <LoadingBox label="Analyzing keyword landscape…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {keywords.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-white font-semibold text-sm">{keywords.length} Keywords Found</p>
-              <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> Refresh</button>
-            </div>
-            <div className="bg-slate-800/40 rounded-xl overflow-hidden border border-slate-700/50">
-              <div className="grid grid-cols-[1fr,80px,100px,70px,60px,32px] gap-3 px-4 py-2.5 bg-slate-800/80 border-b border-slate-700 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-                <span>Keyword</span><span>Volume</span><span>Competition</span><span>Score</span><span>Trend</span><span></span>
-              </div>
-              <div className="divide-y divide-slate-700/50">
-                {keywords.map((kw, i) => (
-                  <div key={i} className="grid grid-cols-[1fr,80px,100px,70px,60px,32px] gap-3 px-4 py-3 items-center hover:bg-slate-800/40 transition-colors">
-                    <div>
-                      <p className="text-white text-xs font-medium">{kw.keyword}</p>
-                      {kw.type && <span className="text-[10px] text-slate-500">{kw.type}</span>}
+            <div className="space-y-2">
+              {weekData.map((item: any, i: number) => (
+                <div key={i} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3.5">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold flex items-center justify-center shrink-0">D{item.day}</span>
+                      <p className="text-white text-sm font-semibold">{item.concept}</p>
                     </div>
-                    <span className={`text-xs font-semibold ${kw.volume === "High" ? "text-emerald-400" : kw.volume === "Medium" ? "text-amber-400" : "text-slate-400"}`}>{kw.volume}</span>
-                    {compBar(kw.competition)}
-                    <span className={`text-sm font-bold ${scoreColor(kw.score)}`}>{kw.score}</span>
-                    <span className="text-xs">{kw.trend === "Rising" ? "📈" : kw.trend === "Falling" ? "📉" : "➡️"} <span className="text-slate-400">{kw.trend}</span></span>
-                    <CopyBtn text={kw.keyword} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Tag Generator
-// ═══════════════════════════════════════════════════════════════════════════
-
-function TagsTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [videoTitle, setVideoTitle] = useState("");
-  const [niche, setNiche] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [tags, setTags] = useState<{ primary: string[]; secondary: string[]; longtail: string[] } | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  async function generate() {
-    if (!videoTitle.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setTags(null);
-    try {
-      const data = await callAPI("yt-tags", { videoTitle, niche }, ctrl.signal);
-      setTags(data.tags || null);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  const allTags = tags ? [...(tags.primary||[]), ...(tags.secondary||[]), ...(tags.longtail||[])] : [];
-
-  return (
-    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Video Title *</label>
-          <textarea rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none transition-colors"
-            placeholder="e.g. How to Save $10k in 2025 (Step by Step)" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Channel Niche</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. Personal Finance" value={niche} onChange={e => setNiche(e.target.value)} />
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!videoTitle.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Generating...</> : <><Tag size={15} className="mr-2" />Generate Tags</>}
-        </Button>
-      </div>
-      <div>
-        {!tags && !loading && !error && <EmptyBox icon={Tag} title="30+ Optimized Tags" desc="Primary, secondary, and long-tail tags to maximize your video's search reach" />}
-        {loading && <LoadingBox label="Building your tag strategy…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {tags && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="bg-orange-500/15 text-orange-400 border border-orange-500/30 text-xs px-2.5 py-1 rounded-full">✓ {allTags.length} Tags Ready</span>
-              <div className="flex gap-2">
-                <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> Refresh</button>
-                <button onClick={() => navigator.clipboard.writeText(allTags.join(", "))} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 border border-blue-500/30 px-2.5 py-1 rounded-lg"><Copy size={11} /> Copy All</button>
-              </div>
-            </div>
-            {[
-              { label: "Primary Tags", tags: tags.primary, color: "bg-red-500/10 text-red-300 border-red-500/20" },
-              { label: "Secondary Tags", tags: tags.secondary, color: "bg-blue-500/10 text-blue-300 border-blue-500/20" },
-              { label: "Long-tail Tags", tags: tags.longtail, color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" },
-            ].map(group => (
-              <div key={group.label} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{group.label} ({group.tags?.length})</p>
-                  <CopyBtn text={(group.tags||[]).join(", ")} />
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(group.tags||[]).map((tag, i) => (
-                    <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${group.color} cursor-pointer`}
-                      onClick={() => navigator.clipboard.writeText(tag)}>{tag}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Thumbnail Ideas
-// ═══════════════════════════════════════════════════════════════════════════
-
-function ThumbnailTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [videoTitle, setVideoTitle] = useState("");
-  const [style, setStyle] = useState("dramatic");
-  const [mood, setMood] = useState("exciting");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [concepts, setConcepts] = useState<Array<{ concept: string; colors: string[]; textOverlay: string; mainElement: string; whyItWorks: string; emotion: string }>>([]);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const STYLES = ["dramatic", "clean/minimal", "colorful", "dark/moody", "illustrated"];
-  const MOODS = ["exciting", "shocking", "curious", "inspiring", "funny", "urgent"];
-
-  async function generate() {
-    if (!videoTitle.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setConcepts([]);
-    try {
-      const data = await callAPI("yt-thumbnail", { videoTitle, style, mood }, ctrl.signal);
-      setConcepts(data.concepts || []);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  return (
-    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Video Title *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. I quit my job to travel the world" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Visual Style</label>
-          <div className="space-y-1.5">
-            {STYLES.map(s => (
-              <button key={s} onClick={() => setStyle(s)}
-                className={`w-full p-2 rounded-lg border text-xs text-left transition-all ${style === s ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400"}`}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Mood / Emotion</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {MOODS.map(m => (
-              <button key={m} onClick={() => setMood(m)}
-                className={`p-1.5 rounded-lg border text-xs transition-all ${mood === m ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400"}`}>
-                {m.charAt(0).toUpperCase() + m.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!videoTitle.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Creating...</> : <><Palette size={15} className="mr-2" />Generate Ideas</>}
-        </Button>
-      </div>
-      <div>
-        {!concepts.length && !loading && !error && <EmptyBox icon={Image} title="3 Thumbnail Concepts" desc="Detailed visual directions with colors, layout, text overlay, and reasoning" />}
-        {loading && <LoadingBox label="Designing thumbnail concepts…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {concepts.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-white font-semibold text-sm">{concepts.length} Thumbnail Concepts</p>
-              <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> New ideas</button>
-            </div>
-            {concepts.map((c, i) => (
-              <div key={i} className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-3 flex items-center justify-between border-b border-slate-700">
-                  <span className="text-white font-semibold text-sm">Concept {i + 1}</span>
-                  <span className="text-xs bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2 py-0.5 rounded-full">{c.emotion}</span>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div>
-                    <p className="text-slate-400 text-xs font-semibold mb-1 uppercase tracking-wider">Layout & Concept</p>
-                    <p className="text-white text-sm">{c.concept}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-slate-400 text-xs font-semibold mb-1.5 uppercase tracking-wider">Color Palette</p>
-                      <div className="flex items-center gap-2">
-                        {c.colors?.map((col, ci) => (
-                          <div key={ci} className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-md border border-white/10 shrink-0" style={{ backgroundColor: col.startsWith("#") ? col : "#555" }} />
-                            <span className="text-slate-300 text-xs">{col}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-slate-400 text-xs font-semibold mb-1.5 uppercase tracking-wider">Main Element</p>
-                      <p className="text-slate-300 text-xs">{c.mainElement}</p>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{item.duration}</span>
+                      <CopyBtn text={`Day ${item.day}: ${item.concept}\nHook: ${item.hook}\nAngle: ${item.angle}\nCTA: ${item.cta}`} />
                     </div>
                   </div>
-                  <div>
-                    <p className="text-slate-400 text-xs font-semibold mb-1 uppercase tracking-wider">Text Overlay</p>
-                    <div className="bg-slate-900 rounded-lg px-3 py-2 inline-block">
-                      <p className="text-white text-sm font-bold">{c.textOverlay}</p>
-                    </div>
-                  </div>
-                  <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-lg p-2.5">
-                    <p className="text-emerald-400 text-xs font-semibold mb-0.5">💡 Why It Works</p>
-                    <p className="text-slate-300 text-xs">{c.whyItWorks}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Channel Audit
-// ═══════════════════════════════════════════════════════════════════════════
-
-function AuditTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [channelName, setChannelName] = useState("");
-  const [niche, setNiche] = useState("");
-  const [subscribers, setSubscribers] = useState("");
-  const [avgViews, setAvgViews] = useState("");
-  const [frequency, setFrequency] = useState("weekly");
-  const [age, setAge] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [audit, setAudit] = useState<{ strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[]; actionPlan: Array<{ step: number; action: string; impact: string }> } | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const FREQS = ["daily", "2-3x/week", "weekly", "bi-weekly", "monthly"];
-
-  async function generate() {
-    if (!niche.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setAudit(null);
-    try {
-      const data = await callAPI("yt-audit", { channelName, niche, subscribers, avgViews, frequency, age }, ctrl.signal);
-      setAudit(data.audit || null);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  return (
-    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-slate-300 text-xs font-medium mb-1.5 block">Channel Name</label>
-            <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-              placeholder="@channel" value={channelName} onChange={e => setChannelName(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-slate-300 text-xs font-medium mb-1.5 block">Channel Age</label>
-            <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-              placeholder="e.g. 2 years" value={age} onChange={e => setAge(e.target.value)} />
-          </div>
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Niche / Content Type *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. Personal Finance, Gaming, Cooking" value={niche} onChange={e => setNiche(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-slate-300 text-xs font-medium mb-1.5 block">Subscribers</label>
-            <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-              placeholder="e.g. 5000" value={subscribers} onChange={e => setSubscribers(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-slate-300 text-xs font-medium mb-1.5 block">Avg Views</label>
-            <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-              placeholder="e.g. 2000" value={avgViews} onChange={e => setAvgViews(e.target.value)} />
-          </div>
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Upload Frequency</label>
-          <div className="space-y-1.5">
-            {FREQS.map(f => (
-              <button key={f} onClick={() => setFrequency(f)}
-                className={`w-full p-2 rounded-lg border text-xs text-left transition-all ${frequency === f ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400"}`}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Auditing...</> : <><BarChart2 size={15} className="mr-2" />Audit My Channel</>}
-        </Button>
-      </div>
-      <div>
-        {!audit && !loading && !error && <EmptyBox icon={BarChart2} title="Complete Channel Audit" desc="SWOT analysis + 5-step growth action plan tailored to your channel's situation" />}
-        {loading && <LoadingBox label="Analyzing your channel performance…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {audit && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { key: "strengths",     label: "✅ Strengths",     color: "border-emerald-500/30 bg-emerald-500/8", pill: "text-emerald-400" },
-                { key: "weaknesses",    label: "⚠️ Weaknesses",    color: "border-amber-500/30 bg-amber-500/8",   pill: "text-amber-400" },
-                { key: "opportunities", label: "🚀 Opportunities", color: "border-blue-500/30 bg-blue-500/8",     pill: "text-blue-400" },
-                { key: "threats",       label: "🛡️ Threats",       color: "border-red-500/30 bg-red-500/8",       pill: "text-red-400" },
-              ].map(q => (
-                <div key={q.key} className={`border rounded-xl p-3.5 ${q.color}`}>
-                  <p className={`text-xs font-semibold mb-2 ${q.pill}`}>{q.label}</p>
-                  <ul className="space-y-1.5">
-                    {((audit as any)[q.key] || []).map((item: string, i: number) => (
-                      <li key={i} className="text-slate-300 text-xs flex items-start gap-1.5"><span className="text-slate-500 mt-0.5">•</span>{item}</li>
-                    ))}
-                  </ul>
+                  {item.hook && <p className="text-pink-300 text-xs italic ml-8">Hook: "{item.hook}"</p>}
+                  {item.angle && <p className="text-slate-400 text-xs ml-8 mt-0.5">Angle: {item.angle}</p>}
+                  {item.cta && <p className="text-emerald-400 text-xs ml-8 mt-0.5">CTA: {item.cta}</p>}
                 </div>
               ))}
             </div>
-            {audit.actionPlan?.length > 0 && (
-              <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-                <p className="text-white font-semibold text-sm mb-3">🎯 5-Step Growth Action Plan</p>
-                <div className="space-y-3">
-                  {audit.actionPlan.map((step, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-red-500/20 text-red-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{step.step || i + 1}</div>
-                      <div>
-                        <p className="text-white text-sm font-medium">{step.action}</p>
-                        <p className="text-emerald-400 text-xs mt-0.5">Impact: {step.impact}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB: Best Time to Post
-// ═══════════════════════════════════════════════════════════════════════════
-
-function BestTimeTab() {
-  const { requestGeneration } = useGenerationGate();
-  const [niche, setNiche] = useState("");
-  const [audience, setAudience] = useState("");
-  const [timezone, setTimezone] = useState("EST");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [result, setResult] = useState<{ bestTimes: Array<{ day: string; time: string; timezone: string; reason: string; score: number }>; generalTips: string[] } | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const TZS = ["EST", "PST", "CST", "GMT", "IST", "AEST", "CET"];
-
-  async function generate() {
-    if (!niche.trim()) return;
-    abortRef.current?.abort();
-    const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setResult(null);
-    try {
-      const data = await callAPI("yt-besttime", { niche, audience, timezone }, ctrl.signal);
-      setResult(data);
-    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
-    finally { setLoading(false); }
-  }
-
-  return (
-    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Channel Niche *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. Gaming, Cooking, Personal Finance" value={niche} onChange={e => setNiche(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Target Audience</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. College students, working professionals" value={audience} onChange={e => setAudience(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-2 block">Timezone</label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {TZS.map(tz => (
-              <button key={tz} onClick={() => setTimezone(tz)}
-                className={`p-1.5 rounded-lg border text-xs transition-all ${timezone === tz ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400"}`}>
-                {tz}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Analyzing...</> : <><Clock size={15} className="mr-2" />Find Best Times</>}
-        </Button>
-      </div>
-      <div>
-        {!result && !loading && !error && <EmptyBox icon={Clock} title="Optimal Publishing Schedule" desc="Get the exact days and times when your target audience is most active on YouTube" />}
-        {loading && <LoadingBox label="Analyzing audience behavior patterns…" />}
-        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {result && (
-          <div className="space-y-4">
-            <p className="text-white font-semibold text-sm mb-1">Top {result.bestTimes?.length} Publishing Windows</p>
-            <div className="space-y-3">
-              {result.bestTimes?.map((bt, i) => (
-                <div key={i} className={`border rounded-xl p-4 ${i === 0 ? "border-red-500/40 bg-red-500/8" : "border-slate-700/50 bg-slate-800/60"}`}>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      {i === 0 && <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">BEST</span>}
-                      <div>
-                        <p className="text-white font-semibold text-sm">{bt.day}</p>
-                        <p className="text-red-400 text-lg font-bold">{bt.time} {bt.timezone || timezone}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs text-slate-400">Audience Score</span>
-                      <div className="flex items-center gap-1.5">
-                        {[1,2,3,4,5].map(s => (
-                          <div key={s} className={`w-2 h-2 rounded-full ${s <= Math.round(bt.score / 20) ? "bg-red-500" : "bg-slate-700"}`} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-slate-400 text-xs">{bt.reason}</p>
-                </div>
-              ))}
-            </div>
-            {result.generalTips?.length > 0 && (
-              <div className="bg-teal-500/8 border border-teal-500/20 rounded-xl p-4">
-                <p className="text-teal-400 text-xs font-semibold mb-2">📅 General Posting Tips</p>
+            {result.tips?.length > 0 && (
+              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3.5">
+                <p className="text-white text-xs font-semibold mb-2">💡 Shorts Growth Tips</p>
                 <ul className="space-y-1.5">
-                  {result.generalTips.map((tip, i) => (
-                    <li key={i} className="text-slate-300 text-xs flex items-start gap-1.5"><span className="text-teal-400 mt-0.5">→</span>{tip}</li>
+                  {result.tips.map((t: string, i: number) => (
+                    <li key={i} className="text-slate-300 text-xs flex items-start gap-1.5"><span className="text-pink-400">→</span>{t}</li>
                   ))}
                 </ul>
               </div>
@@ -1023,76 +365,111 @@ function BestTimeTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: Trend Finder
+// TAB 2: Video Ladder
 // ═══════════════════════════════════════════════════════════════════════════
 
-function TrendsTab() {
+function LadderTab() {
   const { requestGeneration } = useGenerationGate();
   const [niche, setNiche] = useState("");
-  const [keywords, setKeywords] = useState("");
+  const [product, setProduct] = useState("");
+  const [stage, setStage] = useState("just starting");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [trends, setTrends] = useState<Array<{ topic: string; momentum: string; why: string; videoAngle: string; urgency: string }>>([]);
+  const [result, setResult] = useState<any>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const STAGES = ["just starting", "under 100 subs", "100–1k subs", "1k–10k subs", "10k+ subs"];
 
   async function generate() {
     if (!niche.trim()) return;
     abortRef.current?.abort();
     const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setTrends([]);
+    setLoading(true); setError(""); setResult(null);
     try {
-      const data = await callAPI("yt-trends", { niche, keywords }, ctrl.signal);
-      setTrends(data.trends || []);
+      const data = await callAPI("yt-video-ladder", { niche, product, currentStage: stage }, ctrl.signal);
+      setResult(data);
     } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
     finally { setLoading(false); }
   }
 
-  const momentumColor = (m: string) => m === "Exploding" ? "text-red-400 border-red-500/40 bg-red-500/10" : m === "Rising" ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-blue-400 border-blue-500/40 bg-blue-500/10";
+  const STAGE_COLORS = ["bg-slate-500","bg-orange-500","bg-yellow-500","bg-blue-500","bg-red-500"];
 
   return (
     <div className="grid lg:grid-cols-[280px,1fr] gap-6">
       <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. AI & Technology, Fitness, Entrepreneurship" value={niche} onChange={e => setNiche(e.target.value)} />
+        <div className="bg-orange-500/8 border border-orange-500/20 rounded-xl p-3">
+          <p className="text-orange-300 text-xs font-semibold mb-1">📈 Phase 2 Strategy</p>
+          <p className="text-slate-400 text-xs">Map your content from the most basic "what is X" all the way to "advanced X for professionals." Each video brings viewers to the next level — and closer to your product.</p>
         </div>
         <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Focus Keywords (optional)</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. ChatGPT, automation, side hustle" value={keywords} onChange={e => setKeywords(e.target.value)} />
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Dropshipping, Yoga for Beginners, SaaS Marketing" value={niche} onChange={e => setNiche(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Product/Service</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Dropshipping course, Yoga membership, SaaS tool" value={product} onChange={e => setProduct(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-2 block">Current Stage</label>
+          <div className="space-y-1">
+            {STAGES.map(s => (
+              <button key={s} onClick={() => setStage(s)}
+                className={`w-full text-left px-3 py-2 rounded-lg border text-xs transition-all ${stage === s ? "border-red-500 bg-red-500/15 text-red-300" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
         <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
           className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Scanning...</> : <><TrendingUp size={15} className="mr-2" />Find Trending Topics</>}
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Building Ladder…</> : <><TrendingUp size={15} className="mr-2" />Generate Video Ladder</>}
         </Button>
       </div>
       <div>
-        {!trends.length && !loading && !error && <EmptyBox icon={TrendingUp} title="Live Trend Intelligence" desc="Spot trending topics before they peak so you can create content at the perfect moment" />}
-        {loading && <LoadingBox label="Scanning trending topics in your niche…" />}
+        {!result && !loading && !error && <EmptyBox icon={TrendingUp} title="Your 5-Stage Content Ladder" desc="Map the journey from total beginner Shorts to expert long-form videos — with specific examples for your niche" />}
+        {loading && <LoadingBox label="Mapping your content progression ladder…" />}
         {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {trends.length > 0 && (
+        {result && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-white font-semibold text-sm">{trends.length} Trending Topics</p>
-              <button onClick={() => requestGeneration(generate)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg"><RefreshCw size={11} /> Refresh</button>
-            </div>
-            {trends.map((t, i) => (
-              <div key={i} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 hover:border-slate-600 transition-colors">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-white font-semibold text-sm leading-snug">{t.topic}</p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${momentumColor(t.momentum)}`}>{t.momentum}</span>
-                    {t.urgency && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full">{t.urgency}</span>}
+            {(result.ladder || []).map((s: any, i: number) => (
+              <div key={i} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-7 h-7 rounded-full ${STAGE_COLORS[i]} flex items-center justify-center text-white text-xs font-bold shrink-0`}>{s.stage || i+1}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-white font-semibold text-sm">{s.icon} {s.name}</span>
+                      <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{s.format}</span>
+                      <span className="text-[10px] bg-orange-500/20 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-full">{s.frequency}</span>
+                    </div>
                   </div>
                 </div>
-                <p className="text-slate-400 text-xs mb-2">{t.why}</p>
-                <div className="bg-red-500/8 border border-red-500/20 rounded-lg p-2.5">
-                  <span className="text-red-400 text-xs font-semibold">Video Angle: </span>
-                  <span className="text-slate-300 text-xs">{t.videoAngle}</span>
-                </div>
+                <p className="text-slate-300 text-xs mb-2">{s.goal}</p>
+                {s.examples?.length > 0 && (
+                  <div className="space-y-1 mb-2">
+                    {s.examples.map((ex: string, j: number) => (
+                      <div key={j} className="flex items-center justify-between bg-slate-700/40 rounded-lg px-3 py-1.5">
+                        <p className="text-slate-300 text-xs">{ex}</p>
+                        <CopyBtn text={ex} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {s.trigger && <p className="text-amber-400 text-xs">🏁 Next stage trigger: {s.trigger}</p>}
               </div>
             ))}
+            {result.productIntegration && (
+              <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-4">
+                <p className="text-emerald-400 text-xs font-semibold mb-1">🛍️ Product Integration Strategy</p>
+                <p className="text-slate-300 text-xs">{result.productIntegration}</p>
+              </div>
+            )}
+            {result.timelineEstimate && (
+              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3 text-center">
+                <p className="text-slate-400 text-xs">⏱️ Realistic timeline: <span className="text-white font-semibold">{result.timelineEstimate}</span></p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1101,27 +478,157 @@ function TrendsTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: Competitor Intel
+// TAB 3: Social Blast
 // ═══════════════════════════════════════════════════════════════════════════
 
-function CompetitorTab() {
+function SocialBlastTab() {
   const { requestGeneration } = useGenerationGate();
-  const [channelDesc, setChannelDesc] = useState("");
+  const [videoTitle, setVideoTitle] = useState("");
   const [niche, setNiche] = useState("");
-  const [myChannel, setMyChannel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [intel, setIntel] = useState<{ whatTheyDoWell: string[]; contentGaps: string[]; howToDifferentiate: string[]; topicsToCover: Array<{ topic: string; reason: string }>; growthAngle: string } | null>(null);
+  const [result, setResult] = useState<any>(null);
+  const [platform, setPlatform] = useState("instagram");
   const abortRef = useRef<AbortController | null>(null);
 
   async function generate() {
-    if (!channelDesc.trim() || !niche.trim()) return;
+    if (!videoTitle.trim()) return;
     abortRef.current?.abort();
     const ctrl = new AbortController(); abortRef.current = ctrl;
-    setLoading(true); setError(""); setIntel(null);
+    setLoading(true); setError(""); setResult(null);
     try {
-      const data = await callAPI("yt-competitor", { channelDesc, niche, myChannel }, ctrl.signal);
-      setIntel(data.intel || null);
+      const data = await callAPI("yt-social-blast", { videoTitle, niche }, ctrl.signal);
+      setResult(data);
+    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  const PLATFORMS = [
+    { id: "instagram", label: "Instagram", emoji: "📸" },
+    { id: "linkedin",  label: "LinkedIn",  emoji: "💼" },
+    { id: "twitter",   label: "X / Twitter", emoji: "🐦" },
+    { id: "facebook",  label: "Facebook",  emoji: "👥" },
+    { id: "whatsapp",  label: "WhatsApp",  emoji: "💬" },
+  ];
+
+  function renderPlatform() {
+    if (!result) return null;
+    const p = result[platform];
+    if (!p) return <p className="text-slate-400 text-sm">No data for this platform.</p>;
+    if (platform === "instagram") return (
+      <div className="space-y-3">
+        {p.reelHook && <div className="bg-pink-500/8 border border-pink-500/20 rounded-xl p-3"><p className="text-pink-300 text-xs font-semibold mb-1">🎬 Reel Opening Hook (first 3s)</p><p className="text-white text-sm font-semibold">"{p.reelHook}"</p></div>}
+        {p.caption && <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-3"><div className="flex justify-between items-center mb-1"><p className="text-slate-300 text-xs font-semibold">📝 Caption</p><CopyBtn text={p.caption} /></div><p className="text-slate-300 text-xs whitespace-pre-wrap">{p.caption}</p></div>}
+        {p.hashtags?.length > 0 && <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3"><p className="text-slate-400 text-xs mb-2">#{p.hashtags.join(" #")}</p><CopyBtn text={"#" + p.hashtags.join(" #")} /></div>}
+        {p.storySlides?.length > 0 && <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-3"><p className="text-slate-300 text-xs font-semibold mb-2">📖 Story Slides</p>{p.storySlides.map((s: string, i: number) => <div key={i} className="bg-slate-700/40 rounded-lg px-3 py-2 mb-1.5"><p className="text-white text-xs">Slide {i+1}: {s}</p></div>)}</div>}
+      </div>
+    );
+    if (platform === "linkedin") return (
+      <div className="space-y-3">
+        {p.hook && <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl p-3"><p className="text-blue-300 text-xs font-semibold mb-1">🪝 Opening Hook</p><p className="text-white font-semibold text-sm">"{p.hook}"</p></div>}
+        {p.post && <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-3"><div className="flex justify-between items-center mb-1"><p className="text-slate-300 text-xs font-semibold">✍️ Post Copy</p><CopyBtn text={p.post} /></div><p className="text-slate-300 text-xs whitespace-pre-wrap">{p.post}</p></div>}
+        {p.cta && <p className="text-blue-400 text-xs">CTA: {p.cta}</p>}
+      </div>
+    );
+    if (platform === "twitter") return (
+      <div className="space-y-2">
+        {(p.thread || []).map((t: string, i: number) => (
+          <div key={i} className="bg-slate-800/60 border border-slate-700 rounded-xl p-3 flex items-start justify-between gap-2">
+            <div><span className="text-slate-500 text-xs">{i+1}.</span> <p className="text-slate-200 text-sm inline">{t}</p></div>
+            <CopyBtn text={t} />
+          </div>
+        ))}
+      </div>
+    );
+    if (platform === "facebook") return (
+      <div className="space-y-3">
+        {p.post && <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-3"><div className="flex justify-between items-center mb-1"><p className="text-slate-300 text-xs font-semibold">📝 Post</p><CopyBtn text={p.post} /></div><p className="text-slate-300 text-xs">{p.post}</p></div>}
+        {p.groupStrategy && <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl p-3"><p className="text-blue-300 text-xs font-semibold mb-1">👥 Group Strategy</p><p className="text-slate-300 text-xs">{p.groupStrategy}</p></div>}
+      </div>
+    );
+    if (platform === "whatsapp") return (
+      <div className="space-y-3">
+        {p.broadcastMessage && <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3"><div className="flex justify-between items-center mb-1"><p className="text-emerald-300 text-xs font-semibold">📢 Broadcast Message</p><CopyBtn text={p.broadcastMessage} /></div><p className="text-slate-300 text-xs">{p.broadcastMessage}</p></div>}
+        {p.statusText && <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-3"><p className="text-slate-300 text-xs font-semibold mb-1">⏱️ Status Text</p><p className="text-white text-sm font-semibold">{p.statusText}</p></div>}
+      </div>
+    );
+    return null;
+  }
+
+  return (
+    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
+      <div className="space-y-4">
+        <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl p-3">
+          <p className="text-blue-300 text-xs font-semibold mb-1">📢 Phase 3 Strategy</p>
+          <p className="text-slate-400 text-xs">Each YouTube video becomes 5+ pieces of platform-native content. Different format, different tone, same core message.</p>
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">YouTube Video Title *</label>
+          <textarea rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none"
+            placeholder="e.g. How I Made ₹1L Online in 30 Days With No Audience" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Niche</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Online Income, Fitness, Tech Reviews" value={niche} onChange={e => setNiche(e.target.value)} />
+        </div>
+        <Button onClick={() => requestGeneration(generate)} disabled={!videoTitle.trim() || loading}
+          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Blasting…</> : <><Share2 size={15} className="mr-2" />Generate All Platforms</>}
+        </Button>
+        {result?.schedule && (
+          <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3">
+            <p className="text-slate-400 text-xs font-semibold mb-1">📅 Posting Order</p>
+            <p className="text-slate-300 text-xs">{result.schedule}</p>
+          </div>
+        )}
+      </div>
+      <div>
+        {!result && !loading && !error && <EmptyBox icon={Share2} title="5-Platform Distribution Plan" desc="Convert one YouTube video into Instagram Reels, LinkedIn posts, Twitter threads, Facebook posts, and WhatsApp broadcasts" />}
+        {loading && <LoadingBox label="Creating platform-native content for all channels…" />}
+        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
+        {result && (
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              {PLATFORMS.map(p => (
+                <button key={p.id} onClick={() => setPlatform(p.id)}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all ${platform === p.id ? "bg-red-500 border-red-400 text-white" : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500"}`}>
+                  {p.emoji} {p.label}
+                </button>
+              ))}
+            </div>
+            {renderPlatform()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 4: Product Launch
+// ═══════════════════════════════════════════════════════════════════════════
+
+function LaunchTab() {
+  const { requestGeneration } = useGenerationGate();
+  const [productName, setProductName] = useState("");
+  const [problem, setProblem] = useState("");
+  const [solution, setSolution] = useState("");
+  const [audience, setAudience] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const [openVideo, setOpenVideo] = useState<number|null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function generate() {
+    if (!productName.trim() || !problem.trim()) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const data = await callAPI("yt-product-launch", { productName, problem, solution, audience }, ctrl.signal);
+      setResult(data); setOpenVideo(1);
     } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
     finally { setLoading(false); }
   }
@@ -1129,68 +636,83 @@ function CompetitorTab() {
   return (
     <div className="grid lg:grid-cols-[300px,1fr] gap-6">
       <div className="space-y-4">
-        <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Describe the Competitor *</label>
-          <textarea rows={3} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none transition-colors"
-            placeholder="e.g. A finance channel with 500k subs, posts 2x/week about stock investing and ETFs, very data-heavy content style" value={channelDesc} onChange={e => setChannelDesc(e.target.value)} />
+        <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3">
+          <p className="text-emerald-300 text-xs font-semibold mb-1">🛍️ Phase 4 Strategy</p>
+          <p className="text-slate-400 text-xs">Never sell first. Tell the story of the problem, then the journey, then the solution. By video 5, people beg to buy. This is the exact framework used by Jeff Walker's Product Launch Formula.</p>
         </div>
         <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Niche *</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="e.g. Personal Finance, Gaming" value={niche} onChange={e => setNiche(e.target.value)} />
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Product/Service Name *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Marketingstuffs Pro, Fitness Blueprint, SaaS Tool" value={productName} onChange={e => setProductName(e.target.value)} />
         </div>
         <div>
-          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Channel (optional)</label>
-          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm transition-colors"
-            placeholder="Brief description of your channel" value={myChannel} onChange={e => setMyChannel(e.target.value)} />
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Problem it Solves *</label>
+          <textarea rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none"
+            placeholder="e.g. Small business owners spend 20 hours/week on content and still don't see results" value={problem} onChange={e => setProblem(e.target.value)} />
         </div>
-        <Button onClick={() => requestGeneration(generate)} disabled={!channelDesc.trim() || !niche.trim() || loading}
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">How it Solves It</label>
+          <textarea rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm resize-none"
+            placeholder="e.g. AI writes all their content in minutes, no expertise needed" value={solution} onChange={e => setSolution(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Target Audience</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Indian small business owners, 25-45, digital beginners" value={audience} onChange={e => setAudience(e.target.value)} />
+        </div>
+        <Button onClick={() => requestGeneration(generate)} disabled={!productName.trim() || !problem.trim() || loading}
           className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
-          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Analyzing...</> : <><Users size={15} className="mr-2" />Analyze Competitor</>}
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Planning Launch…</> : <><ShoppingBag size={15} className="mr-2" />Generate Launch Series</>}
         </Button>
       </div>
       <div>
-        {!intel && !loading && !error && <EmptyBox icon={Users} title="Competitor Intelligence Report" desc="Discover what competitors do well, what gaps exist, and how to differentiate yourself" />}
-        {loading && <LoadingBox label="Building competitor intelligence report…" />}
+        {!result && !loading && !error && <EmptyBox icon={ShoppingBag} title="5-Video Product Launch Series" desc="A complete story-driven launch sequence — problem → journey → solution → proof → sale. Used by top creators worldwide." />}
+        {loading && <LoadingBox label="Crafting your product launch video series…" />}
         {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
-        {intel && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-              {[
-                { key: "whatTheyDoWell", label: "✅ What They Do Well", color: "border-emerald-500/30 bg-emerald-500/8 text-emerald-400" },
-                { key: "contentGaps", label: "🕳️ Content Gaps You Can Fill", color: "border-blue-500/30 bg-blue-500/8 text-blue-400" },
-                { key: "howToDifferentiate", label: "🎯 How to Differentiate Yourself", color: "border-purple-500/30 bg-purple-500/8 text-purple-400" },
-              ].map(s => (
-                <div key={s.key} className={`border rounded-xl p-4 ${s.color.split(" ").slice(0,2).join(" ")}`}>
-                  <p className={`text-xs font-semibold mb-2 ${s.color.split(" ")[2]}`}>{s.label}</p>
-                  <ul className="space-y-1.5">
-                    {((intel as any)[s.key] || []).map((item: string, i: number) => (
-                      <li key={i} className="text-slate-300 text-xs flex items-start gap-2"><span className="text-slate-500 mt-0.5 shrink-0">•</span>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            {intel.topicsToCover?.length > 0 && (
-              <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-                <p className="text-white font-semibold text-sm mb-3">📌 Specific Topics to Cover</p>
-                <div className="space-y-2">
-                  {intel.topicsToCover.map((t, i) => (
-                    <div key={i} className="flex items-start gap-2 bg-slate-700/40 rounded-lg p-2.5">
-                      <ChevronRight size={13} className="text-red-400 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-white text-xs font-medium">{t.topic}</p>
-                        <p className="text-slate-400 text-xs mt-0.5">{t.reason}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        {result && (
+          <div className="space-y-3">
+            {result.problemStatement && (
+              <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3.5">
+                <p className="text-emerald-400 text-xs font-semibold mb-1">🎯 Refined Problem Statement (use in ALL videos)</p>
+                <p className="text-white text-sm font-semibold">{result.problemStatement}</p>
               </div>
             )}
-            {intel.growthAngle && (
-              <div className="bg-red-500/8 border border-red-500/20 rounded-xl p-4">
-                <p className="text-red-400 text-xs font-semibold mb-1">🚀 Your Growth Angle</p>
-                <p className="text-white text-sm">{intel.growthAngle}</p>
+            {(result.launchSeries || []).map((v: any) => (
+              <div key={v.videoNumber} className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
+                <button onClick={() => setOpenVideo(openVideo === v.videoNumber ? null : v.videoNumber)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/30 transition-colors text-left">
+                  <div className="w-7 h-7 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold shrink-0">V{v.videoNumber}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold leading-snug">{v.title}</p>
+                    <p className="text-slate-400 text-xs">{v.angle}</p>
+                  </div>
+                  <ChevronRight size={14} className={`text-slate-400 shrink-0 transition-transform ${openVideo === v.videoNumber ? "rotate-90" : ""}`} />
+                </button>
+                {openVideo === v.videoNumber && (
+                  <div className="px-4 pb-4 border-t border-slate-700 pt-3 space-y-3">
+                    {v.script_hook && (
+                      <div><p className="text-red-400 text-xs font-semibold mb-1">🪝 Opening Hook (first 30s)</p>
+                        <div className="bg-slate-700/40 rounded-lg p-3 flex justify-between gap-2">
+                          <p className="text-slate-200 text-xs">{v.script_hook}</p>
+                          <CopyBtn text={v.script_hook} />
+                        </div>
+                      </div>
+                    )}
+                    {v.keyPoints?.length > 0 && (
+                      <div><p className="text-slate-400 text-xs font-semibold mb-1.5">📌 Key Points to Cover</p>
+                        <ul className="space-y-1">{v.keyPoints.map((p: string, i: number) => <li key={i} className="text-slate-300 text-xs flex items-start gap-1.5"><span className="text-emerald-400 mt-0.5">✓</span>{p}</li>)}</ul>
+                      </div>
+                    )}
+                    {v.cta && <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-lg p-2.5"><p className="text-emerald-400 text-xs font-semibold">📢 CTA</p><p className="text-slate-300 text-xs">{v.cta}</p></div>}
+                    {v.thumbnail && <div className="bg-slate-700/40 rounded-lg p-2.5"><p className="text-slate-400 text-xs font-semibold mb-0.5">🖼️ Thumbnail Concept</p><p className="text-slate-300 text-xs">{v.thumbnail}</p></div>}
+                  </div>
+                )}
+              </div>
+            ))}
+            {result.launchTimeline && (
+              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3.5">
+                <p className="text-white text-xs font-semibold mb-1">📅 Launch Timeline</p>
+                <p className="text-slate-300 text-xs">{result.launchTimeline}</p>
               </div>
             )}
           </div>
@@ -1201,14 +723,466 @@ function CompetitorTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: AI Coach (streaming chat)
+// TAB 5: Stories Calendar
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StoriesTab() {
+  const { requestGeneration } = useGenerationGate();
+  const [niche, setNiche] = useState("");
+  const [product, setProduct] = useState("");
+  const [platform, setPlatform] = useState("Instagram + YouTube Community");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const [openDay, setOpenDay] = useState<number|null>(1);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function generate() {
+    if (!niche.trim()) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const data = await callAPI("yt-stories", { niche, product, platform }, ctrl.signal);
+      setResult(data); setOpenDay(1);
+    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  const DAY_COLORS = ["bg-pink-500","bg-purple-500","bg-blue-500","bg-teal-500","bg-emerald-500","bg-amber-500","bg-red-500"];
+  const SLIDE_TYPE_ICON: Record<string, string> = { text: "📝", image: "🖼️", poll: "📊", quiz: "❓", countdown: "⏰", swipe: "👆" };
+
+  return (
+    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
+      <div className="space-y-4">
+        <div className="bg-purple-500/8 border border-purple-500/20 rounded-xl p-3">
+          <p className="text-purple-300 text-xs font-semibold mb-1">📖 Phase 5 Strategy</p>
+          <p className="text-slate-400 text-xs">Stories build the intimacy that makes sales feel natural. Mix 70% value/personal with 30% product. Never hard sell in Stories — let the relationship do the selling.</p>
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Nutrition & Weight Loss, Digital Marketing, Fashion" value={niche} onChange={e => setNiche(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Product/Service</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Nutrition plan, Marketing course, Clothing brand" value={product} onChange={e => setProduct(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Platform</label>
+          <select className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500 text-sm"
+            value={platform} onChange={e => setPlatform(e.target.value)}>
+            <option>Instagram + YouTube Community</option>
+            <option>Instagram only</option>
+            <option>YouTube Community only</option>
+            <option>All platforms</option>
+          </select>
+        </div>
+        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
+          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Building Calendar…</> : <><BookOpen size={15} className="mr-2" />Generate 7-Day Stories</>}
+        </Button>
+      </div>
+      <div>
+        {!result && !loading && !error && <EmptyBox icon={BookOpen} title="7-Day Stories Content Calendar" desc="Daily story plans with slide-by-slide content, polls, quizzes, and selling moments designed by marketing coaches" />}
+        {loading && <LoadingBox label="Crafting your 7-day stories content calendar…" />}
+        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
+        {result && (
+          <div className="space-y-3">
+            {result.strategy && (
+              <div className="bg-purple-500/8 border border-purple-500/20 rounded-xl p-3.5">
+                <p className="text-purple-300 text-xs font-semibold mb-1">Strategy</p>
+                <p className="text-slate-300 text-xs">{result.strategy}</p>
+              </div>
+            )}
+            {(result.days || []).map((day: any) => (
+              <div key={day.day} className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
+                <button onClick={() => setOpenDay(openDay === day.day ? null : day.day)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/30 transition-colors text-left">
+                  <div className={`w-7 h-7 rounded-full ${DAY_COLORS[(day.day-1)%7]} flex items-center justify-center text-white text-xs font-bold shrink-0`}>D{day.day}</div>
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-semibold">{day.theme}</p>
+                    <p className="text-slate-400 text-xs">{day.goal}</p>
+                  </div>
+                  <ChevronRight size={14} className={`text-slate-400 shrink-0 transition-transform ${openDay === day.day ? "rotate-90" : ""}`} />
+                </button>
+                {openDay === day.day && (
+                  <div className="px-4 pb-4 border-t border-slate-700 pt-3 space-y-2">
+                    {(day.slides || []).map((slide: any, i: number) => (
+                      <div key={i} className="bg-slate-700/40 rounded-xl p-3">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-sm">{SLIDE_TYPE_ICON[slide.type] || "📌"}</span>
+                          <span className="text-white text-xs font-semibold capitalize">{slide.type} — Slide {i+1}</span>
+                          <CopyBtn text={slide.content} />
+                        </div>
+                        <p className="text-slate-300 text-xs">{slide.content}</p>
+                        {slide.interactivity && <p className="text-purple-300 text-xs mt-1 italic">→ {slide.interactivity}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {result.selling_story && (
+              <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3.5">
+                <p className="text-emerald-400 text-xs font-semibold mb-1">🛍️ Selling Through Stories</p>
+                <p className="text-slate-300 text-xs">{result.selling_story}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 6: Quiz Builder
+// ═══════════════════════════════════════════════════════════════════════════
+
+function QuizTab() {
+  const { requestGeneration } = useGenerationGate();
+  const [niche, setNiche] = useState("");
+  const [topic, setTopic] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const [openQuiz, setOpenQuiz] = useState<number|null>(0);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function generate() {
+    if (!niche.trim()) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const data = await callAPI("yt-quiz", { niche, topic }, ctrl.signal);
+      setResult(data); setOpenQuiz(0);
+    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
+      <div className="space-y-4">
+        <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-xl p-3">
+          <p className="text-yellow-300 text-xs font-semibold mb-1">🎯 Phase 6 Strategy</p>
+          <p className="text-slate-400 text-xs">Quiz videos get 8x more comments than regular videos. Comments = algorithm fuel. "9/10 people get this wrong" triggers the ego response — everyone wants to prove they're in the 1 in 10.</p>
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. History, Finance, Fitness, Tech" value={niche} onChange={e => setNiche(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Specific Topic (optional)</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Compound interest, Indian history myths, Protein myths" value={topic} onChange={e => setTopic(e.target.value)} />
+        </div>
+        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
+          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Generating Quizzes…</> : <><HelpCircle size={15} className="mr-2" />Generate Quiz Videos</>}
+        </Button>
+      </div>
+      <div>
+        {!result && !loading && !error && <EmptyBox icon={HelpCircle} title="3 Quiz Video Concepts + Questions" desc="Engagement-optimized quiz video scripts with questions, reveal hooks, and comment prompts — proven to 5x your comments" />}
+        {loading && <LoadingBox label="Building quiz video concepts for your niche…" />}
+        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
+        {result && (
+          <div className="space-y-3">
+            {(result.quizVideos || []).map((quiz: any, qi: number) => (
+              <div key={qi} className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
+                <button onClick={() => setOpenQuiz(openQuiz === qi ? null : qi)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/30 transition-colors text-left">
+                  <span className="text-xl shrink-0">🎯</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold leading-snug">{quiz.title}</p>
+                    <p className="text-slate-400 text-xs">{quiz.format}</p>
+                  </div>
+                  <ChevronRight size={14} className={`text-slate-400 shrink-0 transition-transform ${openQuiz === qi ? "rotate-90" : ""}`} />
+                </button>
+                {openQuiz === qi && (
+                  <div className="px-4 pb-4 border-t border-slate-700 pt-3 space-y-3">
+                    {(quiz.questions || []).map((q: any, i: number) => (
+                      <div key={i} className="bg-slate-700/40 rounded-xl p-3">
+                        <p className="text-white text-xs font-semibold mb-2">Q{i+1}: {q.question}</p>
+                        <div className="grid grid-cols-2 gap-1.5 mb-2">
+                          {(q.options || []).map((opt: string, j: number) => (
+                            <div key={j} className={`rounded-lg px-2.5 py-1.5 text-xs ${opt.startsWith(q.answer?.charAt(0)) ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-slate-600/50 text-slate-300"}`}>{opt}</div>
+                          ))}
+                        </div>
+                        {q.reveal_hook && <p className="text-yellow-400 text-xs italic">🎬 Reveal: {q.reveal_hook}</p>}
+                        {q.explanation && <p className="text-slate-400 text-xs mt-1">{q.explanation}</p>}
+                      </div>
+                    ))}
+                    {quiz.thumbnail && <div className="bg-slate-700/30 rounded-xl p-3"><p className="text-slate-400 text-xs font-semibold mb-1">🖼️ Thumbnail</p><p className="text-slate-300 text-xs">{quiz.thumbnail}</p></div>}
+                    {quiz.engagement_prompt && <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-xl p-3"><p className="text-yellow-300 text-xs font-semibold">💬 Comment Prompt</p><p className="text-white text-sm">"{quiz.engagement_prompt}"</p></div>}
+                  </div>
+                )}
+              </div>
+            ))}
+            {result.pollIdeas?.length > 0 && (
+              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3.5">
+                <p className="text-white text-xs font-semibold mb-2">📊 Community Poll Ideas</p>
+                <ul className="space-y-1.5">
+                  {result.pollIdeas.map((p: string, i: number) => (
+                    <li key={i} className="flex items-center justify-between bg-slate-700/40 rounded-lg px-3 py-2">
+                      <p className="text-slate-300 text-xs">{p}</p>
+                      <CopyBtn text={p} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 7: Freebie Funnel
+// ═══════════════════════════════════════════════════════════════════════════
+
+function FreebieTab() {
+  const { requestGeneration } = useGenerationGate();
+  const [niche, setNiche] = useState("");
+  const [product, setProduct] = useState("");
+  const [audience, setAudience] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const [openFreebie, setOpenFreebie] = useState<number|null>(0);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function generate() {
+    if (!niche.trim()) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const data = await callAPI("yt-freebie", { niche, product, audience }, ctrl.signal);
+      setResult(data); setOpenFreebie(0);
+    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
+      <div className="space-y-4">
+        <div className="bg-teal-500/8 border border-teal-500/20 rounded-xl p-3">
+          <p className="text-teal-300 text-xs font-semibold mb-1">🎁 Phase 7 Strategy</p>
+          <p className="text-slate-400 text-xs">The freebie builds your email list — your most valuable asset. Give 10x more value than you charge. When people get ₹1000 value free, they feel compelled to buy your paid offer.</p>
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. SEO, Stock Market India, Skincare, Business Automation" value={niche} onChange={e => setNiche(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Product/Service to Upsell</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. SEO course, Stock analysis tool, Skincare kit" value={product} onChange={e => setProduct(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Target Audience</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. beginners, busy professionals, small business owners" value={audience} onChange={e => setAudience(e.target.value)} />
+        </div>
+        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
+          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Creating Freebies…</> : <><Gift size={15} className="mr-2" />Generate Freebie Funnel</>}
+        </Button>
+      </div>
+      <div>
+        {!result && !loading && !error && <EmptyBox icon={Gift} title="3 Lead Magnet Ideas + Email Sequences" desc="High-value freebie concepts with video titles to promote them, CTA scripts, and 3-email welcome sequences" />}
+        {loading && <LoadingBox label="Designing your freebie funnel and email sequences…" />}
+        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
+        {result && (
+          <div className="space-y-3">
+            {(result.freebies || []).map((f: any, fi: number) => (
+              <div key={fi} className="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
+                <button onClick={() => setOpenFreebie(openFreebie === fi ? null : fi)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/30 transition-colors text-left">
+                  <span className="text-xl shrink-0">🎁</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold">{f.name}</p>
+                    <div className="flex items-center gap-2"><span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full">{f.type}</span></div>
+                  </div>
+                  <ChevronRight size={14} className={`text-slate-400 shrink-0 transition-transform ${openFreebie === fi ? "rotate-90" : ""}`} />
+                </button>
+                {openFreebie === fi && (
+                  <div className="px-4 pb-4 border-t border-slate-700 pt-3 space-y-3">
+                    <p className="text-slate-300 text-xs">{f.description}</p>
+                    {f.ytVideoTitle && (
+                      <div className="bg-red-500/8 border border-red-500/20 rounded-xl p-3 flex justify-between gap-2">
+                        <div><p className="text-red-300 text-xs font-semibold mb-1">📹 YouTube Video to Promote It</p><p className="text-white text-sm">{f.ytVideoTitle}</p></div>
+                        <CopyBtn text={f.ytVideoTitle} />
+                      </div>
+                    )}
+                    {f.cta_line && (
+                      <div className="bg-teal-500/8 border border-teal-500/20 rounded-xl p-3 flex justify-between gap-2">
+                        <div><p className="text-teal-300 text-xs font-semibold mb-1">🗣️ CTA to Say in Video</p><p className="text-white text-sm">"{f.cta_line}"</p></div>
+                        <CopyBtn text={f.cta_line} />
+                      </div>
+                    )}
+                    {f.email_sequence?.length > 0 && (
+                      <div><p className="text-slate-400 text-xs font-semibold mb-2">📧 Welcome Email Sequence</p>
+                        <div className="space-y-2">
+                          {f.email_sequence.map((e: any, ei: number) => (
+                            <div key={ei} className="bg-slate-700/40 rounded-xl p-3">
+                              <p className="text-white text-xs font-semibold">Email {e.email}: {e.subject}</p>
+                              <p className="text-slate-400 text-xs mt-1">{e.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {result.landingPageHook && (
+              <div className="bg-teal-500/8 border border-teal-500/20 rounded-xl p-3.5 flex justify-between gap-2">
+                <div><p className="text-teal-400 text-xs font-semibold mb-1">🌐 Landing Page Headline</p><p className="text-white font-bold">{result.landingPageHook}</p></div>
+                <CopyBtn text={result.landingPageHook} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 8: Perks & Scale
+// ═══════════════════════════════════════════════════════════════════════════
+
+function PerksTab() {
+  const { requestGeneration } = useGenerationGate();
+  const [niche, setNiche] = useState("");
+  const [product, setProduct] = useState("");
+  const [subscribers, setSubscribers] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function generate() {
+    if (!niche.trim()) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const data = await callAPI("yt-perks", { niche, product, subscribers }, ctrl.signal);
+      setResult(data);
+    } catch (e: any) { if (e.name !== "AbortError") setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  const TIER_COLORS = ["bg-slate-500","bg-blue-500","bg-amber-500"];
+
+  return (
+    <div className="grid lg:grid-cols-[280px,1fr] gap-6">
+      <div className="space-y-4">
+        <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-3">
+          <p className="text-amber-300 text-xs font-semibold mb-1">💎 Phase 8 Strategy</p>
+          <p className="text-slate-400 text-xs">Your top 100 superfans are worth more than your next 10,000 casual viewers. Memberships, exclusive communities, and insider content turn viewers into a recurring revenue base.</p>
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Your Niche *</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Investing, Gaming, Photography, Business" value={niche} onChange={e => setNiche(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Product/Service</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. Investment newsletter, Game coaching, Photo presets" value={product} onChange={e => setProduct(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-slate-300 text-sm font-medium mb-1.5 block">Current Subscribers</label>
+          <input className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-red-500 text-sm"
+            placeholder="e.g. 500, 5,000, just starting" value={subscribers} onChange={e => setSubscribers(e.target.value)} />
+        </div>
+        <Button onClick={() => requestGeneration(generate)} disabled={!niche.trim() || loading}
+          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl disabled:opacity-40">
+          {loading ? <><Loader2 size={15} className="animate-spin mr-2" />Designing Perks…</> : <><Crown size={15} className="mr-2" />Generate Perks Strategy</>}
+        </Button>
+      </div>
+      <div>
+        {!result && !loading && !error && <EmptyBox icon={Crown} title="Membership Perks & Scale Strategy" desc="3-tier membership structure, insider content series, referral program, and community platform recommendation" />}
+        {loading && <LoadingBox label="Designing your superfan perks and scale strategy…" />}
+        {error && <ErrorBox msg={error} onRetry={() => requestGeneration(generate)} />}
+        {result && (
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-3">
+              {(result.membershipTiers || []).map((tier: any, i: number) => (
+                <div key={i} className={`bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 relative overflow-hidden`}>
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${TIER_COLORS[i]}`} />
+                  <p className="text-white font-bold text-sm mt-1">{tier.name}</p>
+                  <p className="text-amber-400 font-bold text-lg">{tier.price}</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {(tier.perks || []).map((p: string, j: number) => (
+                      <li key={j} className="text-slate-300 text-xs flex items-start gap-1.5"><span className="text-amber-400 shrink-0">✓</span>{p}</li>
+                    ))}
+                  </ul>
+                  {tier.exclusive_content && <p className="text-slate-400 text-xs mt-2 pt-2 border-t border-slate-700">🔒 {tier.exclusive_content}</p>}
+                </div>
+              ))}
+            </div>
+            {result.insightSeries?.length > 0 && (
+              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-4">
+                <p className="text-white text-xs font-semibold mb-2">🎬 Insider Content Series</p>
+                <div className="space-y-2">
+                  {result.insightSeries.map((s: any, i: number) => (
+                    <div key={i} className="bg-slate-700/40 rounded-lg p-3">
+                      <p className="text-white text-xs font-semibold">{s.title}</p>
+                      <div className="flex items-center gap-2 mt-1"><span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">{s.format}</span></div>
+                      <p className="text-slate-400 text-xs mt-1">{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.communityPlatform && (
+              <div className="bg-purple-500/8 border border-purple-500/20 rounded-xl p-3.5">
+                <p className="text-purple-400 text-xs font-semibold mb-1">👥 Community Platform Recommendation</p>
+                <p className="text-slate-300 text-xs">{result.communityPlatform}</p>
+              </div>
+            )}
+            {result.referralProgram && (
+              <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3.5">
+                <p className="text-emerald-400 text-xs font-semibold mb-2">🔗 Referral Program</p>
+                <p className="text-slate-300 text-xs"><strong className="text-white">How it works:</strong> {result.referralProgram.mechanism}</p>
+                <p className="text-slate-300 text-xs mt-1"><strong className="text-white">Reward:</strong> {result.referralProgram.reward}</p>
+                {result.referralProgram.cta && <p className="text-emerald-300 text-xs mt-1 italic">"{result.referralProgram.cta}"</p>}
+              </div>
+            )}
+            {result.scaleRoadmap && (
+              <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-3.5">
+                <p className="text-amber-400 text-xs font-semibold mb-1">🚀 Scale Roadmap (1k → 100k)</p>
+                <p className="text-slate-300 text-xs">{result.scaleRoadmap}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 9: AI Growth Coach (Streaming)
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface ChatMsg { role: "user" | "assistant"; content: string }
 
 function CoachTab() {
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { role: "assistant", content: "Hey! I'm your YouTube AI Coach 🎬\n\nI'm trained on YouTube growth strategies, algorithm insights, and creator best practices. Ask me anything about:\n\n• Growing your channel faster\n• Improving your titles & thumbnails\n• Understanding the YouTube algorithm\n• Niche selection & content strategy\n• Monetization & brand deals\n• Audience retention & engagement\n\nWhat would you like to work on today?" }
+    { role: "assistant", content: "Hey! I'm your YouTube AI Growth Coach 🎬\n\nI'm trained on the phase-based growth playbook used by top creators and digital marketing coaches (VidIQ, Think Media, and more).\n\nI'll guide you through:\n\n📱 Phase 1: Shorts strategy — how to start basic and scale\n🎬 Phase 2: Video Ladder — scaling from Shorts to long-form\n📢 Phase 3: Social Blast — turning 1 video into 5 platforms\n🛍️ Phase 4: Product Launch — story-driven selling series\n📖 Phase 5: Stories — building daily intimacy with followers\n🎯 Phase 6: Quiz videos — the comment algorithm hack\n🎁 Phase 7: Freebies — building your email list on autopilot\n💎 Phase 8: Perks & Scale — building a superfan community\n\nWhat phase are you in, and what's holding you back?" }
   ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -1225,19 +1199,14 @@ function CoachTab() {
     const newMessages: ChatMsg[] = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
     setStreaming(true);
-
     abortRef.current?.abort();
     const ctrl = new AbortController(); abortRef.current = ctrl;
-
     let assistantContent = "";
     setMessages(prev => [...prev, { role: "assistant", content: "" }]);
-
     try {
       const res = await fetch(`${BASE_URL}ai/yt-coach`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
-        signal: ctrl.signal,
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages }), signal: ctrl.signal,
       });
       if (!res.ok) throw new Error(await res.text());
       const reader = res.body?.getReader();
@@ -1246,42 +1215,29 @@ function CoachTab() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-        for (const line of lines) {
+        for (const line of decoder.decode(value).split("\n")) {
           if (line.startsWith("data: ")) {
             const raw = line.slice(6).trim();
             if (raw === "[DONE]") break;
             try {
-              const parsed = JSON.parse(raw);
-              const delta = parsed.choices?.[0]?.delta?.content || "";
+              const delta = JSON.parse(raw).choices?.[0]?.delta?.content || "";
               assistantContent += delta;
-              setMessages(prev => {
-                const updated = [...prev];
-                updated[updated.length - 1] = { role: "assistant", content: assistantContent };
-                return updated;
-              });
+              setMessages(prev => { const u = [...prev]; u[u.length-1] = { role: "assistant", content: assistantContent }; return u; });
             } catch {}
           }
         }
       }
     } catch (e: any) {
-      if (e.name !== "AbortError") {
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: "Sorry, I ran into an error. Please try again." };
-          return updated;
-        });
-      }
+      if (e.name !== "AbortError") setMessages(prev => { const u = [...prev]; u[u.length-1] = { role: "assistant", content: "Sorry, I ran into an error. Try again." }; return u; });
     } finally { setStreaming(false); }
   }
 
   const QUICK = [
-    "How do I grow from 0 to 1,000 subscribers?",
-    "What makes a thumbnail get clicks?",
-    "How does the YouTube algorithm work?",
-    "What's the best upload schedule?",
-    "How do I improve audience retention?",
+    "I'm just starting. Which phase do I begin with?",
+    "How do I make my Shorts go viral?",
+    "When should I start promoting my product?",
+    "How many Shorts should I post per day?",
+    "What freebie converts best for online courses?",
   ];
 
   return (
@@ -1290,7 +1246,7 @@ function CoachTab() {
         {messages.length === 1 && (
           <div className="flex flex-wrap gap-2 mt-2 mb-4">
             {QUICK.map(q => (
-              <button key={q} onClick={() => { setInput(q); }}
+              <button key={q} onClick={() => setInput(q)}
                 className="text-xs bg-slate-800 border border-slate-700 text-slate-300 hover:border-red-500/50 hover:text-white px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
                 <ArrowRight size={10} className="text-red-400" />{q}
               </button>
@@ -1303,7 +1259,7 @@ function CoachTab() {
               {m.role === "assistant" && (
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center"><Bot size={9} className="text-white" /></div>
-                  <span className="text-red-400 text-[10px] font-semibold uppercase tracking-wider">YT Growstuffs Coach</span>
+                  <span className="text-red-400 text-[10px] font-semibold uppercase tracking-wider">YT Growth Coach</span>
                 </div>
               )}
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}{streaming && i === messages.length - 1 && m.role === "assistant" && <span className="inline-block w-0.5 h-4 bg-red-400 animate-pulse ml-0.5 align-middle" />}</p>
@@ -1313,15 +1269,11 @@ function CoachTab() {
         <div ref={bottomRef} />
       </div>
       <div className="flex items-end gap-2 bg-slate-800/60 border border-slate-700 rounded-2xl p-3">
-        <textarea
-          rows={1}
-          className="flex-1 bg-transparent text-white text-sm placeholder-slate-500 focus:outline-none resize-none leading-relaxed"
-          placeholder="Ask anything about growing your YouTube channel…"
-          value={input}
-          onChange={e => setInput(e.target.value)}
+        <textarea rows={1} className="flex-1 bg-transparent text-white text-sm placeholder-slate-500 focus:outline-none resize-none leading-relaxed"
+          placeholder="Ask anything about your YouTube growth journey…"
+          value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); requestGeneration(sendMessage); } }}
-          style={{ maxHeight: "120px", overflowY: "auto" }}
-        />
+          style={{ maxHeight: "120px", overflowY: "auto" }} />
         <button onClick={() => requestGeneration(sendMessage)} disabled={!input.trim() || streaming}
           className="w-9 h-9 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 flex items-center justify-center shrink-0 transition-colors">
           <Send size={15} className="text-white" />
@@ -1336,27 +1288,29 @@ function CoachTab() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function YTGrowstuffsSection() {
-  const [activeTab, setActiveTab] = useState<TabId>("ideas");
+  const [activeTab, setActiveTab] = useState<TabId>("roadmap");
   const tabBarRef = useRef<HTMLDivElement>(null);
 
+  function jumpTo(tab: TabId) {
+    setActiveTab(tab);
+    tabBarRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
   const tabComponents: Record<TabId, React.ReactNode> = {
-    ideas:       <IdeasTab />,
-    titles:      <TitlesTab />,
-    script:      <ScriptTab />,
-    description: <DescriptionTab />,
-    keywords:    <KeywordsTab />,
-    tags:        <TagsTab />,
-    thumbnail:   <ThumbnailTab />,
-    audit:       <AuditTab />,
-    besttime:    <BestTimeTab />,
-    trends:      <TrendsTab />,
-    competitor:  <CompetitorTab />,
-    coach:       <CoachTab />,
+    roadmap: <RoadmapTab onJumpTo={jumpTo} />,
+    shorts:  <ShortsTab />,
+    ladder:  <LadderTab />,
+    social:  <SocialBlastTab />,
+    launch:  <LaunchTab />,
+    stories: <StoriesTab />,
+    quiz:    <QuizTab />,
+    freebie: <FreebieTab />,
+    perks:   <PerksTab />,
+    coach:   <CoachTab />,
   };
 
   return (
     <section id="yt-growstuffs" className="py-20 px-4 bg-gradient-to-b from-[#0a0a1a] via-[#0f0005] to-[#0a0a1a] relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative">
@@ -1365,19 +1319,21 @@ export default function YTGrowstuffsSection() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/25 rounded-full px-4 py-1.5 mb-4">
             <Youtube size={14} className="text-red-400" fill="currentColor" />
-            <span className="text-red-300 text-sm font-semibold">Special Feature</span>
+            <span className="text-red-300 text-sm font-semibold">YT Growstuffs — Phase-Based Growth System</span>
             <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">NEW</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-3">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-orange-500">YT Growstuffs</span>
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Your all-in-one YouTube growth engine. 12 AI-powered tools to grow your channel faster — from idea to viral.
+            The YouTube growth playbook used by top digital marketing coaches — 8 phases from your first Short to a monetized superfan community.
           </p>
-          <div className="flex items-center justify-center gap-6 mt-4 text-sm text-slate-500">
-            <span className="flex items-center gap-1.5"><Zap size={13} className="text-red-400" /> 12 Growth Tools</span>
-            <span className="flex items-center gap-1.5"><Bot size={13} className="text-red-400" /> AI Coach Included</span>
-            <span className="flex items-center gap-1.5"><Star size={13} className="text-red-400" /> 100% Free</span>
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-4 text-sm text-slate-500">
+            <span className="flex items-center gap-1.5"><Smartphone size={13} className="text-pink-400" /> Shorts → Videos</span>
+            <span className="flex items-center gap-1.5"><Share2 size={13} className="text-blue-400" /> Social Blast</span>
+            <span className="flex items-center gap-1.5"><ShoppingBag size={13} className="text-emerald-400" /> Product Launch</span>
+            <span className="flex items-center gap-1.5"><Gift size={13} className="text-teal-400" /> Freebie Funnel</span>
+            <span className="flex items-center gap-1.5"><Crown size={13} className="text-amber-400" /> Perks & Scale</span>
           </div>
         </div>
 
@@ -1390,15 +1346,10 @@ export default function YTGrowstuffsSection() {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-4 py-3.5 text-xs font-medium whitespace-nowrap transition-all border-b-2 shrink-0 ${
-                    isActive
-                      ? "border-red-500 text-white bg-red-500/5"
-                      : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/3"
-                  }`}
-                >
+                    isActive ? "border-red-500 text-white bg-red-500/5" : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/3"
+                  }`}>
                   <Icon size={13} className={isActive ? "text-red-400" : ""} />
                   {tab.label}
                   {tab.badge && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${isActive ? "bg-red-500 text-white" : "bg-slate-800 text-slate-400"}`}>{tab.badge}</span>}
@@ -1415,6 +1366,15 @@ export default function YTGrowstuffsSection() {
               </motion.div>
             </AnimatePresence>
           </div>
+        </div>
+
+        {/* VidIQ-style footer note */}
+        <div className="mt-6 flex items-center justify-center gap-3 text-xs text-slate-600">
+          <span>📊 Strategy based on VidIQ + Think Media playbooks</span>
+          <span>•</span>
+          <span>🤖 All tools powered by free AI models</span>
+          <span>•</span>
+          <span>🇮🇳 Optimized for Indian creators</span>
         </div>
       </div>
     </section>
