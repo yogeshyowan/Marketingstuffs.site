@@ -92,6 +92,80 @@ const ANTHROPIC = process.env.ANTHROPIC_API_KEY
  * Falls back to OpenRouter Claude keys, then free models if needed.
  * Returns real token counts for accurate credit billing.
  */
+// ── Low-level helpers ───────────────────────────────────────────
+
+/** Try streaming one model directly via Anthropic SDK. Returns null on failure. */
+async function tryAnthropicDirect(
+  messages: ChatMessage[],
+  onChunk: (text: string) => void,
+  onHeartbeat: (() => void) | undefined,
+  model: string,
+  maxTokens: number,
+): Promise<{ key: number; model: string; inputTokens: number; outputTokens: number } | null> {
+  if (!ANTHROPIC) return null;
+  const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
+  try {
+    const systemMsg = messages.find(m => m.role === "system");
+    const convoMsgs = messages.filter(m => m.role !== "system") as Array<{ role: "user" | "assistant"; content: string }>;
+    const stream = ANTHROPIC.messages.stream({ model, max_tokens: maxTokens, system: systemMsg?.content ?? undefined, messages: convoMsgs });
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") onChunk(event.delta.text);
+    }
+    const finalMsg = await stream.finalMessage();
+    return { key: 0, model, inputTokens: finalMsg.usage.input_tokens, outputTokens: finalMsg.usage.output_tokens };
+  } catch (err) {
+    console.error(`[claude-direct/${model}] ${(err instanceof Error ? err.message : String(err)).slice(0, 120)}`);
+    return null;
+  } finally {
+    if (hbInterval) clearInterval(hbInterval);
+  }
+}
+
+/** Try streaming one OpenRouter Claude model across all 5 keys. Returns null if all fail. */
+async function tryOpenRouterClaude(
+  messages: ChatMessage[],
+  onChunk: (text: string) => void,
+  onHeartbeat: (() => void) | undefined,
+  orModel: string,
+  maxTokens: number,
+): Promise<{ key: number; model: string; inputTokens: number; outputTokens: number } | null> {
+  for (let ki = 0; ki < CLIENTS.length; ki++) {
+    const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
+    let success = false;
+    let inputTokens = 0, outputTokens = 0;
+    try {
+      const stream = await CLIENTS[ki].chat.completions.create({
+        model: orModel, max_tokens: maxTokens, messages, stream: true,
+        // @ts-ignore – OpenRouter supports stream_options
+        stream_options: { include_usage: true },
+      });
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) onChunk(content);
+        if (chunk.usage) { inputTokens = chunk.usage.prompt_tokens ?? 0; outputTokens = chunk.usage.completion_tokens ?? 0; }
+      }
+      success = true;
+    } catch (err) {
+      console.error(`[claude-or-key${ki + 1}/${orModel}] ${(err instanceof Error ? err.message : String(err)).slice(0, 120)}`);
+    } finally {
+      if (hbInterval) clearInterval(hbInterval);
+    }
+    if (success) return { key: ki + 1, model: orModel, inputTokens, outputTokens };
+  }
+  return null;
+}
+
+/**
+ * Stream Claude for paid users.
+ *
+ * Fallback chain:
+ *   1. Direct Anthropic API  →  requested model (Haiku or Sonnet)
+ *   2. OpenRouter keys 1-5   →  same model
+ *   3. If model was Sonnet:
+ *      3a. Direct Anthropic  →  Haiku  (still Claude, still billable)
+ *      3b. OpenRouter keys   →  Haiku
+ *   4. Free open-source models (no credit deduction)
+ */
 async function streamWithAnthropic(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
@@ -99,75 +173,28 @@ async function streamWithAnthropic(
   model: string = CLAUDE_HAIKU,
   maxTokens = 12000
 ): Promise<{ key: number; model: string; inputTokens: number; outputTokens: number }> {
-  // ── 1. Try direct Anthropic API key ────────────────────────
-  if (ANTHROPIC) {
-    const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
-    try {
-      // Split system message from conversation messages (Anthropic API separates them)
-      const systemMsg = messages.find(m => m.role === "system");
-      const convoMsgs = messages.filter(m => m.role !== "system") as Array<{ role: "user" | "assistant"; content: string }>;
+  // 1. Direct Anthropic — requested model
+  const direct = await tryAnthropicDirect(messages, onChunk, onHeartbeat, model, maxTokens);
+  if (direct) return direct;
 
-      const stream = ANTHROPIC.messages.stream({
-        model,
-        max_tokens: maxTokens,
-        system: systemMsg?.content ?? undefined,
-        messages: convoMsgs,
-      });
-
-      for await (const event of stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          onChunk(event.delta.text);
-        }
-      }
-
-      const finalMsg = await stream.finalMessage();
-      const inputTokens  = finalMsg.usage.input_tokens;
-      const outputTokens = finalMsg.usage.output_tokens;
-      return { key: 0, model, inputTokens, outputTokens };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[claude-direct] failed: ${msg.slice(0, 120)} — falling back to OpenRouter`);
-    } finally {
-      if (hbInterval) clearInterval(hbInterval);
-    }
-  }
-
-  // ── 2. Fallback: OpenRouter Claude keys ────────────────────
+  // 2. OpenRouter — requested model (all 5 keys)
   const orModel = model === CLAUDE_SONNET ? OR_CLAUDE_SONNET : OR_CLAUDE_HAIKU;
-  for (let ki = 0; ki < CLIENTS.length; ki++) {
-    try {
-      const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
-      let success = false;
-      let inputTokens = 0, outputTokens = 0;
-      try {
-        const stream = await CLIENTS[ki].chat.completions.create({
-          model: orModel,
-          max_tokens: maxTokens,
-          messages,
-          stream: true,
-          // @ts-ignore – OpenRouter supports stream_options
-          stream_options: { include_usage: true },
-        });
-        for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content;
-          if (content) onChunk(content);
-          if (chunk.usage) {
-            inputTokens  = chunk.usage.prompt_tokens     ?? 0;
-            outputTokens = chunk.usage.completion_tokens ?? 0;
-          }
-        }
-        success = true;
-      } finally {
-        if (hbInterval) clearInterval(hbInterval);
-      }
-      if (success) return { key: ki + 1, model: orModel, inputTokens, outputTokens };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[claude-or-key${ki + 1}] ${msg.slice(0, 120)}`);
-    }
+  const orResult = await tryOpenRouterClaude(messages, onChunk, onHeartbeat, orModel, maxTokens);
+  if (orResult) return orResult;
+
+  // 3. Sonnet failed everywhere → try Haiku before giving up on Claude
+  if (model === CLAUDE_SONNET) {
+    console.warn("[claude] Sonnet exhausted — retrying with Haiku");
+
+    const haikuDirect = await tryAnthropicDirect(messages, onChunk, onHeartbeat, CLAUDE_HAIKU, maxTokens);
+    if (haikuDirect) return haikuDirect;
+
+    const haikuOr = await tryOpenRouterClaude(messages, onChunk, onHeartbeat, OR_CLAUDE_HAIKU, maxTokens);
+    if (haikuOr) return haikuOr;
   }
 
-  // ── 3. Last resort: free models ────────────────────────────
+  // 4. Last resort — free open-source models (usage = 0 → no credits charged)
+  console.warn("[claude] all Claude paths failed — falling back to free models");
   const fallback = await streamWithFallback(messages, onChunk, onHeartbeat, maxTokens);
   return { ...fallback, inputTokens: 0, outputTokens: 0 };
 }
