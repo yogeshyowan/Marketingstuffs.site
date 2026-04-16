@@ -97,7 +97,7 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-0.5 text-sm font-medium overflow-x-auto">
             {NAV_LINKS.map(link => (
               <button key={link.label} onClick={() => scrollTo(link.href)}
-                className={`relative px-3 py-2 rounded-lg transition-colors text-xs whitespace-nowrap ${
+                className={`relative px-3.5 py-2 rounded-lg transition-colors text-sm whitespace-nowrap ${
                   link.href === "#yt-growstuffs" ? "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 font-semibold" :
                   link.badge === "✨" ? "text-teal-400 hover:text-teal-300 hover:bg-teal-500/10" :
                   link.badge === "🎬" ? "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" :
@@ -130,16 +130,6 @@ export default function Navbar() {
                   ⚡ {credits} credits
                 </div>
               )
-            )}
-
-            {/* Sign In button — shown when not Google signed in */}
-            {!googleSignedIn && (
-              <button
-                onClick={openLoginModal}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium transition-all"
-              >
-                <LogIn className="w-3.5 h-3.5" /> Sign In
-              </button>
             )}
 
             {/* Profile / Get Started */}
@@ -194,17 +184,12 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-            ) : (
-              <button onClick={openOnboarding}
-                className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-white transition-colors">
-                Log in
-              </button>
-            )}
+            ) : null}
 
             <Button
-              onClick={profile.onboardingComplete ? openGrowthHub : openOnboarding}
+              onClick={!googleSignedIn ? openLoginModal : profile.onboardingComplete ? openGrowthHub : openOnboarding}
               className="bg-gradient-to-r from-emerald-500 to-primary hover:from-emerald-400 hover:to-primary/90 text-white border-0 rounded-xl text-sm hidden sm:flex whitespace-nowrap">
-              {profile.onboardingComplete ? "My Hub 🚀" : "Start Free →"}
+              {!googleSignedIn ? <><LogIn className="w-3.5 h-3.5 mr-1" />Sign In</> : profile.onboardingComplete ? "My Hub 🚀" : "Start Free →"}
             </Button>
 
             <button onClick={() => setMobileOpen(o => !o)} className="lg:hidden text-white/70 hover:text-white p-2">
