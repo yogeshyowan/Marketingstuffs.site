@@ -25,7 +25,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, setShowOnboarding, resetProfile } = useUser();
-  const { credits, googleSignedIn, isAdminUser, userEmail, openLoginModal } = useGenerationGate();
+  const { credits, googleSignedIn, isAdminUser, userEmail, openLoginModal, signOut } = useGenerationGate();
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Close profile dropdown on outside click
@@ -158,10 +158,13 @@ export default function Navbar() {
                 </button>
 
                 {profileOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50">
                     <div className="px-4 py-3 border-b border-slate-800">
                       <p className="text-white text-sm font-semibold">{profile.name}</p>
                       <p className="text-slate-500 text-xs">{profile.goal}</p>
+                      {googleSignedIn && userEmail && (
+                        <p className="text-emerald-400/70 text-[10px] mt-1 truncate">✓ {userEmail}</p>
+                      )}
                     </div>
                     <div className="py-1.5">
                       <button onClick={openGrowthHub}
@@ -173,9 +176,20 @@ export default function Navbar() {
                         <RefreshCw size={14} className="text-blue-400" />Update My Plan
                       </button>
                       <button onClick={handleReset}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-500 hover:text-red-400 hover:bg-red-500/5 transition-colors">
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors">
                         <LogOut size={14} />Reset Profile
                       </button>
+                      {googleSignedIn && (
+                        <>
+                          <div className="mx-4 my-1 border-t border-slate-800" />
+                          <button
+                            onClick={() => { signOut(); setProfileOpen(false); }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors"
+                          >
+                            <LogIn size={14} className="rotate-180" />Sign Out
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -240,6 +254,17 @@ export default function Navbar() {
             {profile.onboardingComplete && (
               <button onClick={openOnboarding} className="w-full mt-1 text-sm text-slate-500 hover:text-slate-300 py-2">
                 Update my plan
+              </button>
+            )}
+            {googleSignedIn && userEmail && (
+              <p className="text-center text-[10px] text-emerald-400/60 mt-1">Signed in as {userEmail}</p>
+            )}
+            {googleSignedIn && (
+              <button
+                onClick={() => { signOut(); setMobileOpen(false); }}
+                className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors border border-red-500/20"
+              >
+                <LogIn size={14} className="rotate-180" /> Sign Out
               </button>
             )}
           </div>

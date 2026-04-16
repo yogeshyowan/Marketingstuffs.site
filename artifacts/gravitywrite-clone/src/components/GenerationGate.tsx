@@ -79,6 +79,7 @@ function decrementCredit(type: GenerationType): number {
 type GateCtx = {
   requestGeneration: (onProceed: () => void, type?: GenerationType) => void;
   openLoginModal: () => void;
+  signOut: () => void;
   credits: number;
   googleSignedIn: boolean;
   isAdminUser: boolean;
@@ -88,6 +89,7 @@ type GateCtx = {
 const GenerationGateContext = createContext<GateCtx>({
   requestGeneration: (cb) => cb(),
   openLoginModal: () => {},
+  signOut: () => {},
   credits: FREE_CREDITS,
   googleSignedIn: false,
   isAdminUser: false,
@@ -224,8 +226,27 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
     pendingRef.current = null;
   }
 
+  function signOut() {
+    // Clear auth from localStorage
+    localStorage.removeItem(LS_GOOGLE);
+    localStorage.removeItem(LS_EMAIL);
+    localStorage.removeItem(LS_ADMIN);
+    // Clear paid plan so fresh sign-in re-syncs from server
+    localStorage.removeItem("marketingstuffs_plan");
+    localStorage.removeItem("marketingstuffs_credits");
+    localStorage.removeItem("marketingstuffs_credit_month");
+    // Reset React state
+    setGoogleSignedInState(false);
+    setIsAdminUser(false);
+    setUserEmailState("");
+    setUserPlan("free");
+    const c = getFreeCredits();
+    setCredits(c === -1 ? FREE_CREDITS : c);
+    setModal(null);
+  }
+
   return (
-    <GenerationGateContext.Provider value={{ requestGeneration, openLoginModal: () => setModal("login"), credits, googleSignedIn, isAdminUser, userEmail, userPlan }}>
+    <GenerationGateContext.Provider value={{ requestGeneration, openLoginModal: () => setModal("login"), signOut, credits, googleSignedIn, isAdminUser, userEmail, userPlan }}>
       {children}
       <AnimatePresence>
         {modal === "login" && (
