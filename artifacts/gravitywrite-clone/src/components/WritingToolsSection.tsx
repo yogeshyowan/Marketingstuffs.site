@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Copy, Check, RefreshCw, Sparkles, Search, BookmarkPlus, Zap, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { saveToMediaLibrary } from "@/components/MediaLibrary";
-import { getPlan, deductCredits, CREDIT_COSTS } from "@/lib/credits";
+import { getPlan, applyTextBilling } from "@/lib/credits";
 
 // ── Field types ───────────────────────────────────────────────
 interface ChipField     { type: "chips";    id: string; label: string; options: string[]; }
@@ -19,20 +19,21 @@ interface ToolDef {
   fields: FieldDef[]; systemPrompt: string; buildUserPrompt: (f: Record<string,string>) => string;
 }
 
-// ── SSE helper ────────────────────────────────────────────────
-async function streamTool(sys: string, usr: string, onChunk: (t: string) => void, plan = "free") {
+// ── SSE helper — returns API-reported credit usage for paid billing ───────────
+async function streamTool(sys: string, usr: string, onChunk: (t: string) => void, plan = "free"): Promise<number> {
   const r = await fetch("/api/ai/tool-generate", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({systemPrompt:sys,userPrompt:usr,plan}) });
   if (!r.ok || !r.body) throw new Error("Network error");
-  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf="";
+  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf=""; let usageCredits=0;
   while(true){
     const {done,value} = await reader.read(); if(done) break;
     buf += dec.decode(value,{stream:true});
     const lines = buf.split("\n"); buf = lines.pop()??"";
     for(const line of lines){
       if(!line.startsWith("data: ")) continue;
-      try{ const ev=JSON.parse(line.slice(6)); if(ev.done||ev.error) return; if(ev.content) onChunk(ev.content); }catch{}
+      try{ const ev=JSON.parse(line.slice(6)); if(ev.done||ev.error) break; if(ev.__usage) usageCredits=ev.__usage; if(ev.content) onChunk(ev.content); }catch{}
     }
   }
+  return usageCredits;
 }
 
 // ── Template examples (quick-fill for each tool) ─────────────
@@ -1867,7 +1868,7 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
     const currentPlan = getPlan();
     let generated = "";
     try {
-      await streamTool(sysWithLang, userWithLang, chunk=>{
+      const usageCredits = await streamTool(sysWithLang, userWithLang, chunk=>{
         generated += chunk;
         setOutput(prev=>{
           const next=prev+chunk;
@@ -1875,8 +1876,8 @@ function ToolModal({ tool, onClose }: { tool:ToolDef; onClose:()=>void }) {
           return next;
         });
       }, currentPlan);
-      // Deduct credits: short output = 2, medium/longer = 4
-      if (generated) deductCredits(generated.length > 800 ? CREDIT_COSTS.tool_medium.cost : CREDIT_COSTS.tool_short.cost);
+      // Apply real Claude token billing for paid; free handled by gate already
+      if (generated) applyTextBilling(usageCredits);
     } catch { setOutput("Generation failed. Please try again."); }
     finally { setLoading(false); }
   };

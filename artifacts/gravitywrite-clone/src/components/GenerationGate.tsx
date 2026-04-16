@@ -59,11 +59,17 @@ function decrementCredit(type: GenerationType): number {
   if (isAdmin()) return getRemainingCredits();
   const cost = getCreditCost(type);
   if (isFree()) {
+    // Free plan: flat-rate deduction on generation start
     const c = Math.max(0, getFreeCredits() - cost);
     localStorage.setItem(LS_CREDITS, String(c));
     return c;
   } else {
-    deductPaidCredits(cost);
+    // Paid plan — text: NO upfront deduction (actual cost billed post-generation
+    // via __usage event from API, handled by applyTextBilling() in each section).
+    // image / video: flat deduction since these use Pollinations.ai (free API).
+    if (type !== "text") {
+      deductPaidCredits(cost);
+    }
     return getPaidCredits();
   }
 }

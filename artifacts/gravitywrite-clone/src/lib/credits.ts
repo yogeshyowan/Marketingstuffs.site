@@ -122,10 +122,13 @@ export function isFreeUser(): boolean {
 }
 
 // ── Plan-aware credit cost per generation type ─────────────────
-// Free:       text=1,  image=5,  video=10
-// Plus:       text=1,  image=2,  video=5   ($1 Claude = 186 cr)
-// Pro:        text=1,  image=2,  video=5   ($1 Claude = 182 cr)
-// Enterprise: text=1,  image=1,  video=3   ($1 Claude = 182 cr)
+// Free:       text=1,  image=5,  video=10  (flat rate, gate deducts)
+// Paid text:  actual Claude token cost × 182 (deducted post-generation via __usage event)
+// Paid image: flat 1–2 credits (Pollinations.ai, deducted by gate)
+// Paid video: flat 2–5 credits (Pollinations.ai, deducted by gate)
+//
+// For paid text, this returns 1 — used ONLY as the minimum-balance gate check.
+// The actual deduction happens via applyTextBilling() after the API stream ends.
 export function getCreditCostForPlan(type: "text" | "image" | "video", plan: Plan): number {
   if (plan === "free") {
     if (type === "video") return 10;
@@ -135,10 +138,22 @@ export function getCreditCostForPlan(type: "text" | "image" | "video", plan: Pla
   if (plan === "enterprise") {
     if (type === "video") return 3;
     if (type === "image") return 1;
-    return 1;
+    return 1; // gate-check minimum only; actual cost via applyTextBilling
   }
   // plus / pro
   if (type === "video") return 5;
   if (type === "image") return 2;
-  return 1;
+  return 1; // gate-check minimum only; actual cost via applyTextBilling
+}
+
+/**
+ * Apply post-generation Claude API usage billing for paid plans.
+ * Call this with the __usage value from the API's SSE stream.
+ * No-op for free plan (gate already deducted the flat amount).
+ * No-op if usageCredits is 0 (free-model fallback — no cost).
+ */
+export function applyTextBilling(usageCredits: number): boolean {
+  const plan = getPlan();
+  if (plan === "free" || usageCredits <= 0) return true;
+  return deductCredits(usageCredits);
 }

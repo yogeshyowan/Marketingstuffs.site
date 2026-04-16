@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGenerationGate } from "@/components/GenerationGate";
-import { getPlan, deductCredits, blogCreditKey, CREDIT_COSTS } from "@/lib/credits";
+import { getPlan, applyTextBilling } from "@/lib/credits";
 
 // ── Templates ──────────────────────────────────────────────
 const TEMPLATES = [
@@ -493,10 +493,9 @@ export default function BlogWriterSection() {
     const selectedStyle = BLOG_STYLES.find(s => s.id === blogStyle)?.label ?? blogStyle;
     const selectedVoice = VOICES.find(v => v.id === voice)?.label ?? voice;
     const currentPlan = getPlan();
-    const creditKey = blogCreditKey(wordCount);
-    const creditCost = CREDIT_COSTS[creditKey].cost;
 
     let fullContent = "";
+    let usageCredits = 0;
 
     try {
       const res = await fetch("/api/ai/generate-blog", {
@@ -530,18 +529,20 @@ export default function BlogWriterSection() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           try {
-            const d = JSON.parse(line.slice(6)) as { content?: string; error?: string };
+            const d = JSON.parse(line.slice(6)) as { content?: string; error?: string; __usage?: number };
             if (d.error) { setError(d.error); }
             if (d.content) {
               fullContent += d.content;
               setGeneratedContent(fullContent);
             }
+            // Capture actual Claude token cost for paid plans
+            if (d.__usage) usageCredits = d.__usage;
           } catch { /* malformed chunk */ }
         }
       }
 
-      // Deduct credits after successful generation
-      if (fullContent) deductCredits(creditCost);
+      // Apply real token-based billing (paid) or flat billing already handled by gate (free)
+      if (fullContent) applyTextBilling(usageCredits);
 
       // Generate images now that we have the full content
       if (imageCount > 0 && fullContent) {
