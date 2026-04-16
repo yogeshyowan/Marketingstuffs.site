@@ -25,7 +25,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, setShowOnboarding, resetProfile } = useUser();
-  const { credits, googleSignedIn, isAdminUser, userEmail, openLoginModal, signOut } = useGenerationGate();
+  const { credits, googleSignedIn, isAdminUser, userEmail, userName, userAvatar, openLoginModal, signOut } = useGenerationGate();
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Close profile dropdown on outside click
@@ -155,11 +155,13 @@ export default function Navbar() {
               <div className="relative hidden sm:block" ref={profileRef}>
                 <button onClick={() => setProfileOpen(o => !o)}
                   className="flex items-center gap-2 bg-slate-800 border border-slate-700 hover:border-emerald-500/50 rounded-xl px-3 py-1.5 transition-all">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                    {initials || <User size={11} />}
+                  <div className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    {userAvatar
+                      ? <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      : initials || <User size={11} />}
                   </div>
                   <div className="text-left">
-                    <p className="text-white text-[11px] font-semibold leading-none">{profile.name || "My Plan"}</p>
+                    <p className="text-white text-[11px] font-semibold leading-none">{userName || profile.name || "My Plan"}</p>
                     <p className="text-slate-500 text-[9px] leading-none mt-0.5">{profile.businessLabel}</p>
                   </div>
                   <ChevronDown size={12} className={`text-slate-500 transition-transform ${profileOpen ? "rotate-180" : ""}`} />

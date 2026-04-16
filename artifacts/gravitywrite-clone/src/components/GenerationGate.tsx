@@ -16,6 +16,8 @@ import {
 const LS_GOOGLE  = "ms_google_signed_in";
 const LS_CREDITS = "ms_credits";
 const LS_EMAIL   = "ms_user_email";
+const LS_NAME    = "ms_user_name";
+const LS_AVATAR  = "ms_user_avatar";
 const LS_ADMIN   = "ms_is_admin";
 const FREE_CREDITS = 50;
 const ADMIN_EMAIL  = "yogesh.yowan@gmail.com";
@@ -26,9 +28,14 @@ function isGoogleSignedIn(): boolean { return localStorage.getItem(LS_GOOGLE) ==
 function setGoogleSignedIn() { localStorage.setItem(LS_GOOGLE, "true"); }
 function isAdmin(): boolean { return localStorage.getItem(LS_ADMIN) === "true"; }
 function getUserEmail(): string { return localStorage.getItem(LS_EMAIL) ?? ""; }
-function saveUserEmail(email: string) {
-  localStorage.setItem(LS_EMAIL, email.trim().toLowerCase());
-  if (email.trim().toLowerCase() === ADMIN_EMAIL) localStorage.setItem(LS_ADMIN, "true");
+function getUserName(): string { return localStorage.getItem(LS_NAME) ?? ""; }
+function getUserAvatar(): string { return localStorage.getItem(LS_AVATAR) ?? ""; }
+function saveUserProfile(email: string, name?: string, avatar?: string) {
+  const normalEmail = email.trim().toLowerCase();
+  localStorage.setItem(LS_EMAIL, normalEmail);
+  if (name) localStorage.setItem(LS_NAME, name);
+  if (avatar) localStorage.setItem(LS_AVATAR, avatar);
+  if (normalEmail === ADMIN_EMAIL) localStorage.setItem(LS_ADMIN, "true");
 }
 
 // ── Free-plan credit helpers (ms_credits) ──────────────────────────────────
@@ -84,6 +91,8 @@ type GateCtx = {
   googleSignedIn: boolean;
   isAdminUser: boolean;
   userEmail: string;
+  userName: string;
+  userAvatar: string;
   userPlan: Plan;
 };
 const GenerationGateContext = createContext<GateCtx>({
@@ -94,6 +103,8 @@ const GenerationGateContext = createContext<GateCtx>({
   googleSignedIn: false,
   isAdminUser: false,
   userEmail: "",
+  userName: "",
+  userAvatar: "",
   userPlan: "free",
 });
 export function useGenerationGate() { return useContext(GenerationGateContext); }
@@ -113,6 +124,8 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   const [googleSignedIn, setGoogleSignedInState] = useState(isGoogleSignedIn);
   const [isAdminUser, setIsAdminUser] = useState(isAdmin);
   const [userEmail, setUserEmailState] = useState(getUserEmail);
+  const [userName, setUserNameState] = useState(getUserName);
+  const [userAvatar, setUserAvatarState] = useState(getUserAvatar);
 
   const pendingRef  = useRef<(() => void) | null>(null);
   const pendingType = useRef<GenerationType>("text");
@@ -201,10 +214,12 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
     }
   }, [profile.onboardingComplete, setShowOnboarding]);
 
-  function handleLoginSuccess(email: string) {
+  function handleLoginSuccess(email: string, name?: string, avatar?: string) {
     const normalEmail = email.trim().toLowerCase();
-    saveUserEmail(normalEmail);
+    saveUserProfile(normalEmail, name, avatar);
     setUserEmailState(normalEmail);
+    if (name)   setUserNameState(name);
+    if (avatar) setUserAvatarState(avatar);
     setGoogleSignedIn();
     setGoogleSignedInState(true);
     const adminNow = normalEmail === ADMIN_EMAIL;
@@ -227,18 +242,19 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   }
 
   function signOut() {
-    // Clear auth from localStorage
     localStorage.removeItem(LS_GOOGLE);
     localStorage.removeItem(LS_EMAIL);
+    localStorage.removeItem(LS_NAME);
+    localStorage.removeItem(LS_AVATAR);
     localStorage.removeItem(LS_ADMIN);
-    // Clear paid plan so fresh sign-in re-syncs from server
     localStorage.removeItem("marketingstuffs_plan");
     localStorage.removeItem("marketingstuffs_credits");
     localStorage.removeItem("marketingstuffs_credit_month");
-    // Reset React state
     setGoogleSignedInState(false);
     setIsAdminUser(false);
     setUserEmailState("");
+    setUserNameState("");
+    setUserAvatarState("");
     setUserPlan("free");
     const c = getFreeCredits();
     setCredits(c === -1 ? FREE_CREDITS : c);
@@ -246,7 +262,7 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   }
 
   return (
-    <GenerationGateContext.Provider value={{ requestGeneration, openLoginModal: () => setModal("login"), signOut, credits, googleSignedIn, isAdminUser, userEmail, userPlan }}>
+    <GenerationGateContext.Provider value={{ requestGeneration, openLoginModal: () => setModal("login"), signOut, credits, googleSignedIn, isAdminUser, userEmail, userName, userAvatar, userPlan }}>
       {children}
       <AnimatePresence>
         {modal === "login" && (
@@ -297,32 +313,45 @@ function LoginModal({
 }: {
   loginStep: "idle" | "opening" | "confirm" | "email";
   setLoginStep: (s: "idle" | "opening" | "confirm" | "email") => void;
-  onSuccess: (email: string) => void;
+  onSuccess: (email: string, name?: string, avatar?: string) => void;
   onClose: () => void;
 }) {
-  const [emailInput, setEmailInput] = useState("");
-  const [emailError, setEmailError] = useState("");
+  const [authError, setAuthError] = useState("");
 
   function openGoogle() {
-    window.open(
-      "https://accounts.google.com/signin",
-      "ms_google_login",
-      "width=480,height=600,scrollbars=yes,resizable=yes,left=200,top=100"
-    );
+    setAuthError("");
     setLoginStep("opening");
-    setTimeout(() => setLoginStep("confirm"), 3000);
-  }
 
-  function proceedToEmail() { setLoginStep("email"); }
+    // Open Google OAuth popup
+    const popup = window.open(
+      "/api/auth/google/start",
+      "ms_google_oauth",
+      "width=500,height=640,scrollbars=yes,resizable=yes,left=200,top=80"
+    );
 
-  function submitEmail() {
-    const e = emailInput.trim().toLowerCase();
-    if (!e.includes("@") || !e.includes(".")) {
-      setEmailError("Please enter a valid Gmail address.");
-      return;
+    // Listen for postMessage from the OAuth callback page
+    function onMessage(event: MessageEvent) {
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "MS_AUTH_SUCCESS") {
+        window.removeEventListener("message", onMessage);
+        onSuccess(data.email, data.name, data.avatar);
+      } else if (data.type === "MS_AUTH_ERROR") {
+        window.removeEventListener("message", onMessage);
+        setAuthError(data.error ?? "Google sign-in failed. Please try again.");
+        setLoginStep("idle");
+      }
     }
-    setEmailError("");
-    onSuccess(e);
+    window.addEventListener("message", onMessage);
+
+    // If popup is closed without completing OAuth
+    const pollClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(pollClosed);
+        window.removeEventListener("message", onMessage);
+        if (loginStep === "opening") setLoginStep("idle");
+      }
+    }, 800);
   }
 
   return (
@@ -339,124 +368,75 @@ function LoginModal({
         <div className="bg-[#0d0d1c] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden">
           <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500" />
 
-          {loginStep === "email" ? (
-            <div className="p-6 space-y-5">
-              <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white/70 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg shrink-0">
-                  <Zap className="w-6 h-6 text-white" fill="currentColor" />
-                </div>
-                <div>
-                  <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Almost there!</p>
-                  <h3 className="text-white font-extrabold text-xl leading-tight">Enter your Gmail</h3>
-                </div>
+          <div className="relative p-6 pb-4">
+            <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white/70 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <p className="text-white/45 text-sm">Enter the Gmail address you just used to sign in. This personalises your account and saves your credits.</p>
-              <div className="space-y-2">
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={e => { setEmailInput(e.target.value); setEmailError(""); }}
-                  onKeyDown={e => e.key === "Enter" && submitEmail()}
-                  placeholder="you@gmail.com"
-                  autoFocus
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all"
-                />
-                {emailError && <p className="text-red-400 text-xs">{emailError}</p>}
+              <div>
+                <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Free — No Card Required</p>
+                <h3 className="text-white font-extrabold text-xl leading-tight">Unlock 50 Free Credits</h3>
               </div>
-              <button onClick={submitEmail}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-white font-bold rounded-xl h-12 transition-all shadow-lg">
-                <Zap className="w-4 h-4" fill="currentColor" /> Activate My Credits
-              </button>
-              <p className="text-center text-[11px] text-white/20">
-                By continuing you agree to our{" "}
-                <a href="#" className="underline hover:text-white/40">Terms</a> &amp;{" "}
-                <a href="#" className="underline hover:text-white/40">Privacy Policy</a>
-              </p>
             </div>
-          ) : (
-            <>
-              <div className="relative p-6 pb-4">
-                <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white/70 transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Step 2 of 2</p>
-                    <h3 className="text-white font-extrabold text-xl leading-tight">Unlock 50 Free Credits</h3>
-                  </div>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Sign in with Google to get <strong className="text-emerald-400">50 free AI credits</strong> — generate blogs, ads, social posts, images & more instantly.
+            </p>
+          </div>
+
+          <div className="mx-6 mb-4 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="text-2xl">⚡</div>
+            <div>
+              <p className="text-white font-bold text-sm">{FREE_CREDITS} AI Credits — Free</p>
+              <p className="text-slate-500 text-xs">Text/Ads = 1 cr · Images = 5 cr · Videos = 10 cr</p>
+            </div>
+            <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS}</div>
+          </div>
+
+          <div className="px-6 pb-4 space-y-2">
+            {[
+              "50 free credits — Blog, Ads, Social, Email, Images & Video",
+              "Your name & account saved automatically from Google",
+              "Access to all Growth Hub features",
+              "No credit card required, ever",
+            ].map(b => (
+              <div key={b} className="flex items-start gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="w-2.5 h-2.5 text-emerald-400" />
                 </div>
-                <p className="text-white/50 text-sm leading-relaxed">
-                  Sign in with Google to get <strong className="text-emerald-400">50 free AI credits</strong> — no credit card, no catch.
-                </p>
+                <span className="text-white/65 text-sm">{b}</span>
               </div>
+            ))}
+          </div>
 
-              <div className="mx-6 mb-4 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="text-2xl">⚡</div>
-                <div>
-                  <p className="text-white font-bold text-sm">{FREE_CREDITS} AI Credits — Free</p>
-                  <p className="text-slate-500 text-xs">Text/Ads = 1 cr · Images = 5 cr · Videos = 10 cr</p>
-                </div>
-                <div className="ml-auto text-emerald-400 font-extrabold text-xl">{FREE_CREDITS}</div>
-              </div>
+          <div className="px-6 pb-6 space-y-3">
+            {authError && (
+              <p className="text-red-400 text-xs text-center bg-red-500/8 border border-red-500/20 rounded-xl py-2 px-3">
+                ⚠ {authError}
+              </p>
+            )}
 
-              <div className="px-6 pb-4 space-y-2">
-                {[
-                  "50 free credits — Blog, Ads, Social, Email, Images & Video",
-                  "Your Growth Plan & history saved to your account",
-                  "Access to all Growth Hub features",
-                  "No credit card required, ever",
-                ].map(b => (
-                  <div key={b} className="flex items-start gap-2.5">
-                    <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check className="w-2.5 h-2.5 text-emerald-400" />
-                    </div>
-                    <span className="text-white/65 text-sm">{b}</span>
-                  </div>
-                ))}
+            {loginStep !== "opening" ? (
+              <button onClick={openGoogle}
+                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-xl h-12 transition-all shadow-lg hover:shadow-xl hover:scale-[1.01]">
+                <GoogleIcon />
+                Continue with Google — Get 50 Free Credits
+              </button>
+            ) : (
+              <div className="w-full flex items-center justify-center gap-3 bg-white/8 border border-white/10 rounded-xl h-12">
+                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-white/60 text-sm">Waiting for Google sign-in…</span>
               </div>
+            )}
 
-              <div className="px-6 pb-6 space-y-3">
-                {loginStep === "idle" && (
-                  <button onClick={openGoogle}
-                    className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-xl h-12 transition-all shadow-lg hover:shadow-xl hover:scale-[1.01]">
-                    <GoogleIcon />
-                    Continue with Google — Get 50 Free Credits
-                  </button>
-                )}
-                {loginStep === "opening" && (
-                  <div className="w-full flex items-center justify-center gap-3 bg-white/8 border border-white/10 rounded-xl h-12">
-                    <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-white/60 text-sm">Google sign-in opening…</span>
-                  </div>
-                )}
-                {loginStep === "confirm" && (
-                  <div className="space-y-3">
-                    <p className="text-center text-sm text-yellow-400/80 bg-yellow-400/5 border border-yellow-400/15 rounded-xl py-2">
-                      ✅ Signed in on Google? Click below to continue.
-                    </p>
-                    <button onClick={proceedToEmail}
-                      className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-400 hover:to-blue-400 text-white font-bold rounded-xl h-12 transition-all shadow-lg">
-                      <Zap className="w-4 h-4" fill="currentColor" /> I've signed in — Continue
-                    </button>
-                    <button onClick={openGoogle} className="w-full text-center text-xs text-white/30 hover:text-white/50 transition-colors py-1">
-                      Didn't open? Try again →
-                    </button>
-                  </div>
-                )}
-                <p className="text-center text-[11px] text-white/20">
-                  By continuing you agree to our{" "}
-                  <a href="#" className="underline hover:text-white/40">Terms</a> &amp;{" "}
-                  <a href="#" className="underline hover:text-white/40">Privacy Policy</a>
-                </p>
-              </div>
-            </>
-          )}
+            <p className="text-center text-[11px] text-white/20">
+              By continuing you agree to our{" "}
+              <a href="/terms" className="underline hover:text-white/40">Terms</a> &amp;{" "}
+              <a href="/privacy-policy" className="underline hover:text-white/40">Privacy Policy</a>
+            </p>
+          </div>
         </div>
       </motion.div>
     </>
