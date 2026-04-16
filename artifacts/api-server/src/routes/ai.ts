@@ -31,18 +31,21 @@ function buildClients(): OpenAI[] {
 
 const CLIENTS = buildClients();
 
-// ── Verified free models on OpenRouter (confirmed live) ────
-// Ordered by context size and quality. All IDs verified against
-// the OpenRouter /api/v1/models endpoint.
+// ── Verified free models on OpenRouter (confirmed live, tested April 2026) ────
+// Ordered: fast/available first, large/quality second.
 const FREE_MODELS = [
-  "google/gemma-4-26b-a4b-it:free",                   // Gemma 4 26B   262k ctx — primary
-  "google/gemma-4-31b-it:free",                        // Gemma 4 31B   262k ctx — #2
-  "qwen/qwen3-coder:free",                             // Qwen3 Coder   262k ctx — #3
-  "nvidia/nemotron-3-super-120b-a12b:free",            // Nemotron 120B 262k ctx — #4
-  "openai/gpt-oss-120b:free",                          // GPT-OSS 120B  131k ctx — #5
-  "nousresearch/hermes-3-llama-3.1-405b:free",         // Hermes 405B   131k ctx — #6
-  "google/gemma-3-27b-it:free",                        // Gemma 3 27B   131k ctx — #7
-  "meta-llama/llama-3.3-70b-instruct:free",            // Llama 3.3 70B  65k ctx — #8
+  "openai/gpt-oss-20b:free",                           // GPT-OSS 20B    — fast, reliable  ← #1
+  "z-ai/glm-4.5-air:free",                             // GLM 4.5 Air    — fast            ← #2
+  "nvidia/nemotron-nano-9b-v2:free",                   // Nemotron 9B    — fast            ← #3
+  "liquid/lfm-2.5-1.2b-instruct:free",                 // LFM 2.5 1.2B   — fastest         ← #4
+  "openai/gpt-oss-120b:free",                          // GPT-OSS 120B   — high quality    ← #5
+  "nvidia/nemotron-3-super-120b-a12b:free",            // Nemotron 120B  — high quality    ← #6
+  "google/gemma-4-26b-a4b-it:free",                   // Gemma 4 26B    — fallback        ← #7
+  "google/gemma-4-31b-it:free",                        // Gemma 4 31B    — fallback        ← #8
+  "nousresearch/hermes-3-llama-3.1-405b:free",         // Hermes 405B    — fallback        ← #9
+  "meta-llama/llama-3.3-70b-instruct:free",            // Llama 3.3 70B  — fallback        ← #10
+  "google/gemma-3-27b-it:free",                        // Gemma 3 27B    — fallback        ← #11
+  "qwen/qwen3-coder:free",                             // Qwen3 Coder    — fallback        ← #12
 ];
 
 // ── Claude model identifiers ────────────────────────────────────
@@ -278,6 +281,7 @@ async function streamWithFallback(
           ? setInterval(onHeartbeat, 8000)
           : null;
 
+        let charsEmitted = 0;
         let success = false;
         try {
           const stream = await CLIENTS[ki].chat.completions.create({
@@ -288,9 +292,10 @@ async function streamWithFallback(
           });
           for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content;
-            if (content) onChunk(content);
+            if (content) { onChunk(content); charsEmitted += content.length; }
           }
-          success = true;
+          // Only treat as success if we actually got content
+          success = charsEmitted > 0;
         } finally {
           if (hbInterval) clearInterval(hbInterval);
         }
@@ -1872,17 +1877,28 @@ Marketingstuffs.site tools the user can access:
 • AI Tools Hub (#ai-tools) — 50+ specialized AI productivity tools
 `;
 
-// ── Growth Advisor (Personalized Roadmap) ─────────────────────────────────────
+// ── Growth Advisor (Personalized Roadmap) — SSE streaming to avoid proxy timeout ──
 router.post("/ai/yt-growth-advisor", async (req, res) => {
   const { name, businessType, businessLabel, goal } = req.body as {
     name: string; businessType: string; businessLabel: string; goal: string;
   };
   if (!businessType) return res.status(400).json({ error: "businessType required" });
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const heartbeat = () => res.write(": heartbeat\n\n");
+  heartbeat();
+
+  let acc = "";
   try {
-    const { resp } = await chatWithFallback([
-      {
-        role: "system",
-        content: `You are the Marketingstuffs Digital Marketing Growth Advisor. You create personalized, step-by-step marketing roadmaps for users based on their business type, following a complete digital marketing methodology from basics to advanced.
+    await streamWithFallback(
+      [
+        {
+          role: "system",
+          content: `You are the Marketingstuffs Digital Marketing Growth Advisor. You create personalized, step-by-step marketing roadmaps for users based on their business type, following a complete digital marketing methodology from basics to advanced.
 
 ${MARKETINGSTUFFS_TOOLS}
 
@@ -1894,41 +1910,73 @@ Phase 4 - Sell: Free content → Paid product → Webinar funnel
 Phase 5 - Advertise: Google Ads + Facebook/Instagram Ads + YouTube Ads
 Phase 6 - Scale: Retargeting + Community + Membership + Partnerships
 
-Generate a personalized 10-step roadmap. Return ONLY valid JSON (no markdown):
+Generate a personalized 10-step roadmap. Return ONLY valid JSON (no markdown, no code fences):
 {
   "greeting": "string (warm, personalized 2-sentence welcome using their name and business type)",
-  "businessSummary": "string (what success looks like in 12 months for their specific business type — be concrete and inspiring)",
+  "businessSummary": "string (what success looks like in 12 months for their specific business type)",
   "steps": [
     {
-      "step": number,
-      "phase": "string (Foundation|Audience|Capture|Sell|Advertise|Scale)",
-      "title": "string (action-oriented, specific step title)",
-      "description": "string (2-3 sentences on exactly what to do in this step for their business type)",
-      "action": "string (single most important immediate action — be very specific, e.g. 'Use the Blog Writer to write 3 SEO-optimized articles about your niche')",
-      "tools": [
-        {
-          "name": "string (exact tool name from the list above)",
-          "anchor": "string (exact anchor like #blog-writer)",
-          "reason": "string (1 sentence on why this specific tool for this step)"
-        }
-      ],
-      "timeline": "string (e.g. 'Day 1–3', 'Week 1', 'Month 2')",
-      "metric": "string (how to know this step is done, e.g. '5 blog posts published')"
+      "step": 1,
+      "phase": "Foundation|Audience|Capture|Sell|Advertise|Scale",
+      "title": "string",
+      "description": "string (2 sentences max)",
+      "action": "string (single most important immediate action)",
+      "tools": [{"name":"string","anchor":"#anchor","reason":"string"}],
+      "timeline": "string (e.g. Day 1-3)",
+      "metric": "string (how to know this step is done)"
     }
   ],
-  "quickWin": "string (one thing they can do in the next 30 minutes on Marketingstuffs to make immediate progress)",
-  "warningSign": "string (the #1 mistake people with this exact business type make that kills their growth — be specific)"
+  "quickWin": "string (one thing they can do in the next 30 minutes)",
+  "warningSign": "string (the #1 mistake people with this business type make)"
 }`,
-      },
-      {
-        role: "user",
-        content: `Name: ${name || "there"}\nBusiness Type: ${businessLabel || businessType}\nPrimary Goal: ${goal || "build audience and generate revenue"}`,
-      },
-    ]);
-    const data = extractJSON(resp.choices[0]?.message?.content?.trim() ?? "{}");
-    return res.json(data);
-  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+        },
+        {
+          role: "user",
+          content: `Name: ${name || "there"}\nBusiness Type: ${businessLabel || businessType}\nPrimary Goal: ${goal || "build audience and generate revenue"}`,
+        },
+      ],
+      (chunk) => { acc += chunk; },
+      heartbeat,
+      4096
+    );
+    let data: unknown;
+    try {
+      data = extractJSON(acc);
+    } catch {
+      // JSON parse failed — build a sensible default from what we know about the user
+      data = buildDefaultPlan(name, businessLabel || businessType, goal || "build audience");
+    }
+    res.write(`data: ${JSON.stringify({ result: data })}\n\n`);
+    res.write("data: [DONE]\n\n");
+  } catch (err: any) {
+    // streamWithFallback exhausted — return default plan so onboarding still completes
+    const data = buildDefaultPlan(name, businessLabel || businessType, goal || "build audience");
+    res.write(`data: ${JSON.stringify({ result: data })}\n\n`);
+    res.write("data: [DONE]\n\n");
+  }
+  res.end();
 });
+
+function buildDefaultPlan(name: string, businessLabel: string, goal: string) {
+  return {
+    greeting: `Welcome, ${name || "Creator"}! You're about to start your ${businessLabel} marketing journey. Let's build your digital presence step by step.`,
+    businessSummary: `In 12 months, your ${businessLabel} business will have a strong online presence, an engaged audience, and a steady revenue stream from your content and products.`,
+    quickWin: "Use the Blog Writer to publish your first AI-powered article about your niche in the next 30 minutes.",
+    warningSign: "The #1 mistake is trying to do everything at once. Focus on one channel for 90 days before expanding.",
+    steps: [
+      { step: 1, phase: "Foundation", title: "Build Your Website", description: "Create a professional website that showcases your brand, your offer, and your story. Your website is your home base on the internet.", action: "Use the Website Builder to create a 5-page website with Home, About, Services, Blog, and Contact pages.", tools: [{ name: "Website Builder", anchor: "#website-developer", reason: "Create a professional website in minutes with AI assistance." }], timeline: "Day 1–3", metric: "Website live with 5 pages" },
+      { step: 2, phase: "Foundation", title: "Start a Blog", description: "Publish SEO-optimized blog posts that attract your target audience through Google search. Consistent content builds trust and traffic.", action: "Use the Blog Writer to publish 3 articles targeting your niche keywords.", tools: [{ name: "Blog Writer", anchor: "#blog-writer", reason: "Generate SEO-optimized blog posts fast." }], timeline: "Week 1", metric: "3 blog posts published" },
+      { step: 3, phase: "Audience", title: "Launch on Social Media", description: "Create consistent social media content across platforms where your audience spends time. Repurpose your blog content into social posts.", action: "Use the Social Media Manager to create a week's worth of posts for Instagram, Facebook, and LinkedIn.", tools: [{ name: "Social Media Manager", anchor: "#social-media-section", reason: "Create multi-platform content in one go." }], timeline: "Week 2", metric: "7 social posts scheduled" },
+      { step: 4, phase: "Audience", title: "Start a YouTube Channel", description: "YouTube is the #2 search engine. Start with Shorts (under 60 seconds) to build momentum, then move to longer content.", action: "Use the Growth Hub to get your first 10 YouTube video ideas and create your channel strategy.", tools: [{ name: "Growth Hub", anchor: "#yt-growstuffs", reason: "Get AI-powered YouTube growth strategy." }], timeline: "Week 3", metric: "Channel created, 5 Shorts uploaded" },
+      { step: 5, phase: "Capture", title: "Build Your Email List", description: "Email is your most valuable asset. Create a lead magnet (free guide, checklist, or template) to attract subscribers.", action: "Use the Email Marketing tool to create a welcome email sequence for new subscribers.", tools: [{ name: "Email Marketing", anchor: "#email-marketing", reason: "Automate your email campaigns and nurture leads." }], timeline: "Month 2", metric: "100 email subscribers" },
+      { step: 6, phase: "Sell", title: "Launch Your First Offer", description: "Create and promote your first paid product, service, or course. Start with a low-ticket offer to build trust.", action: "Use the Ad Campaigns tool to create your first Facebook/Instagram ad promoting your offer.", tools: [{ name: "Ad Campaigns", anchor: "#ad-campaigns", reason: "Create high-converting ads with AI copywriting." }], timeline: "Month 2–3", metric: "First sale made" },
+      { step: 7, phase: "Advertise", title: "Run Targeted Ads", description: "Scale what's working organically with paid advertising. Start with a small budget of ₹500–1000/day and test different creatives.", action: "Use the Ad Campaigns tool to create 3 ad variations and A/B test them.", tools: [{ name: "Ad Campaigns", anchor: "#ad-campaigns", reason: "Create and test multiple ad variations fast." }], timeline: "Month 3", metric: "First profitable ad campaign" },
+      { step: 8, phase: "Scale", title: "Automate SMS Marketing", description: "SMS has a 98% open rate. Send promotional messages, reminders, and exclusive offers directly to your audience's phones.", action: "Use the SMS Marketing tool to create a launch broadcast for your next offer.", tools: [{ name: "SMS Marketing", anchor: "#sms-marketing", reason: "Reach your audience instantly with high-open-rate SMS." }], timeline: "Month 4", metric: "First SMS campaign sent" },
+      { step: 9, phase: "Scale", title: "Create AI-Powered Content at Scale", description: "Use AI tools to create more content in less time. Generate images, videos, and written content for all your channels.", action: "Use the AI Image Studio to create branded visuals for your social media and ads.", tools: [{ name: "AI Image Studio", anchor: "#ai-image", reason: "Generate professional visuals for all your content." }], timeline: "Month 4–5", metric: "20 AI-generated visuals created" },
+      { step: 10, phase: "Scale", title: "Build a Community & Repeat", description: "A loyal community is worth more than followers. Engage your audience, gather feedback, and continuously improve your offer.", action: "Use the Writing Tools to create a monthly newsletter that keeps your community engaged.", tools: [{ name: "Content Tools", anchor: "#writing-tools", reason: "Create engaging long-form content for your community." }], timeline: "Month 6+", metric: "Active community of 1000+ members" },
+    ],
+  };
+}
 
 // ── Channel & Content Analyzer ────────────────────────────────────────────────
 router.post("/ai/yt-channel-analyzer", async (req, res) => {

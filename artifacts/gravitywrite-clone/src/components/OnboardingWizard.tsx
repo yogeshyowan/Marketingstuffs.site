@@ -47,7 +47,31 @@ export default function OnboardingWizard() {
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error(await res.text());
-      const plan = await res.json() as GrowthPlan;
+
+      // Read SSE stream — backend sends heartbeats + final { result } event
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error("No stream");
+
+      let plan: GrowthPlan | null = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const line of decoder.decode(value).split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (raw === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.error) throw new Error(parsed.error);
+            if (parsed.result) plan = parsed.result as GrowthPlan;
+          } catch (parseErr: any) {
+            if (parseErr.message && !parseErr.message.includes("JSON")) throw parseErr;
+          }
+        }
+      }
+
+      if (!plan) throw new Error("No plan received. Please try again.");
       const profile: UserProfile = {
         name, businessType, businessLabel, goal: goalLabel,
         onboardingComplete: true, growthPlan: plan,
