@@ -53,23 +53,23 @@ export default function Footer() {
           <nav aria-label="Company navigation">
             <h4 className="text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">About Marketingstuffs</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Careers</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Press</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Contact</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-white transition-colors">Affiliate Program</a></li>
+              <li><a href="/contact" className="text-muted-foreground hover:text-white transition-colors">Contact Us</a></li>
+              <li><a href="/privacy-policy" className="text-muted-foreground hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><a href="/terms" className="text-muted-foreground hover:text-white transition-colors">Terms of Service</a></li>
+              <li><a href="/refund-policy" className="text-muted-foreground hover:text-white transition-colors">Refund Policy</a></li>
+              <li><a href="/sitemap.xml" className="text-muted-foreground hover:text-white transition-colors">Sitemap</a></li>
             </ul>
           </nav>
 
         </div>
 
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
-          <p>© 2025 Marketingstuffs. All rights reserved. Free AI Content Platform.</p>
+          <p>© 2026 Marketingstuffs. All rights reserved. Free AI Content Platform.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
-            <a href="#" className="hover:text-white transition-colors">GDPR</a>
+            <a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
+            <a href="/refund-policy" className="hover:text-white transition-colors">Refund Policy</a>
+            <a href="/contact" className="hover:text-white transition-colors">Contact</a>
           </div>
         </div>
       </div>

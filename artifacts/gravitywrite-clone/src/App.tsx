@@ -5,6 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import SocialPublicPage from "@/pages/SocialPublicPage";
 import NotFound from "@/pages/not-found";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import RefundPolicy from "@/pages/RefundPolicy";
+import ContactUs from "@/pages/ContactUs";
 
 const queryClient = new QueryClient();
 
@@ -13,6 +17,10 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/social/:username" component={SocialPublicPage} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfService} />
+      <Route path="/refund-policy" component={RefundPolicy} />
+      <Route path="/contact" component={ContactUs} />
       <Route component={NotFound} />
     </Switch>
   );
