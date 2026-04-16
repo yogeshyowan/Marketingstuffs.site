@@ -157,3 +157,22 @@ export function applyTextBilling(usageCredits: number): boolean {
   if (plan === "free" || usageCredits <= 0) return true;
   return deductCredits(usageCredits);
 }
+
+/**
+ * Sync plan + credits from the server DB after login or after payment.
+ * Server is the source of truth for paid plans.
+ */
+export async function syncPlanFromServer(email: string): Promise<void> {
+  try {
+    const r = await fetch(`/api/payment/user?email=${encodeURIComponent(email)}`);
+    if (!r.ok) return;
+    const { plan, credits } = await r.json() as { plan: string; credits: number };
+    if (plan && plan in PLAN_CONFIG) {
+      localStorage.setItem(LS_PLAN, plan);
+      localStorage.setItem(LS_CREDITS, String(credits));
+      localStorage.setItem(LS_MONTH, monthKey());
+    }
+  } catch {
+    // silently fail — localStorage stays as fallback
+  }
+}

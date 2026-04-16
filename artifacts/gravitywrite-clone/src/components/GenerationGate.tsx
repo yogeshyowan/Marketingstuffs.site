@@ -8,6 +8,7 @@ import {
   deductCredits as deductPaidCredits,
   addCredits,
   TOPUP_PACKS,
+  syncPlanFromServer,
   type Plan,
 } from "@/lib/credits";
 
@@ -208,6 +209,8 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
       initFreeCredits();
       if (!adminNow) setCredits(FREE_CREDITS);
     }
+    // Sync paid plan from server DB (restores plan on new device / browser clear)
+    syncPlanFromServer(normalEmail).catch(() => {});
     setModal(null);
     setLoginStep("idle");
     setTimeout(resumeAfterLogin, 50);

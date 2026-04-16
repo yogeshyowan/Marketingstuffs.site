@@ -1,22 +1,22 @@
-import { useState, useEffect } from "react";
-import { CheckCircle2, Zap, Crown, Sparkles, Info, X, Copy, Check, QrCode, Smartphone, Plus } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { CheckCircle2, Zap, Crown, Sparkles, Info, X, Copy, Check, QrCode, Smartphone, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getPlan, setPlan, getCredits, addCredits, PLAN_CONFIG, CREDIT_COSTS, TOPUP_PACKS, type Plan } from "@/lib/credits";
+import { getPlan, setPlan, getCredits, addCredits, PLAN_CONFIG, CREDIT_COSTS, TOPUP_PACKS, syncPlanFromServer, type Plan } from "@/lib/credits";
 
 const UPI_ID   = "marketingstuffs@upi";
 const UPI_NAME = "Marketingstuffs";
 
 const CREDIT_EXAMPLES = [
-  { action: "Short blog (600w)",    cost: CREDIT_COSTS.blog_600.cost,    model: "Claude Haiku",  emoji: "📝" },
-  { action: "Standard blog (900w)", cost: CREDIT_COSTS.blog_900.cost,    model: "Claude Haiku",  emoji: "📄" },
-  { action: "Long-form blog (1400w)",cost: CREDIT_COSTS.blog_1400.cost,  model: "Claude Sonnet", emoji: "📰" },
-  { action: "In-depth blog (2000w)",cost: CREDIT_COSTS.blog_2000.cost,   model: "Claude Sonnet", emoji: "📖" },
-  { action: "Epic blog (3000w)",    cost: CREDIT_COSTS.blog_3000.cost,   model: "Claude Sonnet", emoji: "🏆" },
-  { action: "Website section",      cost: CREDIT_COSTS.website.cost,     model: "Claude Sonnet", emoji: "🌐" },
-  { action: "Writing tool (short)", cost: CREDIT_COSTS.tool_short.cost,  model: "Claude Haiku",  emoji: "✍️" },
-  { action: "Writing tool (medium)",cost: CREDIT_COSTS.tool_medium.cost, model: "Claude Haiku",  emoji: "🔧" },
-  { action: "Image generation",     cost: 2,                              model: "Pollinations",  emoji: "🎨" },
-  { action: "Video generation",     cost: 5,                              model: "AI Video",      emoji: "🎬" },
+  { action: "Short blog (600w)",     cost: CREDIT_COSTS.blog_600.cost,   model: "Claude Haiku", emoji: "📝" },
+  { action: "Standard blog (900w)",  cost: CREDIT_COSTS.blog_900.cost,   model: "Claude Haiku", emoji: "📄" },
+  { action: "Long-form blog (1400w)",cost: CREDIT_COSTS.blog_1400.cost,  model: "Claude Haiku", emoji: "📰" },
+  { action: "In-depth blog (2000w)", cost: CREDIT_COSTS.blog_2000.cost,  model: "Claude Haiku", emoji: "📖" },
+  { action: "Epic blog (3000w)",     cost: CREDIT_COSTS.blog_3000.cost,  model: "Claude Haiku", emoji: "🏆" },
+  { action: "Website section",       cost: CREDIT_COSTS.website.cost,    model: "Claude Haiku", emoji: "🌐" },
+  { action: "Writing tool (short)",  cost: CREDIT_COSTS.tool_short.cost, model: "Claude Haiku", emoji: "✍️" },
+  { action: "Writing tool (medium)", cost: CREDIT_COSTS.tool_medium.cost,model: "Claude Haiku", emoji: "🔧" },
+  { action: "Image generation",      cost: 2,                            model: "Pollinations",  emoji: "🎨" },
+  { action: "Video generation",      cost: 5,                            model: "AI Video",      emoji: "🎬" },
 ];
 
 // ── Plans ──────────────────────────────────────────────────────────────────
@@ -226,6 +226,18 @@ function UPIPaymentModal({ plan, amount, label, onClose }: {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
+// ── Load Razorpay checkout.js script ───────────────────────────
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise(resolve => {
+    if ((window as unknown as Record<string, unknown>)["Razorpay"]) { resolve(true); return; }
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload  = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
 export default function PricingSection() {
   const [activePlan, setActivePlan] = useState<Plan>("free");
   const [credits, setCredits] = useState(0);
@@ -234,11 +246,16 @@ export default function PricingSection() {
   const [topupPack, setTopupPack] = useState<typeof TOPUP_PACKS[number] | null>(null);
   const [showINR, setShowINR] = useState(true);
   const [topupAdded, setTopupAdded] = useState<number | null>(null);
+  const [rzpKey, setRzpKey] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   useEffect(() => {
     setActivePlan(getPlan());
     setCredits(getCredits());
     const id = setInterval(() => { setActivePlan(getPlan()); setCredits(getCredits()); }, 2000);
+    // Check if Razorpay is configured on the backend
+    fetch("/api/payment/key").then(r => r.ok ? r.json() : null).then(d => { if (d?.key) setRzpKey(d.key); }).catch(() => {});
     return () => clearInterval(id);
   }, []);
 
@@ -248,13 +265,79 @@ export default function PricingSection() {
     setCredits(PLAN_CONFIG[plan].credits);
   }
 
+  const handleRazorpayCheckout = useCallback(async (opts: { planId?: string; topupId?: string; amountINR: number; label: string; credits: number }) => {
+    setPayError(null);
+    setPaying(true);
+    const email = localStorage.getItem("ms_user_email") ?? "";
+    if (!email) { setPayError("Please sign in first to make a payment."); setPaying(false); return; }
+
+    const loaded = await loadRazorpayScript();
+    if (!loaded || !rzpKey) { setPayError("Payment gateway unavailable. Please use UPI below."); setPaying(false); return; }
+
+    let orderId = "";
+    try {
+      const r = await fetch("/api/payment/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, planId: opts.planId, topupId: opts.topupId }),
+      });
+      const d = await r.json() as { orderId?: string; error?: string };
+      if (!r.ok || !d.orderId) throw new Error(d.error ?? "Could not create order");
+      orderId = d.orderId;
+    } catch (e) {
+      setPayError(e instanceof Error ? e.message : "Order creation failed"); setPaying(false); return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rzp = new (window as any).Razorpay({
+      key:         rzpKey,
+      order_id:    orderId,
+      amount:      opts.amountINR * 100,
+      currency:    "INR",
+      name:        "Marketingstuffs",
+      description: opts.label,
+      prefill:     { email },
+      theme:       { color: "#7c3aed" },
+      handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+        try {
+          const vr = await fetch("/api/payment/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...resp, email }),
+          });
+          const vd = await vr.json() as { plan?: string; credits?: number; error?: string };
+          if (!vr.ok || vd.error) throw new Error(vd.error ?? "Verification failed");
+          // Sync updated plan/credits to localStorage
+          await syncPlanFromServer(email);
+          setActivePlan(getPlan());
+          setCredits(getCredits());
+          setTopupAdded(opts.credits);
+          setTopupPack(null);
+          setPaymentPlan(null);
+          setTimeout(() => setTopupAdded(null), 5000);
+        } catch (e) {
+          setPayError(e instanceof Error ? e.message : "Payment activated but sync failed — refresh the page.");
+        } finally { setPaying(false); }
+      },
+      modal: { ondismiss: () => setPaying(false) },
+    });
+    rzp.open();
+  }, [rzpKey]);
+
   function handleTopupPay(pack: typeof TOPUP_PACKS[number]) {
-    // Demo: immediately add credits
-    addCredits(pack.credits);
-    setCredits(getCredits());
-    setTopupAdded(pack.credits);
-    setTopupPack(null);
-    setTimeout(() => setTopupAdded(null), 4000);
+    if (rzpKey) {
+      handleRazorpayCheckout({ topupId: pack.id, amountINR: pack.priceINR, label: `${pack.label} Top-Up (${pack.credits} credits)`, credits: pack.credits });
+    } else {
+      setTopupPack(pack); // fallback to UPI modal
+    }
+  }
+
+  function handlePlanPay(payPlan: PaymentPlan) {
+    if (rzpKey) {
+      handleRazorpayCheckout({ planId: payPlan.id, amountINR: payPlan.priceINR, label: `${payPlan.name} Plan`, credits: payPlan.credits });
+    } else {
+      setPaymentPlan(payPlan); // fallback to UPI modal
+    }
   }
 
   return (
@@ -272,13 +355,13 @@ export default function PricingSection() {
             One subscription. Every AI tool you need.
           </h2>
           <p className="text-lg text-muted-foreground mb-4">
-            Credits power all AI generations. Paid plans use <span className="text-violet-400 font-semibold">Claude Haiku & Sonnet</span> — significantly better quality than free-tier models. Run out mid-month? <span className="text-amber-400 font-semibold">Top up anytime.</span>
+            Credits power all AI generations. Paid plans use <span className="text-violet-400 font-semibold">Claude Haiku</span> — significantly better quality than free-tier models. Run out mid-month? <span className="text-amber-400 font-semibold">Top up anytime.</span>
           </p>
           <div className="inline-flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-full p-1">
             <button onClick={() => setShowINR(false)} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${!showINR ? "bg-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>USD ($)</button>
             <button onClick={() => setShowINR(true)} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${showINR ? "bg-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>🇮🇳 INR (₹)</button>
           </div>
-          {showINR && <p className="text-slate-500 text-xs mt-2">Pay via PhonePe, Google Pay, or any UPI app</p>}
+          {showINR && <p className="text-slate-500 text-xs mt-2">{rzpKey ? "Pay via Razorpay — UPI, PhonePe, GPay, Cards & Wallets accepted" : "Pay via PhonePe, Google Pay, or any UPI app"}</p>}
         </div>
 
         {/* Credit cost info table */}
@@ -403,28 +486,33 @@ export default function PricingSection() {
                 ) : (
                   <>
                     {showINR ? (
-                      <button onClick={() => setPaymentPlan(payPlan)} className={`w-full flex items-center justify-center gap-2 rounded-full h-12 mb-3 text-base font-bold transition-all ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}>
-                        <span>💳</span> Pay ₹{plan.priceINR.toLocaleString("en-IN")}/mo
+                      <button
+                        onClick={() => handlePlanPay(payPlan)}
+                        disabled={paying}
+                        className={`w-full flex items-center justify-center gap-2 rounded-full h-12 mb-3 text-base font-bold transition-all disabled:opacity-60 disabled:cursor-wait ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}
+                      >
+                        {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>💳</span>}
+                        {rzpKey ? `Pay ₹${plan.priceINR.toLocaleString("en-IN")}/mo` : `Pay via UPI ₹${plan.priceINR.toLocaleString("en-IN")}/mo`}
                       </button>
                     ) : (
                       <Button onClick={() => activate(plan.id)} className={`w-full rounded-full h-12 mb-3 text-base ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}>
                         Activate {plan.name} (Demo)
                       </Button>
                     )}
-                    {showINR && (
+                    {showINR && !rzpKey && (
                       <div className="flex items-center gap-2 mb-5">
-                        <button onClick={() => setPaymentPlan(payPlan)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl bg-[#5f259f]/20 hover:bg-[#5f259f]/40 text-purple-300 border border-[#5f259f]/30 transition-colors">
+                        <button onClick={() => handlePlanPay(payPlan)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl bg-[#5f259f]/20 hover:bg-[#5f259f]/40 text-purple-300 border border-[#5f259f]/30 transition-colors">
                           <span className="font-black text-[10px] bg-white text-[#5f259f] px-1 rounded">Pe</span> PhonePe
                         </button>
-                        <button onClick={() => setPaymentPlan(payPlan)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 transition-colors">
+                        <button onClick={() => handlePlanPay(payPlan)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 transition-colors">
                           <span className="font-black text-[10px]">G</span> GPay
                         </button>
-                        <button onClick={() => setPaymentPlan(payPlan)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-colors">
+                        <button onClick={() => handlePlanPay(payPlan)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-colors">
                           <QrCode size={11} /> UPI
                         </button>
                       </div>
                     )}
-                    {!showINR && <div className="mb-5" />}
+                    {(!showINR || rzpKey) && <div className="mb-5" />}
                   </>
                 )}
 
@@ -479,10 +567,11 @@ export default function PricingSection() {
                     <p className="text-white/25 text-xs mt-0.5">{pack.desc}</p>
                   </div>
                   <button
-                    onClick={() => setTopupPack(pack)}
-                    className="w-full flex items-center justify-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 rounded-xl py-2.5 text-sm font-bold transition-all"
+                    onClick={() => handleTopupPay(pack)}
+                    disabled={paying}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-wait"
                   >
-                    <Plus className="w-4 h-4" /> Top Up Now
+                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Top Up Now
                   </button>
                 </div>
               ))}
@@ -504,11 +593,17 @@ export default function PricingSection() {
             <span>⚡ Instant Activation</span>
           </div>
           <p className="text-sm text-white/40 max-w-2xl mx-auto">
-            * Free plan: Text=1cr, Image=5cr, Video=10cr (open-source models via OpenRouter). Paid plans use Claude Haiku & Sonnet with lower per-generation credit costs. Top-up credits work across all plans and never expire.
+            * Free plan: Text=1cr, Image=5cr, Video=10cr (open-source models via OpenRouter). Paid plans use Claude Haiku with lower per-generation credit costs. Top-up credits work across all plans and never expire.
           </p>
         </div>
       </div>
 
+      {payError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-red-900/90 border border-red-500/40 text-red-200 text-sm px-5 py-3 rounded-2xl shadow-xl max-w-sm text-center backdrop-blur-sm">
+          {payError}
+          <button onClick={() => setPayError(null)} className="ml-3 text-red-400 hover:text-white transition-colors text-xs underline">Dismiss</button>
+        </div>
+      )}
       {paymentPlan && <UPIPaymentModal plan={paymentPlan} onClose={() => setPaymentPlan(null)} />}
       {topupPack && (
         <UPIPaymentModal
