@@ -5,6 +5,10 @@ import { getPlan, setPlan, getCredits, addCredits, PLAN_CONFIG, CREDIT_COSTS, TO
 
 const UPI_ID   = "marketingstuffs@upi";
 const UPI_NAME = "Marketingstuffs";
+const GST_RATE = 0.18;
+
+function withGst(base: number) { return Math.round(base * (1 + GST_RATE)); }
+function gstAmount(base: number) { return withGst(base) - base; }
 
 const CREDIT_EXAMPLES = [
   { action: "Short blog (600w)",     cost: CREDIT_COSTS.blog_600.cost,   model: "Claude Haiku", emoji: "📝" },
@@ -122,8 +126,10 @@ function UPIPaymentModal({ plan, amount, label, onClose }: {
   const [copied, setCopied] = useState(false);
   const [payMethod, setPayMethod] = useState<"qr" | "upi">("qr");
 
-  const displayName = plan ? `${plan.name} Plan` : label ?? "Top-Up";
-  const displayAmount = plan ? plan.priceINR : amount ?? 0;
+  const displayName   = plan ? `${plan.name} Plan` : label ?? "Top-Up";
+  const baseAmount    = plan ? plan.priceINR : amount ?? 0;
+  const gst           = gstAmount(baseAmount);
+  const displayAmount = withGst(baseAmount);
   const upiNote = encodeURIComponent(`${displayName} - Marketingstuffs`);
   const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${displayAmount}&cu=INR&tn=${upiNote}`;
   const phonepeLink = `phonepe://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${displayAmount}&cu=INR&tn=${upiNote}`;
@@ -149,7 +155,9 @@ function UPIPaymentModal({ plan, amount, label, onClose }: {
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-3xl font-bold text-white">₹{displayAmount.toLocaleString("en-IN")}</span>
               {plan && <span className="text-slate-400 text-sm">/month</span>}
-              {plan && <span className="text-xs text-slate-500">({plan.inrBilling})</span>}
+            </div>
+            <div className="flex items-center gap-2 text-xs mt-1">
+              <span className="text-slate-500">₹{baseAmount.toLocaleString("en-IN")} + ₹{gst.toLocaleString("en-IN")} GST (18%)</span>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/8 text-slate-400 hover:text-white transition-colors">
@@ -180,11 +188,16 @@ function UPIPaymentModal({ plan, amount, label, onClose }: {
                   {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                 </button>
               </div>
-              <p className="text-slate-500 text-xs text-center">Amount: <span className="text-white font-semibold">₹{displayAmount.toLocaleString("en-IN")}</span></p>
+              <div className="text-xs text-center space-y-0.5">
+                <p className="text-slate-500">Base: ₹{baseAmount.toLocaleString("en-IN")} + GST 18%: ₹{gst.toLocaleString("en-IN")}</p>
+                <p className="text-white font-semibold">Total: ₹{displayAmount.toLocaleString("en-IN")}</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-slate-400 text-sm text-center mb-4">Open your preferred UPI app to pay ₹{displayAmount.toLocaleString("en-IN")}</p>
+              <p className="text-slate-400 text-sm text-center mb-1">Open your preferred UPI app to pay</p>
+              <p className="text-white font-bold text-center text-lg mb-1">₹{displayAmount.toLocaleString("en-IN")}</p>
+              <p className="text-slate-600 text-xs text-center mb-4">(₹{baseAmount.toLocaleString("en-IN")} + ₹{gst.toLocaleString("en-IN")} GST 18%)</p>
               <a href={phonepeLink} className="flex items-center gap-3 bg-[#5f259f] hover:bg-[#7b32c7] border border-[#8b45d7] text-white rounded-2xl px-5 py-3.5 transition-colors w-full">
                 <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shrink-0"><span className="text-[#5f259f] font-black text-sm">Pe</span></div>
                 <div><p className="font-bold text-sm">Pay with PhonePe</p><p className="text-purple-300 text-xs">UPI · Instant · Secure</p></div>
@@ -265,7 +278,7 @@ export default function PricingSection() {
     setCredits(PLAN_CONFIG[plan].credits);
   }
 
-  const handleRazorpayCheckout = useCallback(async (opts: { planId?: string; topupId?: string; amountINR: number; label: string; credits: number }) => {
+  const handleRazorpayCheckout = useCallback(async (opts: { planId?: string; topupId?: string; baseINR: number; label: string; credits: number }) => {
     setPayError(null);
     setPaying(true);
     const email = localStorage.getItem("ms_user_email") ?? "";
@@ -274,12 +287,14 @@ export default function PricingSection() {
     const loaded = await loadRazorpayScript();
     if (!loaded || !rzpKey) { setPayError("Payment gateway unavailable. Please use UPI below."); setPaying(false); return; }
 
+    const totalINR = withGst(opts.baseINR);
+
     let orderId = "";
     try {
       const r = await fetch("/api/payment/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, planId: opts.planId, topupId: opts.topupId }),
+        body: JSON.stringify({ email, planId: opts.planId, topupId: opts.topupId, amountINR: totalINR }),
       });
       const d = await r.json() as { orderId?: string; error?: string };
       if (!r.ok || !d.orderId) throw new Error(d.error ?? "Could not create order");
@@ -292,10 +307,10 @@ export default function PricingSection() {
     const rzp = new (window as any).Razorpay({
       key:         rzpKey,
       order_id:    orderId,
-      amount:      opts.amountINR * 100,
+      amount:      totalINR * 100,
       currency:    "INR",
       name:        "Marketingstuffs",
-      description: opts.label,
+      description: `${opts.label} (incl. 18% GST)`,
       prefill:     { email },
       theme:       { color: "#7c3aed" },
       handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
@@ -326,17 +341,17 @@ export default function PricingSection() {
 
   function handleTopupPay(pack: typeof TOPUP_PACKS[number]) {
     if (rzpKey) {
-      handleRazorpayCheckout({ topupId: pack.id, amountINR: pack.priceINR, label: `${pack.label} Top-Up (${pack.credits} credits)`, credits: pack.credits });
+      handleRazorpayCheckout({ topupId: pack.id, baseINR: pack.priceINR, label: `${pack.label} Top-Up (${pack.credits} credits)`, credits: pack.credits });
     } else {
-      setTopupPack(pack); // fallback to UPI modal
+      setTopupPack(pack);
     }
   }
 
   function handlePlanPay(payPlan: PaymentPlan) {
     if (rzpKey) {
-      handleRazorpayCheckout({ planId: payPlan.id, amountINR: payPlan.priceINR, label: `${payPlan.name} Plan`, credits: payPlan.credits });
+      handleRazorpayCheckout({ planId: payPlan.id, baseINR: payPlan.priceINR, label: `${payPlan.name} Plan`, credits: payPlan.credits });
     } else {
-      setPaymentPlan(payPlan); // fallback to UPI modal
+      setPaymentPlan(payPlan);
     }
   }
 
@@ -458,7 +473,12 @@ export default function PricingSection() {
                   {showINR ? (
                     <>
                       <div className="flex items-end gap-2 mb-1"><span className="text-5xl font-bold text-white">₹{plan.priceINR.toLocaleString("en-IN")}</span><span className="text-muted-foreground mb-1">/month</span></div>
-                      <div className="text-sm text-white/60">{plan.billingINR}</div>
+                      <div className="flex items-center gap-2 text-xs text-white/40 mb-1">
+                        <span>+ ₹{gstAmount(plan.priceINR).toLocaleString("en-IN")} GST (18%)</span>
+                        <span className="text-white/20">·</span>
+                        <span className="text-white/60 font-semibold">Total ₹{withGst(plan.priceINR).toLocaleString("en-IN")}</span>
+                      </div>
+                      <div className="text-sm text-white/40">{plan.billingINR}</div>
                     </>
                   ) : (
                     <>
@@ -492,7 +512,7 @@ export default function PricingSection() {
                         className={`w-full flex items-center justify-center gap-2 rounded-full h-12 mb-3 text-base font-bold transition-all disabled:opacity-60 disabled:cursor-wait ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}
                       >
                         {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>💳</span>}
-                        {rzpKey ? `Pay ₹${plan.priceINR.toLocaleString("en-IN")}/mo` : `Pay via UPI ₹${plan.priceINR.toLocaleString("en-IN")}/mo`}
+                        {rzpKey ? `Pay ₹${withGst(plan.priceINR).toLocaleString("en-IN")}/mo` : `Pay via UPI ₹${withGst(plan.priceINR).toLocaleString("en-IN")}/mo`}
                       </button>
                     ) : (
                       <Button onClick={() => activate(plan.id)} className={`w-full rounded-full h-12 mb-3 text-base ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}>
@@ -564,14 +584,14 @@ export default function PricingSection() {
                   <div className="mb-4">
                     <span className="text-white font-bold text-xl">₹{pack.priceINR}</span>
                     <span className="text-white/30 text-sm ml-1">(${pack.priceUSD})</span>
-                    <p className="text-white/25 text-xs mt-0.5">{pack.desc}</p>
+                    <div className="text-white/30 text-xs mt-0.5">+ ₹{gstAmount(pack.priceINR)} GST · Total ₹{withGst(pack.priceINR)}</div>
                   </div>
                   <button
                     onClick={() => handleTopupPay(pack)}
                     disabled={paying}
                     className="w-full flex items-center justify-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-wait"
                   >
-                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Top Up Now
+                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Pay ₹{withGst(pack.priceINR)}
                   </button>
                 </div>
               ))}
@@ -588,12 +608,12 @@ export default function PricingSection() {
         {/* Footer note */}
         <div className="text-center mt-12 space-y-3">
           <div className="flex items-center justify-center gap-6 text-sm text-white/40 mb-2">
-            <span>🔒 Secure UPI Payments</span>
-            <span>🇮🇳 PhonePe & Google Pay</span>
+            <span>🔒 Razorpay Secured</span>
+            <span>🇮🇳 UPI / PhonePe / GPay / Cards</span>
             <span>⚡ Instant Activation</span>
           </div>
           <p className="text-sm text-white/40 max-w-2xl mx-auto">
-            * Free plan: Text=1cr, Image=5cr, Video=10cr (open-source models via OpenRouter). Paid plans use Claude Haiku with lower per-generation credit costs. Top-up credits work across all plans and never expire.
+            * Prices shown are exclusive of 18% GST. GST is added at checkout. Free plan: Text=1cr, Image=5cr, Video=10cr (open-source models). Paid plans use Claude Haiku. Top-up credits never expire.
           </p>
         </div>
       </div>
