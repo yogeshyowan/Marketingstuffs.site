@@ -7,7 +7,7 @@ import { useGenerationGate } from "@/components/GenerationGate";
 const NAV_LINKS = [
   { label: "Blog Writer",      href: "#blog-writer" },
   { label: "Website Builder",  href: "#website-developer" },
-  { label: "Writing Tools",    href: "#writing-tools" },
+  { label: "Content Tools",    href: "#writing-tools" },
   { label: "Social Media",     href: "#social-media-section" },
   { label: "Growth Hub",       href: "#yt-growstuffs", badge: "🚀" },
   { label: "Ad Campaigns",     href: "#ad-campaigns",    badge: "🎯" },
@@ -16,9 +16,9 @@ const NAV_LINKS = [
   { label: "AI Image",         href: "#ai-image",        badge: "✨" },
   { label: "AI Video",         href: "#ai-video",        badge: "🎬" },
   { label: "AI Voice",         href: "#ai-voice",        badge: "🎙️" },
-  { label: "AI Tools",         href: "#ai-tools" },
+  { label: "Creation Tools",   href: "#ai-tools" },
   { label: "Blog",             href: "#blogs",    badge: "📝" },
-  { label: "Pricing",          href: "#pricing" },
+  { label: "Library",          href: "#resources", badge: "📚" },
 ];
 
 export default function Navbar() {
@@ -241,6 +241,16 @@ export default function Navbar() {
               className="bg-gradient-to-r from-emerald-500 to-primary hover:from-emerald-400 hover:to-primary/90 text-white border-0 rounded-xl text-sm hidden sm:flex whitespace-nowrap">
               {profile.onboardingComplete ? "My Hub 🚀" : "Start Free →"}
             </Button>
+
+            {/* Mobile Sign In — always visible, no hamburger needed */}
+            {!googleSignedIn && (
+              <button
+                onClick={openLoginModal}
+                className="lg:hidden flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" /> Sign In
+              </button>
+            )}
 
             <button onClick={() => setMobileOpen(o => !o)} className="lg:hidden text-white/70 hover:text-white p-2">
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
