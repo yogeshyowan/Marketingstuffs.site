@@ -200,7 +200,7 @@ Keep it punchy. Use emojis as scene markers. Max 250 words.`;
       const r = await fetch("/api/ai/tool-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ systemPrompt: sys, userPrompt: usr, plan: currentPlan }),
+        body: JSON.stringify({ systemPrompt: sys, userPrompt: usr, plan: currentPlan, freeFirst: true }),
       });
       if (!r.ok || !r.body) throw new Error("fail");
       const reader = r.body.getReader();

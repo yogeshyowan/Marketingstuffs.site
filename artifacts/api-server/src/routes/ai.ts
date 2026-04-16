@@ -46,22 +46,20 @@ const FREE_MODELS = [
 ];
 
 // ── Claude model identifiers ────────────────────────────────────
-// Direct Anthropic API IDs (used with ANTHROPIC_API_KEY)
-const CLAUDE_HAIKU  = "claude-3-5-haiku-20241022";   // Fast, cost-efficient — short outputs
-const CLAUDE_SONNET = "claude-3-5-sonnet-20241022";  // Best quality — long-form content
+// Direct Anthropic API ID (ANTHROPIC_API_KEY)
+const CLAUDE_HAIKU = "claude-3-5-haiku-20241022";
 
-// OpenRouter fallback IDs (same models via OpenRouter, used if direct API fails)
-const OR_CLAUDE_HAIKU  = "anthropic/claude-3-5-haiku";
-const OR_CLAUDE_SONNET = "anthropic/claude-3-5-sonnet";
+// OpenRouter fallback ID
+const OR_CLAUDE_HAIKU = "anthropic/claude-3-5-haiku";
 
-function pickClaudeModel(wordCount?: number): string {
-  return (!wordCount || wordCount <= 1100) ? CLAUDE_HAIKU : CLAUDE_SONNET;
+// Always use Haiku — Sonnet removed
+function pickClaudeModel(_wordCount?: number): string {
+  return CLAUDE_HAIKU;
 }
 
 // ── Claude pricing per 1M tokens (Anthropic list price) ────────
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
-  [CLAUDE_HAIKU]:  { input: 0.80, output: 4.00 },
-  [CLAUDE_SONNET]: { input: 3.00, output: 15.00 },
+  [CLAUDE_HAIKU]: { input: 0.80, output: 4.00 },
 };
 
 /**
@@ -69,16 +67,11 @@ const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
  * $1 of Claude API cost = 182 platform credits.
  * Minimum 1 credit. Returns 0 if tokens unknown (free model fallback).
  */
-function calcClaudeCredits(inputTokens: number, outputTokens: number, model: string): number {
+function calcClaudeCredits(inputTokens: number, outputTokens: number, _model: string): number {
   if (inputTokens === 0 && outputTokens === 0) return 0;
-  // Normalise model string — strip OR prefix if present
-  const key = model.replace(/^anthropic\//, "").replace(/-\d{8}$/, "");
-  const pricing =
-    CLAUDE_PRICING[model] ??
-    Object.entries(CLAUDE_PRICING).find(([k]) => model.includes(k.replace(/-\d{8}$/, "")))?.[1] ??
-    CLAUDE_PRICING[CLAUDE_HAIKU];
+  // All paid calls are Haiku — flat pricing
+  const pricing = CLAUDE_PRICING[CLAUDE_HAIKU];
   const costUSD = (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
-  void key; // used above
   return Math.max(1, Math.ceil(costUSD * 182));
 }
 
@@ -156,47 +149,57 @@ async function tryOpenRouterClaude(
 }
 
 /**
- * Stream Claude for paid users.
+ * Stream Claude Haiku for paid users (long-form text: blog, website, writing tools).
  *
  * Fallback chain:
- *   1. Direct Anthropic API  →  requested model (Haiku or Sonnet)
- *   2. OpenRouter keys 1-5   →  same model
- *   3. If model was Sonnet:
- *      3a. Direct Anthropic  →  Haiku  (still Claude, still billable)
- *      3b. OpenRouter keys   →  Haiku
- *   4. Free open-source models (no credit deduction)
+ *   1. Direct Anthropic API  →  Haiku
+ *   2. OpenRouter keys 1-5   →  Haiku (all 5 keys)
+ *   3. Free open-source models (usage = 0 → no credits charged)
  */
 async function streamWithAnthropic(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
   onHeartbeat?: () => void,
-  model: string = CLAUDE_HAIKU,
+  _model: string = CLAUDE_HAIKU,
   maxTokens = 12000
 ): Promise<{ key: number; model: string; inputTokens: number; outputTokens: number }> {
-  // 1. Direct Anthropic — requested model
-  const direct = await tryAnthropicDirect(messages, onChunk, onHeartbeat, model, maxTokens);
+  // 1. Direct Anthropic API — Haiku
+  const direct = await tryAnthropicDirect(messages, onChunk, onHeartbeat, CLAUDE_HAIKU, maxTokens);
   if (direct) return direct;
 
-  // 2. OpenRouter — requested model (all 5 keys)
-  const orModel = model === CLAUDE_SONNET ? OR_CLAUDE_SONNET : OR_CLAUDE_HAIKU;
-  const orResult = await tryOpenRouterClaude(messages, onChunk, onHeartbeat, orModel, maxTokens);
+  // 2. OpenRouter — Haiku across all 5 keys
+  const orResult = await tryOpenRouterClaude(messages, onChunk, onHeartbeat, OR_CLAUDE_HAIKU, maxTokens);
   if (orResult) return orResult;
 
-  // 3. Sonnet failed everywhere → try Haiku before giving up on Claude
-  if (model === CLAUDE_SONNET) {
-    console.warn("[claude] Sonnet exhausted — retrying with Haiku");
-
-    const haikuDirect = await tryAnthropicDirect(messages, onChunk, onHeartbeat, CLAUDE_HAIKU, maxTokens);
-    if (haikuDirect) return haikuDirect;
-
-    const haikuOr = await tryOpenRouterClaude(messages, onChunk, onHeartbeat, OR_CLAUDE_HAIKU, maxTokens);
-    if (haikuOr) return haikuOr;
-  }
-
-  // 4. Last resort — free open-source models (usage = 0 → no credits charged)
-  console.warn("[claude] all Claude paths failed — falling back to free models");
+  // 3. Last resort — free models (no credits charged)
+  console.warn("[claude] all Haiku paths failed — falling back to free models");
   const fallback = await streamWithFallback(messages, onChunk, onHeartbeat, maxTokens);
   return { ...fallback, inputTokens: 0, outputTokens: 0 };
+}
+
+/**
+ * Free models first, then Haiku as fallback.
+ * Used for image/video script generation for paid users — try free first,
+ * only upgrade to Haiku if all 8 free models × 5 keys fail.
+ */
+async function streamWithFallbackThenHaiku(
+  messages: ChatMessage[],
+  onChunk: (text: string) => void,
+  onHeartbeat?: () => void,
+  maxTokens = 8000
+): Promise<{ inputTokens: number; outputTokens: number; model: string }> {
+  try {
+    const result = await streamWithFallback(messages, onChunk, onHeartbeat, maxTokens);
+    return { inputTokens: 0, outputTokens: 0, model: result.model };
+  } catch {
+    // All free models failed — upgrade to Haiku
+    console.warn("[free→haiku] free models exhausted — falling back to Haiku");
+    const direct = await tryAnthropicDirect(messages, onChunk, onHeartbeat, CLAUDE_HAIKU, maxTokens);
+    if (direct) return direct;
+    const orResult = await tryOpenRouterClaude(messages, onChunk, onHeartbeat, OR_CLAUDE_HAIKU, maxTokens);
+    if (orResult) return orResult;
+    throw new Error("All models exhausted");
+  }
 }
 
 /**
@@ -509,7 +512,7 @@ Generate the complete HTML file now.`;
 
   try {
     const { key, model, inputTokens, outputTokens } = isPaidWeb
-      ? await streamWithAnthropic(webMsgs, (text) => send({ content: text }), heartbeat, CLAUDE_SONNET, 16000)
+      ? await streamWithAnthropic(webMsgs, (text) => send({ content: text }), heartbeat, CLAUDE_HAIKU, 16000)
       : { ...(await streamWithFallback(webMsgs, (text) => send({ content: text }), heartbeat)), inputTokens: 0, outputTokens: 0 };
     const usageCredits = calcClaudeCredits(inputTokens, outputTokens, model);
     if (isPaidWeb && usageCredits > 0) send({ __usage: usageCredits });
@@ -1175,7 +1178,9 @@ Respond with ONLY this exact JSON structure (no other text):
 
 // ── POST /api/ai/tool-generate ── Generic streaming tool endpoint ──
 router.post("/ai/tool-generate", async (req, res) => {
-  const { systemPrompt, userPrompt, plan = "free" } = req.body as { systemPrompt: string; userPrompt: string; plan?: string };
+  const { systemPrompt, userPrompt, plan = "free", freeFirst = false } = req.body as {
+    systemPrompt: string; userPrompt: string; plan?: string; freeFirst?: boolean;
+  };
   if (!systemPrompt || !userPrompt) { res.status(400).json({ error: "systemPrompt and userPrompt required" }); return; }
 
   const messages: ChatMessage[] = [
@@ -1193,13 +1198,21 @@ router.post("/ai/tool-generate", async (req, res) => {
   const heartbeat = () => res.write(": ping\n\n");
   heartbeat();
 
+  const send = (chunk: string) => res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+
   try {
     let inputTokens = 0, outputTokens = 0, usedModel = FREE_MODELS[0];
-    if (isPaidTool) {
-      const r = await streamWithAnthropic(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, CLAUDE_HAIKU, 8000);
+    if (isPaidTool && freeFirst) {
+      // Image/video scripts: free models first, Haiku only if all free fail
+      const r = await streamWithFallbackThenHaiku(messages, send, heartbeat, 8000);
+      inputTokens = r.inputTokens; outputTokens = r.outputTokens; usedModel = r.model;
+    } else if (isPaidTool) {
+      // Blog/website/writing tools: Haiku directly for paid users
+      const r = await streamWithAnthropic(messages, send, heartbeat, CLAUDE_HAIKU, 8000);
       inputTokens = r.inputTokens; outputTokens = r.outputTokens; usedModel = r.model;
     } else {
-      await streamWithFallback(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, 6000);
+      // Free plan: always free models
+      await streamWithFallback(messages, send, heartbeat, 6000);
     }
     const usageCredits = calcClaudeCredits(inputTokens, outputTokens, usedModel);
     if (isPaidTool && usageCredits > 0) res.write(`data: ${JSON.stringify({ __usage: usageCredits })}\n\n`);
