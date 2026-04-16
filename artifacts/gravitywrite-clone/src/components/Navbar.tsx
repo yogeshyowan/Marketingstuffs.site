@@ -71,16 +71,25 @@ export default function Navbar() {
   return (
     <>
       {/* Announcement bar */}
-      <div className="relative z-50 bg-gradient-to-r from-primary/80 via-indigo-600/80 to-primary/80 text-white text-center py-2 px-4 text-sm font-medium">
+      <div className="relative z-50 bg-gradient-to-r from-primary/80 via-indigo-600/80 to-primary/80 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-3">
         <span>🚀 Marketingstuffs is live — All AI tools are completely free to use</span>
-        <button className="ml-3 underline underline-offset-2 opacity-80 hover:opacity-100" onClick={() => scrollTo("#yt-growstuffs")}>
-          Start now →
-        </button>
+        {!googleSignedIn ? (
+          <button
+            onClick={openLoginModal}
+            className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/30 rounded-full px-3 py-0.5 text-xs font-semibold transition-all"
+          >
+            <LogIn className="w-3 h-3" /> Sign In
+          </button>
+        ) : (
+          <button className="underline underline-offset-2 opacity-80 hover:opacity-100 text-xs" onClick={() => scrollTo("#yt-growstuffs")}>
+            Start now →
+          </button>
+        )}
       </div>
 
       {/* Main nav */}
       <nav className="sticky top-0 z-40 w-full border-b border-white/5 bg-[#0a0a1a]/90 backdrop-blur-xl">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-[72px] flex items-center justify-between">
 
           {/* Logo */}
           <a href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -94,10 +103,10 @@ export default function Navbar() {
           </a>
 
           {/* Desktop links */}
-          <div className="hidden lg:flex items-center gap-0.5 text-sm font-medium overflow-x-auto">
+          <div className="hidden lg:flex items-center gap-1 font-medium overflow-x-auto">
             {NAV_LINKS.map(link => (
               <button key={link.label} onClick={() => scrollTo(link.href)}
-                className={`relative px-3.5 py-2 rounded-lg transition-colors text-sm whitespace-nowrap ${
+                className={`relative px-4 py-2.5 rounded-lg transition-colors text-[15px] whitespace-nowrap ${
                   link.href === "#yt-growstuffs" ? "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 font-semibold" :
                   link.badge === "✨" ? "text-teal-400 hover:text-teal-300 hover:bg-teal-500/10" :
                   link.badge === "🎬" ? "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" :
@@ -187,9 +196,9 @@ export default function Navbar() {
             ) : null}
 
             <Button
-              onClick={!googleSignedIn ? openLoginModal : profile.onboardingComplete ? openGrowthHub : openOnboarding}
+              onClick={profile.onboardingComplete ? openGrowthHub : openOnboarding}
               className="bg-gradient-to-r from-emerald-500 to-primary hover:from-emerald-400 hover:to-primary/90 text-white border-0 rounded-xl text-sm hidden sm:flex whitespace-nowrap">
-              {!googleSignedIn ? <><LogIn className="w-3.5 h-3.5 mr-1" />Sign In</> : profile.onboardingComplete ? "My Hub 🚀" : "Start Free →"}
+              {profile.onboardingComplete ? "My Hub 🚀" : "Start Free →"}
             </Button>
 
             <button onClick={() => setMobileOpen(o => !o)} className="lg:hidden text-white/70 hover:text-white p-2">
