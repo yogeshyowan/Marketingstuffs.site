@@ -1,5 +1,6 @@
 import { Router } from "express";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 const router = Router();
 
@@ -44,20 +45,20 @@ const FREE_MODELS = [
   "meta-llama/llama-3.3-70b-instruct:free",            // Llama 3.3 70B  65k ctx — #8
 ];
 
-// ── Claude paid models via OpenRouter ──────────────────────────
-// Used for Plus / Pro / Bundle plans. Same OpenRouter keys, paid tier.
-const CLAUDE_HAIKU  = "anthropic/claude-haiku-4-5";   // Fast, efficient — short outputs
-const CLAUDE_SONNET = "anthropic/claude-sonnet-4-5";  // Best quality — long-form content
+// ── Claude model identifiers ────────────────────────────────────
+// Direct Anthropic API IDs (used with ANTHROPIC_API_KEY)
+const CLAUDE_HAIKU  = "claude-3-5-haiku-20241022";   // Fast, cost-efficient — short outputs
+const CLAUDE_SONNET = "claude-3-5-sonnet-20241022";  // Best quality — long-form content
+
+// OpenRouter fallback IDs (same models via OpenRouter, used if direct API fails)
+const OR_CLAUDE_HAIKU  = "anthropic/claude-3-5-haiku";
+const OR_CLAUDE_SONNET = "anthropic/claude-3-5-sonnet";
 
 function pickClaudeModel(wordCount?: number): string {
   return (!wordCount || wordCount <= 1100) ? CLAUDE_HAIKU : CLAUDE_SONNET;
 }
 
-/**
- * Stream using Claude via OpenRouter (paid models).
- * Tries each key in order; falls back to free models on total failure.
- */
-// Claude pricing per 1M tokens (Anthropic via OpenRouter)
+// ── Claude pricing per 1M tokens (Anthropic list price) ────────
 const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   [CLAUDE_HAIKU]:  { input: 0.80, output: 4.00 },
   [CLAUDE_SONNET]: { input: 3.00, output: 15.00 },
@@ -70,29 +71,77 @@ const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
  */
 function calcClaudeCredits(inputTokens: number, outputTokens: number, model: string): number {
   if (inputTokens === 0 && outputTokens === 0) return 0;
-  const pricing = CLAUDE_PRICING[model] ?? CLAUDE_PRICING[CLAUDE_HAIKU];
+  // Normalise model string — strip OR prefix if present
+  const key = model.replace(/^anthropic\//, "").replace(/-\d{8}$/, "");
+  const pricing =
+    CLAUDE_PRICING[model] ??
+    Object.entries(CLAUDE_PRICING).find(([k]) => model.includes(k.replace(/-\d{8}$/, "")))?.[1] ??
+    CLAUDE_PRICING[CLAUDE_HAIKU];
   const costUSD = (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
+  void key; // used above
   return Math.max(1, Math.ceil(costUSD * 182));
 }
 
-async function streamWithClaude(
+// ── Anthropic direct client ─────────────────────────────────────
+const ANTHROPIC = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
+
+/**
+ * Stream Claude using your direct Anthropic API key.
+ * Falls back to OpenRouter Claude keys, then free models if needed.
+ * Returns real token counts for accurate credit billing.
+ */
+async function streamWithAnthropic(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
   onHeartbeat?: () => void,
   model: string = CLAUDE_HAIKU,
   maxTokens = 12000
 ): Promise<{ key: number; model: string; inputTokens: number; outputTokens: number }> {
-  const errors: string[] = [];
+  // ── 1. Try direct Anthropic API key ────────────────────────
+  if (ANTHROPIC) {
+    const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
+    try {
+      // Split system message from conversation messages (Anthropic API separates them)
+      const systemMsg = messages.find(m => m.role === "system");
+      const convoMsgs = messages.filter(m => m.role !== "system") as Array<{ role: "user" | "assistant"; content: string }>;
 
+      const stream = ANTHROPIC.messages.stream({
+        model,
+        max_tokens: maxTokens,
+        system: systemMsg?.content ?? undefined,
+        messages: convoMsgs,
+      });
+
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          onChunk(event.delta.text);
+        }
+      }
+
+      const finalMsg = await stream.finalMessage();
+      const inputTokens  = finalMsg.usage.input_tokens;
+      const outputTokens = finalMsg.usage.output_tokens;
+      return { key: 0, model, inputTokens, outputTokens };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[claude-direct] failed: ${msg.slice(0, 120)} — falling back to OpenRouter`);
+    } finally {
+      if (hbInterval) clearInterval(hbInterval);
+    }
+  }
+
+  // ── 2. Fallback: OpenRouter Claude keys ────────────────────
+  const orModel = model === CLAUDE_SONNET ? OR_CLAUDE_SONNET : OR_CLAUDE_HAIKU;
   for (let ki = 0; ki < CLIENTS.length; ki++) {
     try {
       const hbInterval = onHeartbeat ? setInterval(onHeartbeat, 8000) : null;
       let success = false;
-      let inputTokens = 0;
-      let outputTokens = 0;
+      let inputTokens = 0, outputTokens = 0;
       try {
         const stream = await CLIENTS[ki].chat.completions.create({
-          model,
+          model: orModel,
           max_tokens: maxTokens,
           messages,
           stream: true,
@@ -102,7 +151,6 @@ async function streamWithClaude(
         for await (const chunk of stream) {
           const content = chunk.choices[0]?.delta?.content;
           if (content) onChunk(content);
-          // Capture usage from the final chunk (OpenRouter emits it there)
           if (chunk.usage) {
             inputTokens  = chunk.usage.prompt_tokens     ?? 0;
             outputTokens = chunk.usage.completion_tokens ?? 0;
@@ -112,14 +160,14 @@ async function streamWithClaude(
       } finally {
         if (hbInterval) clearInterval(hbInterval);
       }
-      if (success) return { key: ki + 1, model, inputTokens, outputTokens };
+      if (success) return { key: ki + 1, model: orModel, inputTokens, outputTokens };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`key${ki + 1}/${model}: ${msg.slice(0, 120)}`);
+      console.error(`[claude-or-key${ki + 1}] ${msg.slice(0, 120)}`);
     }
   }
 
-  // Full fallback to free models if Claude quota exhausted
+  // ── 3. Last resort: free models ────────────────────────────
   const fallback = await streamWithFallback(messages, onChunk, onHeartbeat, maxTokens);
   return { ...fallback, inputTokens: 0, outputTokens: 0 };
 }
@@ -305,7 +353,7 @@ CONTENT RULES:
   try {
     const claudeModel = pickClaudeModel(wordCount);
     const { key, model, inputTokens, outputTokens } = isPaid
-      ? await streamWithClaude(msgs, (text) => send({ content: text }), heartbeat, claudeModel, 12000)
+      ? await streamWithAnthropic(msgs, (text) => send({ content: text }), heartbeat, claudeModel, 12000)
       : { ...(await streamWithFallback(msgs, (text) => send({ content: text }), heartbeat)), inputTokens: 0, outputTokens: 0 };
     const usageCredits = calcClaudeCredits(inputTokens, outputTokens, model);
     if (isPaid && usageCredits > 0) send({ __usage: usageCredits });
@@ -434,7 +482,7 @@ Generate the complete HTML file now.`;
 
   try {
     const { key, model, inputTokens, outputTokens } = isPaidWeb
-      ? await streamWithClaude(webMsgs, (text) => send({ content: text }), heartbeat, CLAUDE_SONNET, 16000)
+      ? await streamWithAnthropic(webMsgs, (text) => send({ content: text }), heartbeat, CLAUDE_SONNET, 16000)
       : { ...(await streamWithFallback(webMsgs, (text) => send({ content: text }), heartbeat)), inputTokens: 0, outputTokens: 0 };
     const usageCredits = calcClaudeCredits(inputTokens, outputTokens, model);
     if (isPaidWeb && usageCredits > 0) send({ __usage: usageCredits });
@@ -1121,7 +1169,7 @@ router.post("/ai/tool-generate", async (req, res) => {
   try {
     let inputTokens = 0, outputTokens = 0, usedModel = FREE_MODELS[0];
     if (isPaidTool) {
-      const r = await streamWithClaude(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, CLAUDE_HAIKU, 8000);
+      const r = await streamWithAnthropic(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, CLAUDE_HAIKU, 8000);
       inputTokens = r.inputTokens; outputTokens = r.outputTokens; usedModel = r.model;
     } else {
       await streamWithFallback(messages, (chunk) => { res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`); }, heartbeat, 6000);
