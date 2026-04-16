@@ -78,6 +78,7 @@ function decrementCredit(type: GenerationType): number {
 // ── Context ───────────────────────────────────────────────────────────────────
 type GateCtx = {
   requestGeneration: (onProceed: () => void, type?: GenerationType) => void;
+  openLoginModal: () => void;
   credits: number;
   googleSignedIn: boolean;
   isAdminUser: boolean;
@@ -86,6 +87,7 @@ type GateCtx = {
 };
 const GenerationGateContext = createContext<GateCtx>({
   requestGeneration: (cb) => cb(),
+  openLoginModal: () => {},
   credits: FREE_CREDITS,
   googleSignedIn: false,
   isAdminUser: false,
@@ -223,7 +225,7 @@ export function GenerationGateProvider({ children }: { children: React.ReactNode
   }
 
   return (
-    <GenerationGateContext.Provider value={{ requestGeneration, credits, googleSignedIn, isAdminUser, userEmail, userPlan }}>
+    <GenerationGateContext.Provider value={{ requestGeneration, openLoginModal: () => setModal("login"), credits, googleSignedIn, isAdminUser, userEmail, userPlan }}>
       {children}
       <AnimatePresence>
         {modal === "login" && (

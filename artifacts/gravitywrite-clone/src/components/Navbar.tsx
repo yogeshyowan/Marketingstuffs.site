@@ -1,4 +1,4 @@
-import { Menu, X, Zap, ChevronDown, User, RefreshCw, Map, LogOut, Crown } from "lucide-react";
+import { Menu, X, Zap, ChevronDown, User, RefreshCw, Map, LogOut, Crown, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
@@ -25,7 +25,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, setShowOnboarding, resetProfile } = useUser();
-  const { credits, googleSignedIn, isAdminUser, userEmail } = useGenerationGate();
+  const { credits, googleSignedIn, isAdminUser, userEmail, openLoginModal } = useGenerationGate();
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Close profile dropdown on outside click
@@ -132,6 +132,16 @@ export default function Navbar() {
               )
             )}
 
+            {/* Sign In button — shown when not Google signed in */}
+            {!googleSignedIn && (
+              <button
+                onClick={openLoginModal}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-medium transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" /> Sign In
+              </button>
+            )}
+
             {/* Profile / Get Started */}
             {profile.onboardingComplete ? (
               <div className="relative hidden sm:block" ref={profileRef}>
@@ -215,6 +225,14 @@ export default function Navbar() {
                 {link.label}
               </button>
             ))}
+            {!googleSignedIn && (
+              <button
+                onClick={() => { openLoginModal(); setMobileOpen(false); }}
+                className="w-full flex items-center justify-center gap-2 mt-2 py-3 rounded-xl border border-white/10 bg-white/5 text-white text-sm font-medium"
+              >
+                <LogIn className="w-4 h-4" /> Sign In with Google
+              </button>
+            )}
             <Button onClick={profile.onboardingComplete ? openGrowthHub : openOnboarding}
               className="w-full mt-3 bg-gradient-to-r from-emerald-500 to-primary text-white rounded-xl">
               {profile.onboardingComplete ? "Open My Growth Hub 🚀" : "Get My Growth Plan — Free"}

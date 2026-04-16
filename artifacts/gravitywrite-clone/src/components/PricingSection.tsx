@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, Zap, Crown, Sparkles, Info, X, Copy, Check, QrCode, Smartphone, Plus, Loader2 } from "lucide-react";
+import { CheckCircle2, Zap, Crown, Sparkles, Info, X, Copy, Check, QrCode, Smartphone, Plus, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPlan, setPlan, getCredits, addCredits, PLAN_CONFIG, CREDIT_COSTS, TOPUP_PACKS, syncPlanFromServer, type Plan } from "@/lib/credits";
+import { useGenerationGate } from "@/components/GenerationGate";
 
 const UPI_ID   = "marketingstuffs@upi";
 const UPI_NAME = "Marketingstuffs";
@@ -252,6 +253,7 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 export default function PricingSection() {
+  const { googleSignedIn, openLoginModal } = useGenerationGate();
   const [activePlan, setActivePlan] = useState<Plan>("free");
   const [credits, setCredits] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
@@ -340,6 +342,7 @@ export default function PricingSection() {
   }, [rzpKey]);
 
   function handleTopupPay(pack: typeof TOPUP_PACKS[number]) {
+    if (!googleSignedIn) { openLoginModal(); return; }
     if (rzpKey) {
       handleRazorpayCheckout({ topupId: pack.id, baseINR: pack.priceINR, label: `${pack.label} Top-Up (${pack.credits} credits)`, credits: pack.credits });
     } else {
@@ -348,6 +351,7 @@ export default function PricingSection() {
   }
 
   function handlePlanPay(payPlan: PaymentPlan) {
+    if (!googleSignedIn) { openLoginModal(); return; }
     if (rzpKey) {
       handleRazorpayCheckout({ planId: payPlan.id, baseINR: payPlan.priceINR, label: `${payPlan.name} Plan`, credits: payPlan.credits });
     } else {
@@ -511,8 +515,8 @@ export default function PricingSection() {
                         disabled={paying}
                         className={`w-full flex items-center justify-center gap-2 rounded-full h-12 mb-3 text-base font-bold transition-all disabled:opacity-60 disabled:cursor-wait ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}
                       >
-                        {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>💳</span>}
-                        {rzpKey ? `Pay ₹${withGst(plan.priceINR).toLocaleString("en-IN")}/mo` : `Pay via UPI ₹${withGst(plan.priceINR).toLocaleString("en-IN")}/mo`}
+                        {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : googleSignedIn ? <span>💳</span> : <LogIn className="w-4 h-4" />}
+                        {!googleSignedIn ? "Sign In to Pay" : rzpKey ? `Pay ₹${withGst(plan.priceINR).toLocaleString("en-IN")}/mo` : `Pay via UPI ₹${withGst(plan.priceINR).toLocaleString("en-IN")}/mo`}
                       </button>
                     ) : (
                       <Button onClick={() => activate(plan.id)} className={`w-full rounded-full h-12 mb-3 text-base ${plan.highlight ? "bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 text-white" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"}`}>
@@ -591,7 +595,8 @@ export default function PricingSection() {
                     disabled={paying}
                     className="w-full flex items-center justify-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-wait"
                   >
-                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Pay ₹{withGst(pack.priceINR)}
+                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : googleSignedIn ? <Plus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                    {googleSignedIn ? `Pay ₹${withGst(pack.priceINR)}` : "Sign In to Pay"}
                   </button>
                 </div>
               ))}
