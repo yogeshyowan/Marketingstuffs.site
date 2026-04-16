@@ -1,4 +1,4 @@
-import { Menu, X, Zap, ChevronDown, User, RefreshCw, Map, LogOut, Crown, LogIn } from "lucide-react";
+import { Menu, X, Zap, ChevronDown, User, RefreshCw, Map, LogOut, Crown, LogIn, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
@@ -148,6 +148,36 @@ export default function Navbar() {
                   ⚡ {credits} credits
                 </div>
               )
+            )}
+
+            {/* Subscribe button */}
+            {!isAdminUser && (
+              <div className="relative hidden sm:block group">
+                <button
+                  onClick={() => scrollTo("#pricing")}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg shadow-violet-900/40 transition-all hover:scale-[1.04]"
+                >
+                  <Star className="w-3 h-3 fill-white" />
+                  Subscribe
+                </button>
+                {/* Tooltip */}
+                <div className="absolute top-full right-0 mt-2 w-52 bg-[#13132a] border border-violet-500/30 rounded-xl px-3 py-2.5 shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                  <p className="text-white text-[11px] font-semibold leading-snug">
+                    ✨ Generate with Claude AI
+                  </p>
+                  <p className="text-white/50 text-[10px] mt-0.5 leading-snug">
+                    Subscribe for higher quality prompts & more credits
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1">
+                    <a onClick={(e) => { e.stopPropagation(); scrollTo("#pricing"); }} className="cursor-pointer text-violet-400 hover:text-violet-300 text-[10px] font-medium flex items-center gap-1 transition-colors">
+                      💳 View subscription plans →
+                    </a>
+                    <a onClick={(e) => { e.stopPropagation(); scrollTo("#pricing"); }} className="cursor-pointer text-amber-400 hover:text-amber-300 text-[10px] font-medium flex items-center gap-1 transition-colors">
+                      ⚡ Buy credit top-up packs →
+                    </a>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Profile / Get Started */}
