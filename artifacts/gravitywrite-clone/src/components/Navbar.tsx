@@ -81,9 +81,18 @@ export default function Navbar() {
             <LogIn className="w-3 h-3" /> Sign In
           </button>
         ) : (
-          <button className="underline underline-offset-2 opacity-80 hover:opacity-100 text-xs" onClick={() => scrollTo("#yt-growstuffs")}>
-            Start now →
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="underline underline-offset-2 opacity-80 hover:opacity-100 text-xs" onClick={() => scrollTo("#yt-growstuffs")}>
+              Start now →
+            </button>
+            <span className="opacity-40 text-xs">·</span>
+            <button
+              onClick={signOut}
+              className="inline-flex items-center gap-1 opacity-75 hover:opacity-100 text-xs transition-opacity"
+            >
+              <LogOut className="w-3 h-3" /> Sign Out
+            </button>
+          </div>
         )}
       </div>
 
