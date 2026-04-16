@@ -10,10 +10,13 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? "";
 const ADMIN_EMAIL          = "yogesh.yowan@gmail.com";
 
 function getRedirectUri(req: any): string {
-  // Prefer explicit env var; fall back to request host
-  const base = process.env.SITE_URL
-    ?? `https://${req.get("host")}`;
-  return `${base}/api/auth/google/callback`;
+  // 1. Explicit override wins
+  if (process.env.SITE_URL) return `${process.env.SITE_URL}/api/auth/google/callback`;
+  // 2. Replit dev domain (always correct in the Replit workspace preview)
+  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/google/callback`;
+  // 3. Fall back to request host
+  const proto = req.headers["x-forwarded-proto"] ?? req.protocol ?? "https";
+  return `${proto}://${req.get("host")}/api/auth/google/callback`;
 }
 
 // ── GET /api/auth/google/start ────────────────────────────────────────────────

@@ -55,3 +55,6 @@ externalPort = 4200
 
 [userenv.shared]
 VITE_ADOBE_CLIENT_ID = "fab2fd7e44be4de39283bc6a53fccc87"
+
+[userenv.production]
+SITE_URL = "https://marketingstuffs.site"
