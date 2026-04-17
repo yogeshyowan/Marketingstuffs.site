@@ -1,0 +1,111 @@
+Build a continuous voice-controlled AI agent for my web platform that generates digital marketing content.
+
+CONTEXT:
+My platform allows users to:
+
+* Generate marketing content (ads, YouTube scripts, emails, campaigns)
+* Create and manage campaigns
+* View and edit generated outputs
+
+GOAL:
+Users should be able to control the entire platform using voice only, without typing or clicking.
+
+FEATURE REQUIREMENTS:
+
+1. CONTINUOUS VOICE INPUT
+
+* Implement always-on microphone listening (with user permission)
+* Convert speech to text in real time
+* Use Web Speech API or Whisper API
+
+2. AI AGENT (CORE BRAIN)
+
+* Integrate OpenAI API (GPT-4o or latest)
+* Use function calling to map user voice commands to platform actions
+* Maintain conversational context
+
+3. INTENT → ACTION SYSTEM
+   Create a function registry like:
+
+* generate_youtube_script(topic, tone)
+* create_ad_campaign(platform, budget, audience)
+* generate_email_sequence(product, audience)
+* edit_content(content_id, changes)
+* publish_content(content_id)
+
+AI should:
+
+* Understand natural language voice input
+* Map it to correct function
+* Execute automatically
+
+4. REAL-TIME ACTION EXECUTION
+
+* Connect functions to backend APIs
+* Automatically trigger actions without user interaction
+* Return results instantly
+
+5. VOICE RESPONSE SYSTEM
+
+* Convert AI responses to speech (use browser TTS or ElevenLabs)
+* Keep responses short and conversational
+* Example: “Your YouTube script is ready. Want me to publish it?”
+
+6. CONTINUOUS LOOP (IMPORTANT)
+
+* After every response, resume listening automatically
+* No manual restart required
+* Allow interruption (user can speak anytime)
+
+7. UI INDICATORS
+
+* Show listening status (Listening / Processing / Speaking)
+* Show live transcription text
+* Show executed action logs
+
+8. ERROR HANDLING
+
+* If unclear input: ask short clarification
+* If action fails: retry once, then respond with issue
+* Never stay silent
+
+9. PERFORMANCE
+
+* Optimize for low latency (near real-time feel)
+* Use streaming responses if possible
+
+10. SECURITY
+
+* Ask confirmation for destructive actions (delete, publish)
+
+TECH STACK:
+Frontend:
+
+* React (or existing frontend)
+* Web Speech API (or mic input handler)
+
+Backend:
+
+* Node.js / Express (or existing backend)
+* OpenAI API for AI agent
+* REST APIs for actions
+
+DELIVERABLES:
+
+* Voice agent component
+* AI agent service
+* Function mapping system
+* Example working actions (at least 3)
+* Clean, modular, production-ready code
+
+BONUS (if possible):
+
+* Add wake word (e.g., “Hey Assistant”)
+* Add memory of previous commands
+* Add proactive suggestions (AI suggests improvements)
+
+IMPORTANT:
+The system should behave like an autonomous assistant, not a chatbot.
+It must take actions automatically based on voice commands.
+
+Build this as a reusable module that integrates with my existing platform.

@@ -9,6 +9,7 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import RefundPolicy from "@/pages/RefundPolicy";
 import ContactUs from "@/pages/ContactUs";
+import VoiceAgent from "@/components/VoiceAgent";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
         </WouterRouter>
+        <VoiceAgent />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

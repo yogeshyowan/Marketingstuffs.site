@@ -2492,4 +2492,177 @@ Create 3 membership tiers and 5 insider insight series ideas.`,
   } catch (err: any) { return res.status(500).json({ error: err.message }); }
 });
 
+// ── Voice Agent ───────────────────────────────────────────────────────────────
+const VOICE_AGENT_SYSTEM = `You are the Marketingstuffs Voice Agent — an autonomous AI assistant that controls a digital marketing platform via voice commands.
+
+PLATFORM TOOLS (sections you can navigate to):
+- blog-writer: Write long-form SEO blog posts
+- website-developer: Build full website HTML
+- social-media-section: Create social media posts for Instagram/Facebook/LinkedIn/Twitter/TikTok
+- email-marketing: Write email campaigns and sequences
+- ad-campaigns: Create ad scripts for Facebook, Google, YouTube, Instagram
+- ai-image: Generate marketing images
+- ai-video: Generate marketing videos
+- ai-voice: Generate voice-overs
+- yt-growstuffs: YouTube growth strategies, scripts, titles, hooks
+- writing-tools: 50+ content writing tools (articles, landing pages, copy)
+- sms-marketing: SMS/WhatsApp marketing messages
+
+INTENT TAXONOMY — pick ONE intent per user message:
+- generate_blog: user wants a blog post, article, SEO content
+- generate_youtube_script: user wants a YouTube video script, YT content
+- generate_youtube_ideas: user wants YouTube video ideas, topic suggestions
+- generate_youtube_titles: user wants YouTube title suggestions
+- generate_social_post: user wants Instagram/Facebook/LinkedIn/Twitter/TikTok post
+- generate_email: user wants an email, newsletter, sequence, follow-up
+- generate_ad: user wants an ad script, ad copy, campaign
+- generate_hooks: user wants video hooks, attention grabbers, openers
+- generate_reel_script: user wants a Reel/Short/TikTok script
+- generate_hashtags: user wants hashtags for a topic/post
+- generate_image: user wants an AI-generated image
+- navigate: user wants to go to a section / open a tool
+- answer: general question, greeting, clarification, off-topic
+
+RULES:
+1. Return ONLY valid JSON, NO markdown, NO code fences.
+2. Extract topic/product/niche from the user's words — be specific.
+3. For "navigate", pick the closest section anchor from the list above.
+4. Keep spokenResponse SHORT (max 2 sentences), friendly, South Indian English ok.
+5. If intent is unclear, use "answer" and ask a short clarifying question in spokenResponse.
+
+JSON FORMAT:
+{
+  "intent": "one of the intents above",
+  "params": {
+    "topic": "string",
+    "tone": "professional|casual|funny|motivational|urgent",
+    "platform": "instagram|facebook|youtube|email|google|tiktok|whatsapp",
+    "platforms": ["array", "of", "platforms"],
+    "niche": "string",
+    "product": "string",
+    "wordCount": 800,
+    "duration": "60 seconds|3 minutes",
+    "section": "blog-writer|social-media-section|email-marketing|...",
+    "prompt": "string (for image generation)"
+  },
+  "thinking": "1 sentence on what the user wants",
+  "spokenResponse": "Short friendly response telling user what you're doing or asking a question"
+}`;
+
+async function executeVoiceAction(intent: string, params: Record<string, unknown>): Promise<string> {
+  const topic = String(params.topic || params.niche || params.product || "marketing");
+  const tone = String(params.tone || "professional");
+  const platform = String(params.platform || "instagram");
+
+  const msgMap: Record<string, ChatMessage[]> = {
+    generate_blog: [
+      { role: "system", content: `Write a compelling ${String(params.wordCount || 800)}-word SEO blog post about "${topic}" in ${tone} tone. Use clear headings. Return plain text with markdown headings.` },
+      { role: "user", content: `Write the blog post now.` },
+    ],
+    generate_youtube_script: [
+      { role: "system", content: `Write a YouTube video script about "${topic}" for a ${String(params.duration || "5-7 minute")} video in ${tone} tone. Include: Hook (0-15s), Intro, Main Content (3-5 sections), CTA. Label each section clearly.` },
+      { role: "user", content: `Write the script.` },
+    ],
+    generate_youtube_ideas: [
+      { role: "system", content: `Generate 10 viral YouTube video ideas for the niche: "${topic}". For each idea include: Title, Hook (1 sentence), Why it works (1 sentence). Return as a numbered list.` },
+      { role: "user", content: `Give me 10 YouTube video ideas.` },
+    ],
+    generate_youtube_titles: [
+      { role: "system", content: `Generate 10 click-worthy YouTube titles for a video about "${topic}". Mix: curiosity gaps, numbers, how-to, and emotional hooks. Return as a numbered list.` },
+      { role: "user", content: `Give me 10 titles.` },
+    ],
+    generate_social_post: [
+      { role: "system", content: `Write an engaging ${platform} post about "${topic}" in ${tone} tone. Include relevant emojis. Add 5-8 hashtags at the end. Max 280 chars for Twitter, 2200 for others.` },
+      { role: "user", content: `Write the ${platform} post.` },
+    ],
+    generate_email: [
+      { role: "system", content: `Write a compelling marketing email about "${topic}" in ${tone} tone. Include: Subject line (labeled), Preview text, Greeting, Body (3-4 paragraphs), CTA button text, Sign-off. Make it feel personal and human.` },
+      { role: "user", content: `Write the email.` },
+    ],
+    generate_ad: [
+      { role: "system", content: `Write a high-converting ${platform} ad script for "${topic}" in ${tone} tone. Include: Hook (5 seconds), Problem, Solution, Benefits (3 bullet points), CTA. Label each part.` },
+      { role: "user", content: `Write the ad script.` },
+    ],
+    generate_hooks: [
+      { role: "system", content: `Generate 10 powerful video hooks for "${topic}" optimized for ${platform}. Each hook should grab attention in the first 3 seconds. Include pattern interrupts, curiosity, and controversy. Return as a numbered list.` },
+      { role: "user", content: `Give me 10 hooks.` },
+    ],
+    generate_reel_script: [
+      { role: "system", content: `Write a ${String(params.duration || "30-second")} Reel/Short/TikTok script about "${topic}" in ${tone} tone. Format: [0s] Hook text, [5s] ..., [20s] CTA. Keep it punchy and visual.` },
+      { role: "user", content: `Write the reel script.` },
+    ],
+    generate_hashtags: [
+      { role: "system", content: `Generate 30 hashtags for "${topic}" on ${platform}. Mix: 10 niche-specific (low competition), 10 mid-tier (50k-500k posts), 10 broad (1M+ posts). Group them and label. Optimized for maximum reach.` },
+      { role: "user", content: `Generate the hashtags.` },
+    ],
+    answer: [
+      { role: "system", content: `You are the Marketingstuffs AI assistant. Answer the user's question helpfully and concisely in 2-4 sentences. Focus on digital marketing advice.` },
+      { role: "user", content: topic },
+    ],
+  };
+
+  const messages = msgMap[intent];
+  if (!messages) return "";
+
+  let result = "";
+  await streamWithFallback(messages, (chunk) => { result += chunk; }, undefined, 2048);
+  return result.trim();
+}
+
+router.post("/ai/voice-agent", async (req, res) => {
+  const { transcript, history = [] } = req.body as {
+    transcript: string;
+    history?: Array<{ role: string; content: string }>;
+  };
+  if (!transcript?.trim()) return res.status(400).json({ error: "transcript required" });
+
+  try {
+    // Step 1: Parse intent
+    const intentMessages: ChatMessage[] = [
+      { role: "system", content: VOICE_AGENT_SYSTEM },
+      ...(history.slice(-6) as ChatMessage[]),
+      { role: "user", content: transcript },
+    ];
+
+    const { resp } = await chatWithFallback(intentMessages);
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = extractJSON(resp.choices[0]?.message?.content ?? "{}") as Record<string, unknown>;
+    } catch {
+      parsed = { intent: "answer", params: { topic: transcript }, thinking: "Parsing failed", spokenResponse: "Let me try to help you with that." };
+    }
+
+    const intent = String(parsed.intent || "answer");
+    const params = (parsed.params || {}) as Record<string, unknown>;
+    const spokenResponse = String(parsed.spokenResponse || "Working on it!");
+
+    // Step 2: Execute action (skip for navigate)
+    let result = "";
+    let executed = false;
+    if (intent !== "navigate") {
+      result = await executeVoiceAction(intent, params);
+      executed = true;
+    }
+
+    return res.json({
+      intent,
+      params,
+      thinking: parsed.thinking,
+      spokenResponse,
+      result,
+      executed,
+      actionLabel: intent.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      intent: "answer",
+      spokenResponse: "Sorry, I ran into an issue. Please try again.",
+      error: err.message,
+      result: "",
+      executed: false,
+    });
+  }
+});
+
 export default router;
+
