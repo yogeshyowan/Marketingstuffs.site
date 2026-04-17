@@ -1,21 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Mic, MicOff, X, Minimize2, Maximize2, Volume2, VolumeX,
-  Loader2, Send, Copy, Check, ChevronDown, Zap,
-} from "lucide-react";
+import { Mic, X, Volume2, VolumeX, Copy, Check } from "lucide-react";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/__api/";
 
 type Status = "idle" | "listening" | "processing" | "speaking";
 
-interface ChatMsg {
-  id: number;
-  role: "user" | "assistant";
-  text: string;
-  result?: string;       // full generated content
-  resultLabel?: string;  // e.g. "Blog Post"
-  copied?: boolean;
-}
+interface Result { label: string; text: string; }
 
 declare global {
   interface Window {
@@ -25,204 +15,120 @@ declare global {
 }
 
 const SECTION_MAP: Record<string, string> = {
-  "blog-writer": "#blog-writer",
-  "website-developer": "#website-developer",
-  "social-media-section": "#social-media-section",
-  "email-marketing": "#email-marketing",
-  "ad-campaigns": "#ad-campaigns",
-  "ai-image": "#ai-image",
-  "ai-video": "#ai-video",
-  "ai-voice": "#ai-voice",
-  "yt-growstuffs": "#yt-growstuffs",
-  "writing-tools": "#writing-tools",
-  "sms-marketing": "#sms-marketing",
+  "blog-writer": "#blog-writer", "website-developer": "#website-developer",
+  "social-media-section": "#social-media-section", "email-marketing": "#email-marketing",
+  "ad-campaigns": "#ad-campaigns", "ai-image": "#ai-image", "ai-video": "#ai-video",
+  "ai-voice": "#ai-voice", "yt-growstuffs": "#yt-growstuffs",
+  "writing-tools": "#writing-tools", "sms-marketing": "#sms-marketing",
 };
 
-let msgId = 0;
-const nextId = () => ++msgId;
+// ── CSS animations injected once ──────────────────────────────────────────────
+const STYLE = `
+@keyframes orb-idle   { 0%,100%{transform:scale(1);opacity:.9}   50%{transform:scale(1.06);opacity:1} }
+@keyframes orb-listen { 0%,100%{transform:scale(1.04)} 50%{transform:scale(1.10)} }
+@keyframes orb-think  { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+@keyframes ring-out   { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.2);opacity:0} }
+@keyframes ring-speak { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(1.9);opacity:0} }
+@keyframes slide-up   { 0%{transform:translateY(100%);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@keyframes fade-in    { 0%{opacity:0;transform:translateY(8px)} 100%{opacity:1;transform:translateY(0)} }
+@keyframes txt-fade   { 0%{opacity:0} 20%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+`;
 
-function StatusDot({ status }: { status: Status }) {
-  const color =
-    status === "listening" ? "bg-red-500" :
-    status === "processing" ? "bg-yellow-400" :
-    status === "speaking" ? "bg-blue-500" : "bg-zinc-600";
-  return (
-    <span className={`inline-block w-2 h-2 rounded-full ${color} ${status === "listening" ? "animate-ping" : ""}`} />
-  );
-}
-
-function Waveform({ color }: { color: string }) {
-  return (
-    <span className="flex items-end gap-[2px] h-4">
-      {[3, 6, 4, 8, 5, 7, 3].map((h, i) => (
-        <span
-          key={i}
-          className={`w-[2px] rounded-full ${color} animate-bounce`}
-          style={{ height: `${h}px`, animationDelay: `${i * 55}ms`, animationDuration: "0.7s" }}
-        />
-      ))}
-    </span>
-  );
+function injectStyle() {
+  if (document.getElementById("va-style")) return;
+  const el = document.createElement("style");
+  el.id = "va-style"; el.textContent = STYLE;
+  document.head.appendChild(el);
 }
 
 export default function VoiceAgent() {
-  const [open, setOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  const [status, setStatus] = useState<Status>("idle");
-  const [interimText, setInterimText] = useState("");
-  const [muted, setMuted] = useState(false);
-  const [msgs, setMsgs] = useState<ChatMsg[]>([]);
-  const [typedInput, setTypedInput] = useState("");
-  const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [error, setError] = useState("");
-  const [voicesReady, setVoicesReady] = useState(false);
+  const [open, setOpen]         = useState(false);
+  const [status, setStatus]     = useState<Status>("idle");
+  const [muted, setMuted]       = useState(false);
+  const [userSaid, setUserSaid] = useState("");
+  const [aiSaid, setAiSaid]     = useState("Hi! Tell me what you need. I can write blog posts, social media captions, YouTube scripts, emails, ads — just say the word.");
+  const [interim, setInterim]   = useState("");
+  const [result, setResult]     = useState<Result | null>(null);
+  const [copied, setCopied]     = useState(false);
 
-  // ── Refs to avoid stale closures ──────────────────────────────────────────
-  const statusRef = useRef<Status>("idle");
-  const openRef = useRef(false);
-  const mutedRef = useRef(false);
-  const historyRef = useRef<Array<{ role: string; content: string }>>([]);
-  const recogRef = useRef<SpeechRecognition | null>(null);
+  const statusRef    = useRef<Status>("idle");
+  const openRef      = useRef(false);
+  const mutedRef     = useRef(false);
+  const historyRef   = useRef<Array<{ role: string; content: string }>>([]);
+  const recogRef     = useRef<SpeechRecognition | null>(null);
   const listeningRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const handleTranscriptRef = useRef<(t: string) => void>(() => {});
-  const startListeningRef = useRef<() => void>(() => {});
+  const abortRef     = useRef<AbortController | null>(null);
+  const handleRef    = useRef<(t: string) => void>(() => {});
+  const startRef     = useRef<() => void>(() => {});
 
-  // keep refs in sync
+  useEffect(() => { statusRef.current = status; }, [status]);
   useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
-  useEffect(() => { statusRef.current = status; }, [status]);
 
   const supported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  // ── Load voices ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const check = () => {
-      if (window.speechSynthesis.getVoices().length > 0) setVoicesReady(true);
-    };
-    check();
-    window.speechSynthesis.addEventListener("voiceschanged", check);
-    return () => window.speechSynthesis.removeEventListener("voiceschanged", check);
-  }, []);
+  useEffect(() => { injectStyle(); }, []);
 
-  // ── Auto-scroll chat ───────────────────────────────────────────────────────
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, interimText]);
-
-  // ── Speak ──────────────────────────────────────────────────────────────────
+  // ── TTS ────────────────────────────────────────────────────────────────────
   const speak = useCallback((text: string, onDone?: () => void) => {
     if (mutedRef.current || !text) { onDone?.(); return; }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.0;
-    u.pitch = 1.05;
-    u.volume = 1;
+    u.rate = 1.0; u.pitch = 1.05; u.volume = 1;
     const voices = window.speechSynthesis.getVoices();
-    const pref =
-      voices.find(v => v.lang === "en-IN") ||
-      voices.find(v => v.lang.startsWith("en-IN")) ||
-      voices.find(v => v.lang.startsWith("en-GB")) ||
-      voices.find(v => v.lang.startsWith("en"));
-    if (pref) u.voice = pref;
-    let fired = false;
-    const done = () => { if (!fired) { fired = true; setStatus("idle"); onDone?.(); } };
-    u.onend = done;
-    u.onerror = done;
-    // Safari sometimes doesn't fire onend — timeout fallback
-    const words = text.split(" ").length;
-    const ms = Math.max(2000, words * 450);
-    setTimeout(done, ms + 500);
+    const v = voices.find(v => v.lang === "en-IN")
+           || voices.find(v => v.lang.startsWith("en-IN"))
+           || voices.find(v => v.lang.startsWith("en-GB"))
+           || voices.find(v => v.lang.startsWith("en"));
+    if (v) u.voice = v;
+    let done = false;
+    const finish = () => { if (!done) { done = true; setStatus("idle"); onDone?.(); } };
+    u.onend = finish; u.onerror = finish;
+    setTimeout(finish, Math.max(2500, text.split(" ").length * 420 + 500));
     setStatus("speaking");
     window.speechSynthesis.speak(u);
-  }, []); // no deps — always uses mutedRef
+  }, []);
 
-  // ── Start listening ────────────────────────────────────────────────────────
+  // ── STT ────────────────────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (!supported || listeningRef.current) return;
     if (statusRef.current === "processing" || statusRef.current === "speaking") return;
-
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recog = new SR();
-    recog.lang = "en-IN";
-    recog.continuous = false;
-    recog.interimResults = true;
-    recog.maxAlternatives = 1;
-
-    recog.onstart = () => {
-      listeningRef.current = true;
-      setStatus("listening");
-      setInterimText("");
-      setError("");
-    };
-
-    recog.onresult = (e: SpeechRecognitionEvent) => {
-      let interim = "";
-      let final = "";
+    const r = new SR();
+    r.lang = "en-IN"; r.continuous = false; r.interimResults = true;
+    r.onstart  = () => { listeningRef.current = true; setStatus("listening"); setInterim(""); };
+    r.onresult = (e: SpeechRecognitionEvent) => {
+      let tmp = "", fin = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) final += t;
-        else interim += t;
+        if (e.results[i].isFinal) fin += t; else tmp += t;
       }
-      setInterimText(interim);
-      if (final.trim()) {
-        setInterimText("");
-        // Use ref — always gets the latest version, no stale closure
-        handleTranscriptRef.current(final.trim());
-      }
+      setInterim(tmp);
+      if (fin.trim()) { setInterim(""); handleRef.current(fin.trim()); }
     };
-
-    recog.onerror = (e: SpeechRecognitionErrorEvent) => {
-      listeningRef.current = false;
-      if (e.error !== "no-speech" && e.error !== "aborted") {
-        setError(`Mic: ${e.error}. Use the text box below.`);
-      }
-      setStatus("idle");
-    };
-
-    recog.onend = () => {
-      listeningRef.current = false;
-      if (statusRef.current === "listening") setStatus("idle");
-    };
-
-    recogRef.current = recog;
-    try { recog.start(); } catch { /* ignore duplicate starts */ }
+    r.onerror  = () => { listeningRef.current = false; setStatus("idle"); };
+    r.onend    = () => { listeningRef.current = false; if (statusRef.current === "listening") setStatus("idle"); };
+    recogRef.current = r;
+    try { r.start(); } catch { /* ignore */ }
   }, [supported]);
 
-  // Expose via ref so callbacks can call the latest version
-  useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
-
-  // ── Stop listening ─────────────────────────────────────────────────────────
   const stopListening = useCallback(() => {
     listeningRef.current = false;
     try { recogRef.current?.stop(); recogRef.current?.abort(); } catch { /* ignore */ }
     recogRef.current = null;
   }, []);
 
-  // ── Add message helper ─────────────────────────────────────────────────────
-  const addMsg = (msg: Omit<ChatMsg, "id">) =>
-    setMsgs(prev => [...prev, { ...msg, id: nextId() }]);
+  useEffect(() => { startRef.current = startListening; }, [startListening]);
 
-  const updateHistory = (user: string, assistant: string) => {
-    historyRef.current = [
-      ...historyRef.current,
-      { role: "user", content: user },
-      { role: "assistant", content: assistant },
-    ].slice(-12);
-  };
-
-  // ── Handle transcript (stores in ref to prevent stale closures) ────────────
+  // ── Core handle ────────────────────────────────────────────────────────────
   const handleTranscript = useCallback(async (text: string) => {
     stopListening();
     setStatus("processing");
-    setInterimText("");
+    setInterim("");
+    setUserSaid(text);
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-
-    addMsg({ role: "user", text });
 
     try {
       const res = await fetch(`${BASE_URL}ai/voice-agent`, {
@@ -231,333 +137,268 @@ export default function VoiceAgent() {
         body: JSON.stringify({ transcript: text, history: historyRef.current }),
         signal: abortRef.current.signal,
       });
-
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json() as {
-        intent: string;
-        params: Record<string, unknown>;
-        spokenResponse: string;
-        result: string;
-        executed: boolean;
-        actionLabel: string;
+        intent: string; params: Record<string, unknown>;
+        spokenResponse: string; result: string; executed: boolean; actionLabel: string;
       };
 
-      // Navigate
       if (data.intent === "navigate" && data.params?.section) {
-        const anchor = SECTION_MAP[String(data.params.section)];
-        if (anchor) {
-          const el = document.querySelector(anchor);
-          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        const a = SECTION_MAP[String(data.params.section)];
+        if (a) document.querySelector(a)?.scrollIntoView({ behavior: "smooth" });
       }
 
       const spoken = data.spokenResponse || "Done!";
-      const result = data.result?.trim() || "";
-      const label = data.actionLabel || "";
+      const content = data.result?.trim() || "";
 
-      updateHistory(text, spoken + (result ? ` [${label} generated]` : ""));
+      historyRef.current = [
+        ...historyRef.current,
+        { role: "user", content: text },
+        { role: "assistant", content: spoken + (content ? ` [${data.actionLabel}]` : "") },
+      ].slice(-12);
 
-      // Show assistant reply with optional result
-      addMsg({
-        role: "assistant",
-        text: spoken,
-        result: result || undefined,
-        resultLabel: label || undefined,
-      });
+      setAiSaid(spoken);
+      if (content) setResult({ label: data.actionLabel || data.intent, text: content });
 
-      // Speak + auto-resume
-      speak(spoken, () => {
-        if (openRef.current) {
-          setTimeout(() => startListeningRef.current(), 700);
-        }
-      });
+      speak(spoken, () => { if (openRef.current) setTimeout(() => startRef.current(), 600); });
 
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      setError(msg.slice(0, 100));
-      addMsg({ role: "assistant", text: "Sorry, something went wrong. Please try again." });
+      const errMsg = "Sorry, something went wrong. Please try again.";
+      setAiSaid(errMsg);
       setStatus("idle");
-      speak("Sorry, something went wrong. Please try again.", () => {
-        if (openRef.current) setTimeout(() => startListeningRef.current(), 700);
-      });
+      speak(errMsg, () => { if (openRef.current) setTimeout(() => startRef.current(), 800); });
     }
   }, [speak, stopListening]);
 
-  // Keep ref updated — this is the key fix for stale closures
-  useEffect(() => { handleTranscriptRef.current = handleTranscript; }, [handleTranscript]);
+  useEffect(() => { handleRef.current = handleTranscript; }, [handleTranscript]);
 
-  // ── Submit typed text ──────────────────────────────────────────────────────
-  const submitText = useCallback(() => {
-    const t = typedInput.trim();
-    if (!t || status === "processing" || status === "speaking") return;
-    setTypedInput("");
-    handleTranscriptRef.current(t);
-  }, [typedInput, status]);
-
-  // ── Copy result ────────────────────────────────────────────────────────────
-  const copyResult = (id: number, text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    });
-  };
-
-  // ── Open / close ───────────────────────────────────────────────────────────
+  // ── Open / close ────────────────────────────────────────────────────────────
   const openAgent = () => {
-    setOpen(true);
-    setMinimized(false);
-    setError("");
-    if (msgs.length === 0) {
-      setMsgs([{
-        id: nextId(),
-        role: "assistant",
-        text: "Hi! I'm your AI marketing assistant. Tell me what you need — write a blog post, create an Instagram caption, draft an email, make a YouTube script, and more. What would you like to create?",
-      }]);
-    }
-    setTimeout(() => startListeningRef.current(), 600);
+    setOpen(true); setStatus("idle"); setUserSaid(""); setInterim("");
+    setTimeout(() => {
+      speak(aiSaid, () => setTimeout(() => startRef.current(), 400));
+    }, 300);
   };
-
   const closeAgent = () => {
-    stopListening();
-    window.speechSynthesis.cancel();
-    setOpen(false);
-    setStatus("idle");
-    setInterimText("");
+    stopListening(); window.speechSynthesis.cancel();
+    setOpen(false); setStatus("idle"); setInterim("");
+    abortRef.current?.abort();
   };
 
-  const toggleMic = () => {
-    if (status === "listening") {
-      stopListening();
-      setStatus("idle");
-    } else if (status === "idle") {
-      startListeningRef.current();
-    }
-  };
-
-  // Cleanup
   useEffect(() => {
-    return () => {
-      stopListening();
-      window.speechSynthesis.cancel();
-      abortRef.current?.abort();
-    };
+    return () => { stopListening(); window.speechSynthesis.cancel(); abortRef.current?.abort(); };
   }, [stopListening]);
+
+  // ── Orb style ───────────────────────────────────────────────────────────────
+  const orbGrad =
+    status === "listening"  ? "radial-gradient(circle at 40% 40%, #f87171, #ef4444, #b91c1c)" :
+    status === "processing" ? "radial-gradient(circle at 40% 40%, #fbbf24, #f59e0b, #d97706)" :
+    status === "speaking"   ? "radial-gradient(circle at 40% 40%, #60a5fa, #3b82f6, #1d4ed8)" :
+                              "radial-gradient(circle at 40% 40%, #a78bfa, #7c3aed, #4c1d95)";
+
+  const orbAnim =
+    status === "listening"  ? "orb-listen 0.6s ease-in-out infinite" :
+    status === "processing" ? "none" :
+    status === "speaking"   ? "orb-listen 0.8s ease-in-out infinite" :
+                              "orb-idle 3s ease-in-out infinite";
+
+  const ringColor =
+    status === "listening" ? "#ef4444" : status === "speaking" ? "#3b82f6" : "#7c3aed";
+  const ringAnim  = status === "listening" ? "ring-out 1.2s ease-out infinite" :
+                    status === "speaking"  ? "ring-speak 1.6s ease-out infinite" : "none";
 
   if (!supported) return null;
 
-  const busy = status === "processing" || status === "speaking";
-  const statusLabel =
-    status === "listening" ? "Listening…" :
-    status === "processing" ? "Thinking…" :
-    status === "speaking" ? "Speaking…" : "Tap mic or type";
-
   return (
     <>
-      {/* Floating button */}
+      {/* Floating trigger */}
       <button
         onClick={open ? closeAgent : openAgent}
-        title={open ? "Close AI Assistant" : "Open AI Voice Assistant"}
         className={`
           fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center
-          border-2 transition-all duration-200
+          border-2 transition-all duration-300
           ${open
             ? "bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
-            : "bg-gradient-to-br from-violet-600 to-purple-700 border-violet-400 hover:scale-105"
+            : "bg-gradient-to-br from-violet-600 to-purple-800 border-violet-400 hover:scale-110 active:scale-95"
           }
-          ${status === "listening" ? "ring-4 ring-red-400/50" : ""}
-          ${status === "speaking" ? "ring-4 ring-blue-400/50" : ""}
         `}
+        title={open ? "Close voice agent" : "Open voice agent"}
       >
-        {open
-          ? <X className="w-5 h-5 text-zinc-300" />
-          : <Mic className="w-5 h-5 text-white" />
-        }
-        {!open && status === "idle" && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-zinc-950" />
+        {open ? <X className="w-5 h-5 text-zinc-300" /> : <Mic className="w-5 h-5 text-white" />}
+        {!open && (
+          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-zinc-950" />
         )}
       </button>
 
-      {/* Panel */}
+      {/* Full-screen overlay */}
       {open && (
-        <div className={`
-          fixed bottom-24 right-6 z-[9998] w-[340px] rounded-2xl shadow-2xl border border-zinc-800
-          bg-zinc-950 flex flex-col overflow-hidden transition-all duration-200
-          ${minimized ? "h-14" : "h-[520px]"}
-        `}>
-          {/* Header */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900 shrink-0">
-            <StatusDot status={status} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-zinc-100 leading-none">AI Assistant</p>
-              <p className="text-[10px] text-zinc-500 mt-0.5">{statusLabel}</p>
+        <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center"
+          style={{ background: "rgba(5,5,15,0.96)", backdropFilter: "blur(16px)" }}>
+
+          {/* Top bar */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-5">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-violet-500" style={{
+                boxShadow: "0 0 6px #7c3aed",
+                animation: status === "listening" ? "orb-idle 0.8s infinite" : "orb-idle 2s infinite"
+              }} />
+              <span className="text-xs font-semibold text-zinc-400 tracking-widest uppercase">
+                AI Assistant
+              </span>
             </div>
-            <button onClick={() => setMuted(m => !m)}
-              className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
-              title={muted ? "Unmute voice" : "Mute voice"}>
-              {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-            </button>
-            <button onClick={() => setMinimized(m => !m)}
-              className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors">
-              {minimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+            <div className="flex items-center gap-3">
+              <button onClick={() => setMuted(m => !m)}
+                className="p-2 rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors">
+                {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <button onClick={closeAgent}
+                className="p-2 rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* AI response text */}
+          <div className="w-full max-w-md text-center mb-10 px-8 min-h-[60px]">
+            {aiSaid && (
+              <p className="text-zinc-200 text-lg font-light leading-relaxed"
+                style={{ animation: "fade-in 0.4s ease-out forwards" }}>
+                {aiSaid}
+              </p>
+            )}
+          </div>
+
+          {/* ── ORB ────────────────────────────────────────────────────────── */}
+          <div className="relative flex items-center justify-center" style={{ width: 220, height: 220 }}>
+            {/* Ring 1 */}
+            <div className="absolute rounded-full" style={{
+              width: 220, height: 220,
+              border: `1.5px solid ${ringColor}`,
+              animation: ringAnim,
+              animationDelay: "0s",
+              opacity: ringAnim === "none" ? 0 : undefined,
+            }} />
+            {/* Ring 2 */}
+            <div className="absolute rounded-full" style={{
+              width: 220, height: 220,
+              border: `1.5px solid ${ringColor}`,
+              animation: ringAnim,
+              animationDelay: "0.4s",
+              opacity: ringAnim === "none" ? 0 : undefined,
+            }} />
+            {/* Ring 3 */}
+            <div className="absolute rounded-full" style={{
+              width: 220, height: 220,
+              border: `1px solid ${ringColor}`,
+              animation: ringAnim,
+              animationDelay: "0.8s",
+              opacity: ringAnim === "none" ? 0 : undefined,
+            }} />
+
+            {/* Processing spinner ring */}
+            {status === "processing" && (
+              <div className="absolute rounded-full" style={{
+                width: 200, height: 200,
+                border: "3px solid transparent",
+                borderTopColor: "#f59e0b",
+                borderRightColor: "#f59e0b44",
+                animation: "orb-think 1s linear infinite",
+              }} />
+            )}
+
+            {/* Main orb */}
+            <button
+              onClick={() => {
+                if (status === "listening") { stopListening(); setStatus("idle"); }
+                else if (status === "idle") startRef.current();
+              }}
+              className="relative rounded-full flex items-center justify-center cursor-pointer"
+              style={{
+                width: 160, height: 160,
+                background: orbGrad,
+                animation: orbAnim,
+                boxShadow: `0 0 40px ${ringColor}55, 0 0 80px ${ringColor}22`,
+              }}
+            >
+              {status === "processing" ? (
+                <div className="flex gap-1.5 items-end">
+                  {[0,1,2,3].map(i => (
+                    <div key={i} className="w-1 rounded-full bg-white/80"
+                      style={{ height: `${10 + (i % 2) * 8}px`, animation: `ring-out 0.8s ease-in-out ${i*0.15}s infinite alternate` }} />
+                  ))}
+                </div>
+              ) : status === "speaking" ? (
+                <div className="flex gap-1.5 items-end">
+                  {[0,1,2,3,4].map(i => (
+                    <div key={i} className="w-1 rounded-full bg-white/90"
+                      style={{ height: `${8 + (i % 3) * 7}px`, animation: `ring-speak 0.7s ease-in-out ${i*0.1}s infinite alternate` }} />
+                  ))}
+                </div>
+              ) : (
+                <Mic className="w-10 h-10 text-white/90"
+                  style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.5))" }} />
+              )}
             </button>
           </div>
 
-          {!minimized && (
-            <div className="flex flex-col flex-1 overflow-hidden">
-              {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-                {msgs.map(msg => (
-                  <div key={msg.id} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
-                    <div className={`
-                      max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed
-                      ${msg.role === "user"
-                        ? "bg-violet-600 text-white rounded-br-sm"
-                        : "bg-zinc-800 text-zinc-200 rounded-bl-sm"
-                      }
-                    `}>
-                      {msg.text}
-                    </div>
+          {/* Status / transcript below orb */}
+          <div className="mt-8 min-h-[48px] flex flex-col items-center gap-2">
+            <p className="text-sm font-medium tracking-wider uppercase" style={{
+              color: status === "listening" ? "#f87171" :
+                     status === "processing" ? "#fbbf24" :
+                     status === "speaking" ? "#60a5fa" : "#6b7280"
+            }}>
+              {status === "listening" ? "Listening…" :
+               status === "processing" ? "Thinking…" :
+               status === "speaking" ? "Speaking…" : "Tap orb to speak"}
+            </p>
+            {(interim || userSaid) && (
+              <p className="text-zinc-500 text-sm italic max-w-xs text-center leading-relaxed"
+                style={{ animation: "txt-fade 3s ease forwards" }}>
+                "{interim || userSaid}"
+              </p>
+            )}
+          </div>
 
-                    {/* Generated result card */}
-                    {msg.role === "assistant" && msg.result && (
-                      <div className="w-[85%] mt-1.5 rounded-xl border border-zinc-700 bg-zinc-900 overflow-hidden">
-                        <button
-                          onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
-                          className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-zinc-800/60 transition-colors"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <Zap className="w-3 h-3 text-violet-400" />
-                            <span className="text-[10px] font-semibold text-violet-300">{msg.resultLabel}</span>
-                          </div>
-                          <ChevronDown className={`w-3 h-3 text-zinc-500 transition-transform ${expandedId === msg.id ? "rotate-180" : ""}`} />
-                        </button>
-                        {expandedId === msg.id && (
-                          <div className="border-t border-zinc-800">
-                            <pre className="text-[10px] text-zinc-400 whitespace-pre-wrap font-sans px-3 py-2 max-h-40 overflow-y-auto leading-relaxed">
-                              {msg.result}
-                            </pre>
-                            <div className="px-3 pb-2">
-                              <button
-                                onClick={() => copyResult(msg.id, msg.result!)}
-                                className="flex items-center gap-1 text-[10px] text-violet-400 hover:text-violet-200 font-medium transition-colors"
-                              >
-                                {copiedId === msg.id
-                                  ? <><Check className="w-3 h-3" /> Copied!</>
-                                  : <><Copy className="w-3 h-3" /> Copy</>
-                                }
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Interim text (live speech) */}
-                {interimText && (
-                  <div className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl rounded-br-sm px-3 py-2 text-xs bg-violet-600/50 text-violet-200 italic border border-violet-500/30">
-                      {interimText}
-                    </div>
-                  </div>
-                )}
-
-                {/* Processing indicator */}
-                {status === "processing" && (
-                  <div className="flex items-start">
-                    <div className="bg-zinc-800 rounded-2xl rounded-bl-sm px-3 py-2 flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 text-yellow-400 animate-spin" />
-                      <span className="text-[11px] text-zinc-400">Working on it…</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Speaking indicator */}
-                {status === "speaking" && (
-                  <div className="flex items-start">
-                    <div className="bg-zinc-800 rounded-2xl rounded-bl-sm px-3 py-2 flex items-center gap-2">
-                      <Waveform color="bg-blue-400" />
-                      <span className="text-[11px] text-zinc-400">Speaking…</span>
-                    </div>
-                  </div>
-                )}
-
-                {error && (
-                  <p className="text-[10px] text-red-400 text-center px-2">{error}</p>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Quick command chips */}
-              {msgs.length <= 1 && (
-                <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-                  {["Write a blog post", "Instagram caption", "YouTube script", "Email campaign", "Facebook ad"].map(cmd => (
-                    <button
-                      key={cmd}
-                      disabled={busy}
-                      onClick={() => { setTypedInput(""); handleTranscriptRef.current(cmd); }}
-                      className="text-[10px] text-zinc-400 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-full px-2.5 py-1 transition-colors disabled:opacity-40"
-                    >
-                      {cmd}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Input row */}
-              <div className="px-3 pb-3 pt-1 border-t border-zinc-800 shrink-0">
+          {/* ── Generated result sheet ─────────────────────────────────────── */}
+          {result && (
+            <div className="absolute bottom-0 left-0 right-0 max-h-[42vh] flex flex-col rounded-t-3xl border-t border-zinc-800 bg-zinc-950/98"
+              style={{ animation: "slide-up 0.35s cubic-bezier(.16,1,.3,1) forwards" }}>
+              {/* Sheet header */}
+              <div className="flex items-center justify-between px-5 pt-4 pb-2">
                 <div className="flex items-center gap-2">
-                  {/* Mic button */}
+                  <div className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                  <span className="text-xs font-semibold text-zinc-300 tracking-wide">{result.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={toggleMic}
-                    disabled={busy}
-                    title={status === "listening" ? "Stop listening" : "Start listening"}
-                    className={`
-                      w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all
-                      disabled:opacity-40 disabled:cursor-not-allowed
-                      ${status === "listening"
-                        ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30"
-                        : "bg-violet-600 hover:bg-violet-500"
-                      }
-                    `}
-                  >
-                    {status === "listening"
-                      ? <Waveform color="bg-white" />
-                      : status === "processing"
-                        ? <Loader2 className="w-4 h-4 text-white animate-spin" />
-                        : <Mic className="w-4 h-4 text-white" />
-                    }
+                    onClick={() => {
+                      navigator.clipboard.writeText(result.text);
+                      setCopied(true); setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="flex items-center gap-1.5 text-[11px] text-violet-400 hover:text-violet-200 font-medium transition-colors">
+                    {copied ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                   </button>
-
-                  {/* Text input */}
-                  <input
-                    type="text"
-                    value={typedInput}
-                    onChange={e => setTypedInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && submitText()}
-                    placeholder={status === "listening" ? "Listening…" : "Or type here…"}
-                    disabled={busy}
-                    className="flex-1 bg-zinc-800 text-zinc-200 text-xs rounded-xl px-3 py-2 outline-none border border-zinc-700 focus:border-violet-500 placeholder:text-zinc-600 disabled:opacity-50 transition-colors"
-                  />
-
-                  {/* Send button */}
-                  <button
-                    onClick={submitText}
-                    disabled={!typedInput.trim() || busy}
-                    className="w-9 h-9 rounded-full bg-violet-600 hover:bg-violet-500 flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Send className="w-3.5 h-3.5 text-white" />
+                  <button onClick={() => setResult(null)}
+                    className="p-1 text-zinc-600 hover:text-zinc-300 transition-colors">
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
-
-                {!voicesReady && !muted && (
-                  <p className="text-[9px] text-zinc-600 mt-1 text-center">
-                    Loading voices for speech output…
-                  </p>
-                )}
               </div>
+              {/* Drag handle */}
+              <div className="flex justify-center pb-1">
+                <div className="w-8 h-1 rounded-full bg-zinc-800" />
+              </div>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-5 pb-6">
+                <pre className="text-zinc-300 text-[13px] font-sans whitespace-pre-wrap leading-relaxed">
+                  {result.text}
+                </pre>
+              </div>
+              <p className="text-center text-[10px] text-zinc-700 pb-3">
+                Say "copy it" · "make it shorter" · "change the tone" · "close"
+              </p>
             </div>
           )}
         </div>

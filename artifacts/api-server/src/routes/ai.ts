@@ -2595,10 +2595,45 @@ async function executeVoiceAction(intent: string, params: Record<string, unknown
 
   const messages = msgMap[intent];
   if (!messages) return "";
+  return chatForVoiceContent(messages);
+}
 
-  let result = "";
-  await streamWithFallback(messages, (chunk) => { result += chunk; }, undefined, 2048);
-  return result.trim();
+// Try GPT-4o-mini first (best conversational quality), fall back to free models
+async function chatForVoiceAgent(messages: ChatMessage[]): Promise<{ resp: OpenAI.Chat.ChatCompletion; model: string }> {
+  const smartModels = [
+    "openai/gpt-4o-mini",
+    "openai/gpt-4o",
+    "anthropic/claude-3-haiku",
+    "microsoft/phi-4",
+  ];
+  for (let ki = 0; ki < CLIENTS.length; ki++) {
+    for (const model of smartModels) {
+      try {
+        const resp = await CLIENTS[ki].chat.completions.create({ model, max_tokens: 512, messages });
+        return { resp, model };
+      } catch { /* try next */ }
+    }
+  }
+  // Fall back to free models
+  const { resp } = await chatWithFallback(messages);
+  return { resp, model: "free" };
+}
+
+async function chatForVoiceContent(messages: ChatMessage[]): Promise<string> {
+  const smartModels = ["openai/gpt-4o-mini", "openai/gpt-4o", "microsoft/phi-4"];
+  for (let ki = 0; ki < CLIENTS.length; ki++) {
+    for (const model of smartModels) {
+      try {
+        const resp = await CLIENTS[ki].chat.completions.create({ model, max_tokens: 2048, messages });
+        const text = resp.choices[0]?.message?.content ?? "";
+        if (text.length > 0) return text.trim();
+      } catch { /* try next */ }
+    }
+  }
+  // Free model fallback
+  let acc = "";
+  await streamWithFallback(messages, (c) => { acc += c; }, undefined, 2048);
+  return acc.trim();
 }
 
 router.post("/ai/voice-agent", async (req, res) => {
@@ -2609,14 +2644,14 @@ router.post("/ai/voice-agent", async (req, res) => {
   if (!transcript?.trim()) return res.status(400).json({ error: "transcript required" });
 
   try {
-    // Step 1: Parse intent
+    // Step 1: Parse intent with smart model
     const intentMessages: ChatMessage[] = [
       { role: "system", content: VOICE_AGENT_SYSTEM },
       ...(history.slice(-6) as ChatMessage[]),
       { role: "user", content: transcript },
     ];
 
-    const { resp } = await chatWithFallback(intentMessages);
+    const { resp } = await chatForVoiceAgent(intentMessages);
     let parsed: Record<string, unknown>;
     try {
       parsed = extractJSON(resp.choices[0]?.message?.content ?? "{}") as Record<string, unknown>;
