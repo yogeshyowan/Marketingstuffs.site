@@ -2598,39 +2598,41 @@ async function executeVoiceAction(intent: string, params: Record<string, unknown
   return chatForVoiceContent(messages);
 }
 
-// Try GPT-4o-mini first (best conversational quality), fall back to free models
+// Smart model for voice agent — tries gpt-4o-mini with 6s timeout, falls back to proven free models
 async function chatForVoiceAgent(messages: ChatMessage[]): Promise<{ resp: OpenAI.Chat.ChatCompletion; model: string }> {
-  const smartModels = [
-    "openai/gpt-4o-mini",
-    "openai/gpt-4o",
-    "anthropic/claude-3-haiku",
-    "microsoft/phi-4",
-  ];
+  const smartModels = ["openai/gpt-4o-mini", "openai/gpt-4o"];
   for (let ki = 0; ki < CLIENTS.length; ki++) {
     for (const model of smartModels) {
       try {
-        const resp = await CLIENTS[ki].chat.completions.create({ model, max_tokens: 512, messages });
-        return { resp, model };
-      } catch { /* try next */ }
+        const resp = await CLIENTS[ki].chat.completions.create(
+          { model, max_tokens: 400, messages },
+          { timeout: 6000 } // hard 6s cap — if it hangs, move on immediately
+        );
+        const content = resp.choices[0]?.message?.content ?? "";
+        if (content.length > 0) return { resp, model };
+      } catch { /* 429, timeout, no credits — skip silently */ }
     }
   }
-  // Fall back to free models
+  // Free model fallback (always works)
   const { resp } = await chatWithFallback(messages);
   return { resp, model: "free" };
 }
 
 async function chatForVoiceContent(messages: ChatMessage[]): Promise<string> {
-  const smartModels = ["openai/gpt-4o-mini", "openai/gpt-4o", "microsoft/phi-4"];
+  // Try gpt-4o-mini with 10s timeout for content generation
   for (let ki = 0; ki < CLIENTS.length; ki++) {
-    for (const model of smartModels) {
+    for (const model of ["openai/gpt-4o-mini", "openai/gpt-4o"]) {
       try {
-        const resp = await CLIENTS[ki].chat.completions.create({ model, max_tokens: 2048, messages });
+        const resp = await CLIENTS[ki].chat.completions.create(
+          { model, max_tokens: 1500, messages },
+          { timeout: 10000 }
+        );
         const text = resp.choices[0]?.message?.content ?? "";
-        if (text.length > 0) return text.trim();
-      } catch { /* try next */ }
+        if (text.length > 20) return text.trim();
+      } catch { /* skip */ }
     }
   }
-  // Free model fallback
+  // Free model streaming fallback
   let acc = "";
   await streamWithFallback(messages, (c) => { acc += c; }, undefined, 2048);
   return acc.trim();
